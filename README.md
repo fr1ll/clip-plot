@@ -1,6 +1,20 @@
 # PixPlot
 
-This repository contains code that can be used to visualize tens of thousands of images in a two-dimensional projection within which similar images are clustered together. The image analysis uses Tensorflow's Inception bindings, and the visualization layer uses a custom WebGL viewer.
+This repository is forked from pix-plot by Douglas Duhaime.
+
+I plan to:
+- Unpin requirements versions
+- Generally, outsource stuff where possible
+- Remove some options in a selfish manner!
+- Replace Inception with `clip-retrieval` for even sweeter embeddings
+- Enable to run with zarr or numpy inputs
+- Outsource/simplify thumbnail processing if possible
+- Enable to run the heavy embeddings step in batches before the lighter dimensionality reduction and layout stuff
+- Add a linear dimensionality reduction method to complement UMAP
+
+The rest of this README will be unchanged for the moment.
+
+This repository contains code that can be used to visualize ~~tens~~ hundreds of thousands of images in a two-dimensional projection within which similar images are clustered together. ~~The image analysis uses Tensorflow's Inception bindings~~, and the visualization layer uses a custom WebGL viewer.
 
 See the [change log](https://github.com/YaleDHLab/pix-plot/wiki/Change-Log) for recent updates.
 
