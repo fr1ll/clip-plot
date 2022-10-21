@@ -11,6 +11,7 @@ I plan to:
 - Outsource/simplify thumbnail processing if possible
 - Enable to run the heavy embeddings step in batches before the lighter dimensionality reduction and layout stuff
 - Add a linear dimensionality reduction method to complement UMAP
+- BYO logo
 
 The rest of this README will be unchanged for the moment.
 
