@@ -3,15 +3,17 @@
 This repository is forked from pix-plot by Douglas Duhaime.
 
 I plan to:
-- Unpin requirements versions
-- Generally, outsource stuff where possible
-- Remove some options in a selfish manner!
-- Replace Inception with `clip-retrieval` for even sweeter embeddings
-- Enable to run with zarr or numpy inputs
-- Outsource/simplify thumbnail processing if possible
-- Enable to run the heavy embeddings step in batches before the lighter dimensionality reduction and layout stuff
-- Add a linear dimensionality reduction method to complement UMAP
-- BYO logo
+- [x] Unpin requirements versions
+- [ ] Generally, outsource stuff where possible
+- [ ] Remove some options in a selfish manner!
+- [ ] Replace Inception with `clip-retrieval` for even sweeter embeddings
+- [ ] Enable to run with zarr or numpy inputs
+- [ ] Outsource/simplify thumbnail processing if possible
+- [ ] Enable to run the heavy embeddings step in batches before the lighter dimensionality reduction and layout stuff
+- [ ] Add a linear dimensionality reduction method to complement UMAP
+- [ ] Convert image format to WebP for smaller bundle size
+- [ ] Include option to output as a desktop app via Tauri
+- [ ] BYO logo
 
 The rest of this README will be unchanged for the moment.
 
