@@ -9,7 +9,7 @@ If you want to go directly from a folder of JPGs to a PixPlot visualization, you
 This is merely a work-in-progress attempt to enable you to generate a PixPlot visualization after creating embeddings.
 
 Why do this?
-1. `clip` gives useful embeddings as shown by the [first place solution[(https://www.kaggle.com/competitions/google-universal-image-embedding/discussion/359316) in the recent "Google Universal Image Embeddings" Kaggle competition
+1. `clip` gives useful embeddings as shown by the [first place solution](https://www.kaggle.com/competitions/google-universal-image-embedding/discussion/359316) in the recent "Google Universal Image Embeddings" Kaggle competition
 2. Separating the embeddings step gives more flexibility in how it is run -- for example, it can be run in parallel on several nodes
 3. Separating the embeddings step also makes it easier to remove pinned dependencies so the exciting viz stuff is easier to install
 
