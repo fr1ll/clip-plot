@@ -30,6 +30,6 @@ This is merely a work-in-progress attempt to enable you to generate a PixPlot vi
 
 ## Acknowledgements
 
-`clip-plot` is a fork of [`pix-plot`](https://github.com/YaleDHLab/pix-plot) by [Douglas Duhaime](https://github.com/duhaime), [Peter Leonard](https://github.com/pleonard212), and others, and is mainly a lighter, smaller version of their work.
+`clip-plot` is a fork of [`pix-plot`](https://github.com/YaleDHLab/pix-plot) by [Douglas Duhaime](https://github.com/duhaime), [Peter Leonard](https://github.com/pleonard212), and others, and mainly aims to be a lighter, smaller version of their work.
 
 The DHLab would like to thank [Cyril Diagne](http://cyrildiagne.com/) and [Nicolas Barradeau](http://barradeau.com), lead developers of the spectacular [Google Arts Experiments TSNE viewer](https://artsexperiments.withgoogle.com/tsnemap/), for generously sharing ideas on optimization techniques used in this viewer, and [Lillianna Marie](https://github.com/lilliannamarie) for naming this viewer PixPlot.
