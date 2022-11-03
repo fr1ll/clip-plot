@@ -15,4 +15,4 @@ iiif-downloads
 .ipynb_checkpoints
 models
 geo
-!pixplot/web/assets/vendor/dist/
+!clipplot/web/assets/vendor/dist/

@@ -26,22 +26,15 @@ def timestamp():
 
 if '--copy_web_only' not in sys.argv:
 
-  from tensorflow.keras.preprocessing.image import save_img, img_to_array, array_to_img
-  from tensorflow.keras.applications.inception_v3 import preprocess_input
-  from tensorflow.keras.applications import InceptionV3, imagenet_utils
   from sklearn.metrics import pairwise_distances_argmin_min
-  from tensorflow.keras.preprocessing.image import load_img
   from collections import defaultdict, namedtuple
   from dateutil.parser import parse as parse_date
   from sklearn.preprocessing import minmax_scale
   from pointgrid import align_points_to_grid
-  from tensorflow.keras.models import Model
   from scipy.spatial.distance import cdist
   from sklearn.decomposition import PCA
-  import tensorflow.keras.backend as K
   from iiif_downloader import Manifest
   from rasterfairy import coonswarp
-  from tensorflow import compat
   from scipy.stats import kde
   from PIL import ImageFile
   import multiprocessing
@@ -99,11 +92,6 @@ if '--copy_web_only' not in sys.argv:
     print(timestamp(), 'CUML not available; using umap-learn UMAP')
     cuml_ready = False
 
-  # handle dynamic GPU memory allocation
-  tf_config = compat.v1.ConfigProto()
-  tf_config.gpu_options.allow_growth = True
-  tf_config.log_device_placement = True
-  sess = compat.v1.Session(config=tf_config)
 
   # handle truncated images in PIL (managed by Pillow)
   ImageFile.LOAD_TRUNCATED_IMAGES = True
@@ -170,7 +158,7 @@ def preprocess_kwargs(**kwargs):
 
 
 def copy_web_assets(**kwargs):
-  '''Copy the /web directory from the pixplot source to the users cwd'''
+  '''Copy the /web directory from the clipplot source to the users cwd'''
   src = join(dirname(realpath(__file__)), 'web')
   dest = join(os.getcwd(), kwargs['out_dir'])
   copy_tree(src, dest)
@@ -267,7 +255,7 @@ def get_image_paths(**kwargs):
   image_paths = None
   if not kwargs['images']:
     print('\nError: please provide an images argument, e.g.:')
-    print('pixplot --images "cat_pictures/*.jpg"\n')
+    print('clipplot --images "cat_pictures/*.jpg"\n')
     sys.exit()
   # handle list of IIIF image inputs
   if os.path.exists(kwargs['images']):
@@ -1287,8 +1275,8 @@ def write_images(**kwargs):
 
 
 def get_version():
-  '''Return the version of pixplot installed'''
-  return pkg_resources.get_distribution('pixplot').version
+  '''Return the version of clipplot installed'''
+  return pkg_resources.get_distribution('clipplot').version
 
 
 class Image:
@@ -1339,7 +1327,7 @@ class Image:
 
 def parse():
   '''Read command line args and begin data processing'''
-  description = 'Create the data required to create a PixPlot viewer'
+  description = 'Create the data required to create a clipplot viewer'
   parser = argparse.ArgumentParser(description=description, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
   parser.add_argument('--images', '-i', type=str, default=config['images'], help='path to a glob of images to process', required=False)
   parser.add_argument('--metadata', '-m', type=str, default=config['metadata'], help='path to a csv or glob of JSON files with image metadata (see readme for format)', required=False)

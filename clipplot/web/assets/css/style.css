@@ -122,20 +122,20 @@ select:disabled {
   z-index: 1;
 }
 
-#pixplot-canvas {
+#clipplot-canvas {
   height: 100%;
   width: 100%;
 }
 
-#pixplot-canvas.pan {
+#clipplot-canvas.pan {
   cursor: grab;
 }
 
-#pixplot-canvas.pan:active {
+#clipplot-canvas.pan:active {
   cursor: grabbing;
 }
 
-#pixplot-canvas.select {
+#clipplot-canvas.select {
   cursor: crosshair;
 }
 

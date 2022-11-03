@@ -849,7 +849,7 @@ Layout.prototype.onTransitionComplete = function() {
 **/
 
 function World() {
-  this.canvas = document.querySelector('#pixplot-canvas');
+  this.canvas = document.querySelector('#clipplot-canvas');
   this.scene = this.getScene();
   this.camera = this.getCamera();
   this.renderer = this.getRenderer();
@@ -1795,7 +1795,7 @@ Lasso.prototype.addMouseEventListeners = function() {
 }
 
 Lasso.prototype.isLassoEvent = function(e) {
-  return e.target.id && e.target.id === 'pixplot-canvas';
+  return e.target.id && e.target.id === 'clipplot-canvas';
 }
 
 Lasso.prototype.handleMouseDown = function(e) {
@@ -2276,7 +2276,7 @@ Picker.prototype.onMouseUp = function(e) {
   // if the click wasn't on the canvas, quit
   var cellIdx = this.select({x: click.x, y: click.y});
   if (cellIdx === -1) return; // cellIdx == -1 means the user didn't click on a cell
-  if (e.target.id !== 'pixplot-canvas') return; // whether the click hit the gl canvas
+  if (e.target.id !== 'clipplot-canvas') return; // whether the click hit the gl canvas
   var allowedDelta = config.isTouchDevice ? 10 : 0;
   if (Math.abs(click.x - this.mouseDown.x) > allowedDelta ||
       Math.abs(click.y - this.mouseDown.y) > allowedDelta) return;
@@ -3018,7 +3018,7 @@ function Filter(obj) {
   document.querySelector('#filters-desktop').appendChild(this.desktopSelect);
   document.querySelector('#filters-mobile').appendChild(this.mobileSelect);
   // allow canvas clicks to close the filter options
-  document.querySelector('#pixplot-canvas').addEventListener('click', this.hide.bind(this));
+  document.querySelector('#clipplot-canvas').addEventListener('click', this.hide.bind(this));
 }
 
 Filter.prototype.showHide = function(e) {
@@ -3973,7 +3973,7 @@ function getNested(obj, keyArr, ifEmpty) {
 **/
 
 function getCanvasSize() {
-  var elem = document.querySelector('#pixplot-canvas');
+  var elem = document.querySelector('#clipplot-canvas');
   return {
     w: elem.clientWidth,
     h: elem.clientHeight,

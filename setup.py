@@ -5,33 +5,32 @@ import sys
 
 # validate python version
 if sys.version_info < (3, 6):
-  sys.exit('Sorry, PixPlot requires Python 3.6 or later')
+  sys.exit('Sorry, ClipPlot requires Python 3.6 or later')
 
-# populate list of all paths in `./pixplot/web`
+# populate list of all paths in `./clipplot/web`
 web = []
-dirs = [join('pixplot', 'web'), join('pixplot', 'models')]
+dirs = [join('clipplot', 'web'), join('clipplot', 'models')]
 for i in dirs:
   for root, subdirs, files in os.walk(i):
     if not files:
       continue
     for file in files:
-      web.append(join(root.replace('pixplot/', '')
-                          .replace('pixplot\\', ''), file))
+      web.append(join(root.replace('clipplot/', '')
+                          .replace('clipplot\\', ''), file))
 
 setup(
-  name='pixplot',
-  version='0.0.113',
-  packages=['pixplot'],
+  name='clipplot',
+  version='0.0.2',
+  packages=['clipplot'],
   package_data={
-    'pixplot': web,
+    'clip-plot': web,
   },
   keywords=['computer-vision',
             'webgl',
             'three.js',
-            'tensorflow',
             'machine-learning'],
   description='Visualize large image collections with WebGL',
-  url='https://github.com/fr1ll/pix-plot-lite',
+  url='https://github.com/fr1ll/clip-plot',
   author='Forked from work by Douglas Duhaime',
   license='MIT',
   install_requires=[
@@ -55,7 +54,7 @@ setup(
   ],
   entry_points={
     'console_scripts': [
-      'pixplot=pixplot:parse',
+      'clipplot=clipplot:parse',
     ],
   },
 )
