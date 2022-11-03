@@ -6,7 +6,7 @@ The goal of this repo is to use [`pix-plot`](https://github.com/YaleDHLab/pix-pl
 
 If you want to go directly from a folder of JPGs to a clipplot visualization, you should use [`pix-plot`](https://github.com/YaleDHLab/pix-plot) itself.
 
-This is merely a work-in-progress attempt to enable you to generate a clipplot visualization after creating embeddings.
+This is a work-in-progress attempt to enable you to generate a PixPlot visualization after creating embeddings.
 
 ## Why do this?
 
