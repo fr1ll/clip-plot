@@ -1,0 +1,9 @@
+project:
+  output-dir: _docs
+
+website:
+  title: "clip-plot"
+  site-url: "https://fr1ll.github.io/clip-plot"
+  description: "A WebGL viewer for UMAP or TSNE-clustered images"
+  repo-branch: main
+  repo-url: "https://github.com/fr1ll/clip-plot"
