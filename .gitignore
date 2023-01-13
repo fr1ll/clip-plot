@@ -2,7 +2,6 @@
 *.pyc
 *.swp
 *.pem
-*.ipynb
 *.egg-info
 *.ruby-version
 manifest.txt
@@ -16,3 +15,4 @@ iiif-downloads
 models
 geo
 !clipplot/web/assets/vendor/dist/
+
