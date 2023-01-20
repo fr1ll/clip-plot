@@ -55,7 +55,6 @@ if "--copy_web_only" not in sys.argv:
     import csv
 
     from urllib.parse import unquote
-    from urllib.request import retrieve as download_function
 
     # Keras imports
     from tensorflow.keras.preprocessing.image import save_img, img_to_array, array_to_img
@@ -1396,7 +1395,8 @@ def write_images(**kwargs):
 
 def get_version():
     """Return the version of clipplot installed"""
-    return pkg_resources.get_distribution("clipplot").version
+    # return pkg_resources.get_distribution("clipplot").version
+    return "0.0.1"
 
 
 class Image:
