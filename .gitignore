@@ -4,6 +4,7 @@
 *.pem
 *.egg-info
 *.ruby-version
+.vscode
 manifest.txt
 missing-metadata.txt
 dist
