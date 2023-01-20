@@ -61,21 +61,8 @@ if "--copy_web_only" not in sys.argv:
     ##
     # Optional install imports
     ##
-
-    try:
-        from MulticoreTSNE import MulticoreTSNE as TSNE
-    except:
-        from sklearn.manifold import TSNE
-
-    try:
-        from hdbscan import HDBSCAN
-
-        cluster_method = "hdbscan"
-    except:
-        print(timestamp(), "HDBSCAN not available; using sklearn KMeans")
-        from sklearn.cluster import KMeans
-
-        cluster_method = "kmeans"
+    from hdbscan import HDBSCAN
+    cluster_method = "hdbscan"
 
     try:
         from cuml.manifold.umap import UMAP
@@ -801,22 +788,6 @@ def get_umap_model(**kwargs):
         )
 
 
-def get_tsne_layout(**kwargs):
-    """Get the x,y positions of images passed through a TSNE projection"""
-    print(
-        timestamp(),
-        "Creating TSNE layout with " + str(multiprocessing.cpu_count()) + " cores...",
-    )
-    out_path = get_path("layouts", "tsne", **kwargs)
-    if os.path.exists(out_path) and kwargs["use_cache"]:
-        return out_path
-    model = TSNE(
-        perplexity=kwargs.get("perplexity", 2), n_jobs=multiprocessing.cpu_count()
-    )
-    z = model.fit_transform(kwargs["vecs"])
-    return write_layout(out_path, z, **kwargs)
-
-
 def get_rasterfairy_layout(**kwargs):
     """Get the x, y position of images passed through a rasterfairy projection"""
     print(timestamp(), "Creating rasterfairy layout")
@@ -1356,17 +1327,14 @@ def get_hotspots(layouts={}, use_high_dimensional_vectors=True, **kwargs):
 
 def get_cluster_model(**kwargs):
     """Return a model with .fit() method that can be used to cluster input vectors"""
-    if cluster_method == "hdbscan":
-        config = {
-            "core_dist_n_jobs": multiprocessing.cpu_count(),
-            "min_cluster_size": kwargs["min_cluster_size"],
-            "cluster_selection_epsilon": 0.01,
-            "min_samples": 1,
-            "approx_min_span_tree": False,
-        }
-        return HDBSCAN(**config)
-    else:
-        return KMeans(n_clusters=kwargs["n_clusters"], random_state=kwargs["seed"])
+    config = {
+        "core_dist_n_jobs": multiprocessing.cpu_count(),
+        "min_cluster_size": kwargs["min_cluster_size"],
+        "cluster_selection_epsilon": 0.01,
+        "min_samples": 1,
+        "approx_min_span_tree": False,
+    }
+    return HDBSCAN(**config)
 
 
 def get_heightmap(path, label, **kwargs):
