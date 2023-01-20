@@ -54,19 +54,9 @@ if "--copy_web_only" not in sys.argv:
     import json
     import csv
 
-    ##
-    # Python 2 vs 3 imports
-    ##
+    from urllib.parse import unquote
+    from urllib.request import retrieve as download_function
 
-    try:
-        from urllib.parse import unquote  # python 3
-    except:
-        from urllib import unquote  # python 2
-
-    try:
-        from urllib.request import retrieve as download_function  # python 3
-    except:
-        from urllib.request import urlretrieve as download_function  # python 2
 
     ##
     # Optional install imports
