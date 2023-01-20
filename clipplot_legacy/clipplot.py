@@ -7,12 +7,11 @@ warnings.filterwarnings("ignore")
 # Unconditional imports
 ##
 
-from os.path import basename, join, exists, dirname, realpath
+from os.path import join, exists, dirname, realpath
 from distutils.dir_util import copy_tree
 import pkg_resources
 import datetime
 import argparse
-import shutil
 import glob2
 import uuid
 import sys
