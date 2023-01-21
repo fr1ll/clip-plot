@@ -76,5 +76,4 @@ d = { 'settings': { 'branch': 'main',
                                      'clip_plot.clip_plot.write_images': ('clip_plot.html#write_images', 'clip_plot/clip_plot.py'),
                                      'clip_plot.clip_plot.write_json': ('clip_plot.html#write_json', 'clip_plot/clip_plot.py'),
                                      'clip_plot.clip_plot.write_layout': ('clip_plot.html#write_layout', 'clip_plot/clip_plot.py'),
-                                     'clip_plot.clip_plot.write_metadata': ('clip_plot.html#write_metadata', 'clip_plot/clip_plot.py')},
-            'clip_plot.core': {'clip_plot.core.foo': ('core.html#foo', 'clip_plot/core.py')}}}
+                                     'clip_plot.clip_plot.write_metadata': ('clip_plot.html#write_metadata', 'clip_plot/clip_plot.py')}}}
