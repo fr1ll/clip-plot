@@ -12,9 +12,11 @@ warnings.filterwarnings("ignore")
 
 from os.path import join, exists, dirname, realpath
 from distutils.dir_util import copy_tree
+from pathlib import Path
 import pkg_resources
 import datetime
 import argparse
+from typing import Optional
 import glob2
 import uuid
 import sys
@@ -95,7 +97,7 @@ NB: Keras Image class objects return image.size as w,h
 
 
 # %% auto 0
-__all__ = ['config', 'timestamp', 'process_images', 'preprocess_kwargs', 'copy_web_assets', 'filter_images', 'get_image_paths',
+__all__ = ['config', 'args', 'timestamp', 'process_images', 'preprocess_kwargs', 'filter_images', 'get_image_paths',
            'stream_images', 'clean_filename', 'get_metadata_list', 'write_metadata', 'is_number', 'get_manifest',
            'get_atlas_data', 'save_atlas', 'get_layouts', 'get_inception_vectors', 'get_umap_layout',
            'process_single_layout_umap', 'process_multi_layout_umap', 'save_model', 'load_model', 'get_umap_model',
@@ -160,24 +162,7 @@ def preprocess_kwargs(**kwargs):
             kwargs[i] = [kwargs[i]]
     return kwargs
 
-
-def copy_web_assets(**kwargs):
-    """Copy the /web directory from the clipplot source to the users cwd"""
-    src = join(dirname(realpath(__file__)), "web")
-    dest = join(os.getcwd(), kwargs["out_dir"])
-    copy_tree(src, dest)
-    # write version numbers into output
-    for i in ["index.html", os.path.join("assets", "js", "tsne.js")]:
-        path = join(dest, i)
-        with open(path, "r") as f:
-            f = f.read().replace("VERSION_NUMBER", get_version())
-            with open(path, "w") as out:
-                out.write(f)
-    if kwargs["copy_web_only"]:
-        print(timestamp(), "Done!")
-        sys.exit()
-
-# %% ../nbs/00_clip_plot.ipynb 5
+# %% ../nbs/00_clip_plot.ipynb 7
 ##
 # Images
 ##
@@ -276,7 +261,7 @@ def filter_images(**kwargs):
     write_metadata(**kwargs)
     return [images, metadata]
 
-# %% ../nbs/00_clip_plot.ipynb 6
+# %% ../nbs/00_clip_plot.ipynb 8
 def get_image_paths(**kwargs):
     """Called once to provide a list of image paths--handles IIIF manifest input"""
     # handle case where --images points to iiif manifest
@@ -314,7 +299,7 @@ def get_image_paths(**kwargs):
         image_paths = image_paths[: kwargs["max_images"]]
     return image_paths
 
-# %% ../nbs/00_clip_plot.ipynb 7
+# %% ../nbs/00_clip_plot.ipynb 9
 def stream_images(**kwargs):
     """Read in all images from args[0], a list of image paths"""
     for idx, i in enumerate(kwargs["image_paths"]):
@@ -335,7 +320,7 @@ def clean_filename(s, **kwargs):
         s = s.replace(i, "")
     return s
 
-# %% ../nbs/00_clip_plot.ipynb 8
+# %% ../nbs/00_clip_plot.ipynb 10
 ##
 # Metadata
 ##
@@ -369,7 +354,7 @@ def get_metadata_list(**kwargs):
             i.update({"tags": i["category"]})
     return l
 
-# %% ../nbs/00_clip_plot.ipynb 9
+# %% ../nbs/00_clip_plot.ipynb 11
 def write_metadata(metadata, **kwargs):
     """Write list `metadata` of objects to disk"""
     if not metadata:
@@ -427,7 +412,7 @@ def write_metadata(metadata, **kwargs):
             **kwargs
         )
 
-# %% ../nbs/00_clip_plot.ipynb 10
+# %% ../nbs/00_clip_plot.ipynb 12
 def is_number(s):
     """Return a boolean indicating if a string is a number"""
     try:
@@ -436,7 +421,7 @@ def is_number(s):
     except:
         return False
 
-# %% ../nbs/00_clip_plot.ipynb 11
+# %% ../nbs/00_clip_plot.ipynb 13
 ##
 # Main
 ##
@@ -519,7 +504,7 @@ def get_manifest(**kwargs):
     }
     write_json(manifest["imagelist"], imagelist, **kwargs)
 
-# %% ../nbs/00_clip_plot.ipynb 12
+# %% ../nbs/00_clip_plot.ipynb 14
 ##
 # Atlases
 ##
@@ -590,7 +575,7 @@ def save_atlas(atlas, out_dir, n):
     out_path = join(out_dir, "atlas-{}.jpg".format(n))
     save_img(out_path, atlas)
 
-# %% ../nbs/00_clip_plot.ipynb 13
+# %% ../nbs/00_clip_plot.ipynb 15
 ##
 # Layouts
 ##
@@ -614,7 +599,7 @@ def get_layouts(**kwargs):
     }
     return layouts
 
-# %% ../nbs/00_clip_plot.ipynb 14
+# %% ../nbs/00_clip_plot.ipynb 16
 def get_inception_vectors(**kwargs):
     """Create and return Inception vector representation of Image() instances"""
     print(
@@ -644,7 +629,7 @@ def get_inception_vectors(**kwargs):
             progress_bar.update(1)
     return np.array(vecs)
 
-# %% ../nbs/00_clip_plot.ipynb 15
+# %% ../nbs/00_clip_plot.ipynb 17
 def get_umap_layout(**kwargs):
     """Get the x,y positions of images passed through a umap projection"""
     vecs = kwargs["vecs"]
@@ -808,7 +793,7 @@ def get_umap_model(**kwargs):
             transform_seed=kwargs["seed"],
         )
 
-# %% ../nbs/00_clip_plot.ipynb 16
+# %% ../nbs/00_clip_plot.ipynb 18
 def get_rasterfairy_layout(**kwargs):
     """Get the x, y position of images passed through a rasterfairy projection"""
     print(timestamp(), "Creating rasterfairy layout")
@@ -925,7 +910,7 @@ def get_custom_layout(**kwargs):
         ),
     }
 
-# %% ../nbs/00_clip_plot.ipynb 17
+# %% ../nbs/00_clip_plot.ipynb 19
 ##
 # Date Layout
 ##
@@ -1064,7 +1049,7 @@ def round_date(date, unit):
             date = str(int(date.split()[-1]) // 100) + "00"
     return date
 
-# %% ../nbs/00_clip_plot.ipynb 18
+# %% ../nbs/00_clip_plot.ipynb 20
 ##
 # Metadata Layout
 ##
@@ -1205,7 +1190,7 @@ class Box:
         self.x = None if len(args) < 4 else args[3]
         self.y = None if len(args) < 5 else args[4]
 
-# %% ../nbs/00_clip_plot.ipynb 19
+# %% ../nbs/00_clip_plot.ipynb 21
 ##
 # Geographic Layout
 ##
@@ -1253,7 +1238,7 @@ def process_geojson(geojson_path):
         json.dump(l, out)
 
 
-# %% ../nbs/00_clip_plot.ipynb 20
+# %% ../nbs/00_clip_plot.ipynb 22
 ##
 # Helpers
 ##
@@ -1410,7 +1395,7 @@ def write_images(**kwargs):
         save_img(out_path, img)
 
 
-# %% ../nbs/00_clip_plot.ipynb 21
+# %% ../nbs/00_clip_plot.ipynb 23
 def get_version():
     """
     Return the version of clipplot installed
@@ -1419,7 +1404,7 @@ def get_version():
     # return pkg_resources.get_distribution("clipplot").version
     return "0.0.1"
 
-# %% ../nbs/00_clip_plot.ipynb 22
+# %% ../nbs/00_clip_plot.ipynb 24
 class Image:
     def __init__(self, *args, **kwargs):
         self.path = args[0]
@@ -1462,13 +1447,13 @@ class Image:
             b[:h, :w, :] = a
         return b
 
-# %% ../nbs/00_clip_plot.ipynb 23
+# %% ../nbs/00_clip_plot.ipynb 25
 ##
 # Entry Point
 ##
 
 
-def parse():
+def parse(args: Optional[dict] = None):
     """Read command line args and begin data processing"""
     description = "Create the data required to create a clipplot viewer"
     parser = argparse.ArgumentParser(
@@ -1611,10 +1596,18 @@ def parse():
         default=config["geojson"],
         help="path to a GeoJSON file with shapes to be rendered on a map",
     )
-    config.update(vars(parser.parse_args()))
+    if args is None:
+        config.update(vars(parser.parse_args()))
+    else:
+        config.update(vars(parser.parse_args({})))
+        config.update(args)
     process_images(**config)
 
+# %% ../nbs/00_clip_plot.ipynb 27
+args = None
 
-# %% ../nbs/00_clip_plot.ipynb 24
+#| hide_line
+args = nb_test_args
+
 if __name__ == "__main__":
-    parse()
+    parse(args)
