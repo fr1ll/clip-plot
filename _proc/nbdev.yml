@@ -4,6 +4,6 @@ project:
 website:
   title: "clip-plot"
   site-url: "https://fr1ll.github.io/clip-plot"
-  description: "A WebGL viewer for UMAP or TSNE-clustered images"
+  description: "Interactively explore image embeddings. Based on PixPlot and clip-retrieval."
   repo-branch: main
   repo-url: "https://github.com/fr1ll/clip-plot"

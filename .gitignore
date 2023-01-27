@@ -15,5 +15,10 @@ iiif-downloads
 .ipynb_checkpoints
 models
 geo
-!clipplot/web/assets/vendor/dist/
+
+# force to include test dataset
+!datasets/smithsonian_butterflies_10/jpgs
+
+# force to include web folder
+!clip_plot/web
 
