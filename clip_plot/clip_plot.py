@@ -10,7 +10,7 @@ __all__ = ['config', 'cuml_ready', 'cluster_method', 'args', 'timestamp', 'proce
            'get_metadata_list', 'write_metadata', 'is_number', 'get_manifest', 'get_atlas_data', 'save_atlas',
            'get_layouts', 'get_inception_vectors', 'get_umap_layout', 'process_single_layout_umap',
            'process_multi_layout_umap', 'save_model', 'load_model', 'get_umap_model', 'get_rasterfairy_layout',
-           'get_lap_layout', 'get_alphabetic_layout', 'get_pointgrid_layout', 'get_custom_layout', 'get_date_layout',
+           'get_alphabetic_layout', 'get_pointgrid_layout', 'get_custom_layout', 'get_date_layout',
            'datestring_to_date', 'date_to_seconds', 'round_date', 'get_categorical_layout', 'get_categorical_boxes',
            'get_categorical_points', 'Box', 'get_geographic_layout', 'process_geojson', 'get_path', 'write_layout',
            'round_floats', 'write_json', 'read_json', 'get_hotspots', 'get_cluster_model', 'get_heightmap',
@@ -54,7 +54,6 @@ import matplotlib.pyplot as plt
 import multiprocessing
 from tqdm import tqdm
 import rasterfairy
-import lap
 import numpy as np
 import itertools
 import operator
@@ -814,36 +813,6 @@ def get_rasterfairy_layout(**kwargs):
     except Exception as exc:
         print(timestamp(), "Coonswarp rectification could not be performed", exc)
     pos = rasterfairy.transformPointCloud2D(umap)[0]
-    return write_layout(out_path, pos, **kwargs)
-
-
-def get_lap_layout(**kwargs):
-    print(timestamp(), "Creating linear assignment layout")
-    # try:
-    #     import lap
-    # except:
-    #     raise Exception("LAP must be installed to use get_lap_layout")
-    out_path = get_path("layouts", "linear-assignment", **kwargs)
-    if os.path.exists(out_path) and kwargs["use_cache"]:
-        return out_path
-    # load the umap layout
-    umap = np.array(read_json(kwargs["umap"]["variants"][0]["layout"], **kwargs))
-    umap = (umap + 1) / 2  # scale 0:1
-    # determine length of each side in square grid
-    side = math.ceil(umap.shape[0] ** (1 / 2))
-    # create square grid 0:1 in each dimension
-    grid_x, grid_y = np.meshgrid(np.linspace(0, 1, side), np.linspace(0, 1, side))
-    grid = np.dstack((grid_x, grid_y)).reshape(-1, 2)
-    # compute pairwise distance costs
-    cost = cdist(grid, umap, "sqeuclidean")
-    # increase cost
-    cost = cost * (10000000.0 / cost.max())
-    # run the linear assignment
-    min_cost, row_assignments, col_assignments = lap.lapjv(
-        np.copy(cost), extend_cost=True
-    )
-    # use the assignment vals to determine gridified positions of `arr`
-    pos = grid[col_assignments]
     return write_layout(out_path, pos, **kwargs)
 
 
