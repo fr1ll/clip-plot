@@ -16,9 +16,6 @@ iiif-downloads
 models
 geo
 
-# force to include test dataset
-!datasets/smithsonian_butterflies_10/jpgs
-
 # force to include web folder
 !clip_plot/web
 
