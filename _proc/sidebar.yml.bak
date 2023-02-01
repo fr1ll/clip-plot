@@ -1,0 +1,90 @@
+website:
+  sidebar:
+    contents:
+      - index.ipynb
+      - 00_clip_plot.ipynb
+      - 01_utils.ipynb
+      - nbdev.yml
+      - sidebar.yml
+      - styles.css
+      - section: output
+        contents:
+          - section: assets
+            contents:
+              - section: vendor
+                contents:
+                  - section: dist
+                    contents:
+                      - output/assets/vendor/dist/d3.min.js
+      - section: output
+        contents:
+          - section: assets
+            contents:
+              - section: vendor
+                contents:
+                  - section: dist
+                    contents:
+                      - output/assets/vendor/dist/gsap.min.js
+      - section: output
+        contents:
+          - section: assets
+            contents:
+              - section: vendor
+                contents:
+                  - section: dist
+                    contents:
+                      - output/assets/vendor/dist/gunzip.min.js
+      - section: output
+        contents:
+          - section: assets
+            contents:
+              - section: vendor
+                contents:
+                  - section: dist
+                    contents:
+                      - output/assets/vendor/dist/jszip.min.js
+      - section: output
+        contents:
+          - section: assets
+            contents:
+              - section: vendor
+                contents:
+                  - section: dist
+                    contents:
+                      - output/assets/vendor/dist/lodash.min.js
+      - section: output
+        contents:
+          - section: assets
+            contents:
+              - section: vendor
+                contents:
+                  - section: dist
+                    contents:
+                      - output/assets/vendor/dist/no-ui-slider.min.js
+      - section: output
+        contents:
+          - section: assets
+            contents:
+              - section: vendor
+                contents:
+                  - section: dist
+                    contents:
+                      - output/assets/vendor/dist/papaparse.min.js
+      - section: output
+        contents:
+          - section: assets
+            contents:
+              - section: vendor
+                contents:
+                  - section: dist
+                    contents:
+                      - output/assets/vendor/dist/stats.min.js
+      - section: output
+        contents:
+          - section: assets
+            contents:
+              - section: vendor
+                contents:
+                  - section: dist
+                    contents:
+                      - output/assets/vendor/dist/three.min.js
