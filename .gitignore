@@ -2,9 +2,9 @@
 *.pyc
 *.swp
 *.pem
-*.ipynb
 *.egg-info
 *.ruby-version
+.vscode
 manifest.txt
 missing-metadata.txt
 dist
@@ -15,4 +15,7 @@ iiif-downloads
 .ipynb_checkpoints
 models
 geo
-!clipplot/web/assets/vendor/dist/
+
+# force to include web folder
+!clip_plot/web
+
