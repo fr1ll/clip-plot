@@ -18,4 +18,4 @@ geo
 
 # force to include web folder
 !clip_plot/web
-
+!clip_plot/web/**/dist
