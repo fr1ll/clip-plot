@@ -6,7 +6,7 @@ import warnings
 
 
 # %% auto 0
-__all__ = ['config', 'cuml_ready', 'cluster_method', 'timestamp', 'process_images', 'preprocess_kwargs', 'copy_web_assets',
+__all__ = ['DEFAULTS', 'cuml_ready', 'cluster_method', 'timestamp', 'process_images', 'preprocess_kwargs', 'copy_web_assets',
            'filter_images', 'get_image_paths', 'stream_images', 'clean_filename', 'get_metadata_list', 'write_metadata',
            'is_number', 'get_manifest', 'get_atlas_data', 'save_atlas', 'get_layouts', 'get_inception_vectors',
            'get_umap_layout', 'process_single_layout_umap', 'process_multi_layout_umap', 'save_model', 'load_model',
@@ -83,7 +83,7 @@ from tensorflow.keras.models import Model
 from tensorflow import compat
 
 # %% ../nbs/00_clip_plot.ipynb 11
-config = {
+DEFAULTS = {
     "images": None,
     "metadata": None,
     "out_dir": "output",
@@ -94,7 +94,7 @@ config = {
     "max_clusters": 10,
     "atlas_size": 2048,
     "cell_size": 32,
-    "lod_cell_height": 128,
+    "lod_cell_height": 128, # Why is not in parser?
     "n_neighbors": [15],
     "min_dist": [0.01],
     "n_components": 2,
@@ -141,7 +141,17 @@ def process_images(**kwargs):
 
 
 def preprocess_kwargs(**kwargs):
-    """Preprocess incoming key word arguments"""
+    """Preprocess incoming key word arguments
+    Converts n_neighbors and min_dist arguments into a list
+
+    Args:
+        n_neighbors (int, list[int], default = [15])
+        min_dist (int, list[int], default = [0.01])
+
+    Notes:
+        Convenient hook for preprocessing arguments
+    
+    """
     for i in ["n_neighbors", "min_dist"]:
         if not isinstance(kwargs[i], list):
             kwargs[i] = [kwargs[i]]
@@ -149,7 +159,19 @@ def preprocess_kwargs(**kwargs):
 
 # %% ../nbs/00_clip_plot.ipynb 14
 def copy_web_assets(**kwargs):
-    """Copy the /web directory from the clipplot source to the users cwd"""
+    """Copy the /web directory from the clipplot source to the users cwd
+    
+    Args: 
+        out_dir (str): directory to copy web assets
+        copy_web_only (Optional[bool], default = False): 
+
+    Returns:
+        None
+
+    Notes:
+        Will exit process if copy_web_only is True
+    
+    """
     src = copy_root_dir / "clip_plot/web"
     # resolve will handle cases with ../ in the path
     dest = Path.cwd() / Path(kwargs["out_dir"]).resolve()
@@ -167,7 +189,28 @@ def copy_web_assets(**kwargs):
 
 # %% ../nbs/00_clip_plot.ipynb 16
 def filter_images(**kwargs):
-    """Main method for filtering images given user metadata (if provided)"""
+    """Main method for filtering images given user metadata (if provided)
+    
+    Args:
+        atlas_size (int, default = 2048)
+        cell_size (int, default = 32)
+        lod_cell_height (int, default = 128)
+        shuffle (Optional[bool], default = False) 
+
+    Returns:
+        images (list[str])
+        metadata (list[dict])
+
+    Notes:
+        Duplicate checking is wrong
+            Checking paths not names
+        Improve variable naming
+        Unnecessary stream_images
+        Assumes 'filename' is provided in metadata 
+        Overwrites metadata keyword
+        Convoluted compiling of metadata
+        missing-metadata.txt saved in current directory
+    """
     # validate that input image names are unique
     image_paths = set()
     duplicates = set()
@@ -261,7 +304,25 @@ def filter_images(**kwargs):
 
 # %% ../nbs/00_clip_plot.ipynb 17
 def get_image_paths(**kwargs):
-    """Called once to provide a list of image paths--handles IIIF manifest input"""
+    """Called once to provide a list of image paths--handles IIIF manifest input
+    
+    args:
+        images (str): directory location of images
+            - will exit if not provided
+        shuffle (bool, default = False) Optional: shuffle image list
+        max_images (Optional[int], default = None) optional: cap maximum size of images
+
+    returns:
+        image_paths list(str): list of image paths
+
+    Note:
+        Will exit if 'images' arg is not provided
+            - Should raise error instead
+        Will save downloaded IIIF files to hardcoded Manifest folder
+            No way to specify output dir
+        Old/previous images are not deleted from IIIF directory
+        See comment Carlo_comment#1
+    """
     # handle case where --images points to iiif manifest
     image_paths = None
     if not kwargs["images"]:
@@ -282,6 +343,13 @@ def get_image_paths(**kwargs):
                         Manifest(url=i).save_images(limit=1)
                     except:
                         print(timestamp(), "Could not download url " + i)
+
+                """ 
+                Carlo_comment#1
+                There are scenarios where you will be here but no http was found!
+                No warning that it did not work!
+                see tests/IIIF_examples/iif_example_bad.txt
+                """
             image_paths = sorted(
                 glob2.glob(os.path.join("iiif-downloads", "images", "*"))
             )
@@ -303,7 +371,22 @@ def get_image_paths(**kwargs):
 
 # %% ../nbs/00_clip_plot.ipynb 18
 def stream_images(**kwargs):
-    """Read in all images from args[0], a list of image paths"""
+    """Read in all images from args[0], a list of image paths
+    
+    Args:
+        image_paths (list[str]): list of image locations
+        metadata (Optional[list[dist]]): metadata for each image
+    
+
+    Returns:
+        yields Image instance
+
+    Notes:
+        image is matched to metadata by index location
+            Matching by key would be better
+            
+
+    """
     for idx, i in enumerate(kwargs["image_paths"]):
         try:
             metadata = None
@@ -315,7 +398,18 @@ def stream_images(**kwargs):
 
 
 def clean_filename(s, **kwargs):
-    """Given a string that points to a filename, return a clean filename"""
+    """Given a string that points to a filename, return a clean filename
+    
+    Args:
+        s (str): filename path
+
+    Returns:
+        s (str): clean file name
+
+    Notes:
+        kwargs is not used at all
+    
+    """
     s = unquote(os.path.basename(s))
     invalid_chars = '<>:;,"/\\|?*[]'
     for i in invalid_chars:
@@ -329,7 +423,17 @@ def clean_filename(s, **kwargs):
 
 
 def get_metadata_list(**kwargs):
-    """Return a list of objects with image metadata"""
+    """Return a list of objects with image metadata
+    
+    Args:
+        metadata (str, default = None): Metadata location
+
+    Returns:
+        l (list): 
+
+    Notes:
+        No check for 'filename' is performed
+    """
     if not kwargs.get("metadata", False):
         return []
     # handle csv metadata
@@ -358,7 +462,25 @@ def get_metadata_list(**kwargs):
 
 # %% ../nbs/00_clip_plot.ipynb 20
 def write_metadata(metadata, **kwargs):
-    """Write list `metadata` of objects to disk"""
+    """Write list `metadata` of objects to disk
+    
+    Args:
+        metadata (list[dict])
+        out_dir (str)
+
+        subfunctions:
+            write_json():
+                gzip (Optional[bool]):
+                encoding (Optional[str]): Required if gzip is provided
+                    default = 'utf8'
+
+    Returns:
+        None
+
+    Notes:
+        Improve variable naming
+    
+    """
     if not metadata:
         return
     out_dir = join(kwargs["out_dir"], "metadata")
@@ -416,7 +538,15 @@ def write_metadata(metadata, **kwargs):
 
 # %% ../nbs/00_clip_plot.ipynb 21
 def is_number(s):
-    """Return a boolean indicating if a string is a number"""
+    """Return a boolean indicating if a string is a number
+    
+    Args:
+        s (Any); Value to be checked
+
+    Returns:
+        bool
+    
+    """
     try:
         int(s)
         return True
@@ -430,7 +560,30 @@ def is_number(s):
 
 
 def get_manifest(**kwargs):
-    """Create and return the base object for the manifest output file"""
+    """Create and return the base object for the manifest output file
+    
+    Args:
+        atlas_dir (str)
+        image_paths (str)
+        plot_id (str, default = str(uuid.uuid1()))
+        out_dir (str)
+        metadata (list[dict]): Only checking if provided
+        gzip (bool, default = False)
+        atlas_size (int, default = 2048)
+        cell_size (int, default = 32)
+        lod_cell_height (int, default = 128)
+
+        Need to check subfunctions
+
+
+    Returns:
+        None
+
+    Notes:
+        Original description is inadequate
+        Function is to big (god function)
+    
+    """
     # load the atlas data
     atlas_data = json.load(open(join(kwargs["atlas_dir"], "atlas_positions.json")))
     # store each cell's size and atlas position
@@ -516,6 +669,22 @@ def get_atlas_data(**kwargs):
     """
     Generate and save to disk all atlases to be used for this visualization
     If square, center each cell in an nxn square, else use uniform height
+
+    Args:
+        out_dir (str)
+        plot_id (str, default = str(uuid.uuid1()))
+        use_cache (bool, default = False)
+        shuffle (Optional[bool], default = False)
+        atlas_size (int, default = 2048)
+        cell_size (int, default = 32)
+        lod_cell_height (int, default = 128)
+
+
+    Returns:
+        out_dir (str): Atlas location 
+
+    Notes:
+
     """
     # if the atlas files already exist, load from cache
     out_dir = os.path.join(kwargs["out_dir"], "atlases", kwargs["plot_id"])
@@ -1409,7 +1578,7 @@ def parse(args: Optional[dict] = None):
         "--images",
         "-i",
         type=str,
-        default=config["images"],
+        default=DEFAULTS["images"],
         help="path to a glob of images to process",
         required=False,
     )
@@ -1417,56 +1586,56 @@ def parse(args: Optional[dict] = None):
         "--metadata",
         "-m",
         type=str,
-        default=config["metadata"],
+        default=DEFAULTS["metadata"],
         help="path to a csv or glob of JSON files with image metadata (see readme for format)",
         required=False,
     )
     parser.add_argument(
         "--max_images",
         type=int,
-        default=config["max_images"],
+        default=DEFAULTS["max_images"],
         help="maximum number of images to process from the input glob",
         required=False,
     )
     parser.add_argument(
         "--use_cache",
         type=bool,
-        default=config["use_cache"],
+        default=DEFAULTS["use_cache"],
         help="given inputs identical to prior inputs, load outputs from cache",
         required=False,
     )
     parser.add_argument(
         "--encoding",
         type=str,
-        default=config["encoding"],
+        default=DEFAULTS["encoding"],
         help="the encoding of input metadata",
         required=False,
     )
     parser.add_argument(
         "--min_cluster_size",
         type=int,
-        default=config["min_cluster_size"],
+        default=DEFAULTS["min_cluster_size"],
         help="the minimum number of images in a cluster",
         required=False,
     )
     parser.add_argument(
         "--max_clusters",
         type=int,
-        default=config["max_clusters"],
+        default=DEFAULTS["max_clusters"],
         help="the maximum number of clusters to return",
         required=False,
     )
     parser.add_argument(
         "--out_dir",
         type=str,
-        default=config["out_dir"],
+        default=DEFAULTS["out_dir"],
         help="the directory to which outputs will be saved",
         required=False,
     )
     parser.add_argument(
         "--cell_size",
         type=int,
-        default=config["cell_size"],
+        default=DEFAULTS["cell_size"],
         help="the size of atlas cells in px",
         required=False,
     )
@@ -1474,32 +1643,32 @@ def parse(args: Optional[dict] = None):
         "--n_neighbors",
         nargs="+",
         type=int,
-        default=config["n_neighbors"],
+        default=DEFAULTS["n_neighbors"],
         help="the n_neighbors arguments for UMAP",
     )
     parser.add_argument(
         "--min_dist",
         nargs="+",
         type=float,
-        default=config["min_dist"],
+        default=DEFAULTS["min_dist"],
         help="the min_dist arguments for UMAP",
     )
     parser.add_argument(
         "--n_components",
         type=int,
-        default=config["n_components"],
+        default=DEFAULTS["n_components"],
         help="the n_components argument for UMAP",
     )
     parser.add_argument(
         "--metric",
         type=str,
-        default=config["metric"],
+        default=DEFAULTS["metric"],
         help="the metric argument for umap",
     )
     parser.add_argument(
         "--pointgrid_fill",
         type=float,
-        default=config["pointgrid_fill"],
+        default=DEFAULTS["pointgrid_fill"],
         help="float 0:1 that determines sparsity of jittered distributions (lower means more sparse)",
     )
     parser.add_argument(
@@ -1510,7 +1679,7 @@ def parse(args: Optional[dict] = None):
     parser.add_argument(
         "--min_size",
         type=float,
-        default=config["min_size"],
+        default=DEFAULTS["min_size"],
         help="min size of cropped images",
     )
     parser.add_argument(
@@ -1524,24 +1693,25 @@ def parse(args: Optional[dict] = None):
     parser.add_argument(
         "--plot_id",
         type=str,
-        default=config["plot_id"],
+        default=DEFAULTS["plot_id"],
         help="unique id for a plot; useful for resuming processing on a started plot",
     )
     parser.add_argument(
-        "--seed", type=int, default=config["seed"], help="seed for random processes"
+        "--seed", type=int, default=DEFAULTS["seed"], help="seed for random processes"
     )
     parser.add_argument(
         "--n_clusters",
         type=int,
-        default=config["n_clusters"],
+        default=DEFAULTS["n_clusters"],
         help="number of clusters to use when clustering with kmeans",
     )
     parser.add_argument(
         "--geojson",
         type=str,
-        default=config["geojson"],
+        default=DEFAULTS["geojson"],
         help="path to a GeoJSON file with shapes to be rendered on a map",
     )
+    config = DEFAULTS.copy()
     if in_ipython():
         config.update(vars(parser.parse_args({})))
     else:
@@ -1568,10 +1738,12 @@ if __name__ == "__main__":
         config["test_mode"] = True
         test_images = copy_root_dir/"tests/smithsonian_butterflies_10/jpgs/*.jpg"
         test_out_dir = copy_root_dir/"tests/smithsonian_butterflies_10/output_test_temp"
+        meta_dir = copy_root_dir/"tests/smithsonian_butterflies_10/meta_data/good_meta.csv"
         if Path(test_out_dir).exists():
             rmtree(test_out_dir)
 
         config["images"] = test_images.as_posix()
         config["out_dir"] = test_out_dir.as_posix()
+        config["metadata"] = meta_dir.as_posix()
 
     process_images(**config)
