@@ -31,7 +31,7 @@ from pathlib import Path
 import pkg_resources
 import datetime
 import argparse
-from typing import Optional
+from typing import Optional, List
 import glob2
 import uuid
 import sys
@@ -85,7 +85,7 @@ from tensorflow import compat
 # %% ../nbs/00_clip_plot.ipynb 11
 DEFAULTS = {
     "images": None,
-    "metadata": None,
+    "meta_dir": None,
     "out_dir": "output",
     "max_images": None,
     "use_cache": True,
@@ -128,7 +128,12 @@ NB: Keras Image class objects return image.size as w,h
 def process_images(**kwargs):
     """Main method for processing user images and metadata"""
     kwargs = preprocess_kwargs(**kwargs)
-    copy_web_assets(**kwargs)
+
+    copy_web_assets(out_dir=kwargs['out_dir'])
+    if kwargs["copy_web_only"]:
+        print(timestamp(), "Done!")
+        sys.exit()
+    
     np.random.seed(kwargs["seed"])
     compat.v1.set_random_seed(kwargs["seed"])
     kwargs["out_dir"] = join(kwargs["out_dir"], "data")
@@ -158,24 +163,22 @@ def preprocess_kwargs(**kwargs):
     return kwargs
 
 # %% ../nbs/00_clip_plot.ipynb 14
-def copy_web_assets(**kwargs):
-    """Copy the /web directory from the clipplot source to the users cwd
+def copy_web_assets(out_dir: str) -> None:
+    """Copy the /web directory from the clipplot source to the users cwd.
+    Copies version number into assets.
     
     Args: 
         out_dir (str): directory to copy web assets
-        copy_web_only (Optional[bool], default = False): 
 
     Returns:
         None
-
-    Notes:
-        Will exit process if copy_web_only is True
-    
     """
     src = copy_root_dir / "clip_plot/web"
+
     # resolve will handle cases with ../ in the path
-    dest = Path.cwd() / Path(kwargs["out_dir"]).resolve()
+    dest = Path.cwd() / Path(out_dir).resolve()
     utils.copytree_agnostic(src.as_posix(), dest.as_posix())
+
     # write version numbers into output
     for i in ["index.html", os.path.join("assets", "js", "tsne.js")]:
         path = join(dest, i)
@@ -183,9 +186,7 @@ def copy_web_assets(**kwargs):
             f = f.read().replace("VERSION_NUMBER", get_version())
             with open(path, "w") as out:
                 out.write(f)
-    if kwargs["copy_web_only"]:
-        print(timestamp(), "Done!")
-        sys.exit()
+
 
 # %% ../nbs/00_clip_plot.ipynb 16
 def filter_images(**kwargs):
@@ -212,23 +213,26 @@ def filter_images(**kwargs):
         missing-metadata.txt saved in current directory
     """
     # validate that input image names are unique
-    image_paths = set()
-    duplicates = set()
-    for i in stream_images(image_paths=get_image_paths(**kwargs)):
-        if i.path in image_paths:
-            duplicates.add(i.path)
-        image_paths.add(i.path)
+    image_paths = get_image_paths(images=kwargs["images"], out_dir=kwargs["out_dir"])
+    image_names = list(map(clean_filename,image_paths))
+    duplicates = set([x for x in image_names if image_names.count(x) > 1])
+
     if duplicates:
         raise Exception(
-            """
-      Image filenames should be unique, but the following filenames are duplicated\n
-      {}
-      """.format(
-                "\n".join(duplicates)
-            )
-        )
-    if not kwargs.get("shuffle", False):
+            """Image filenames should be unique, but the following 
+            filenames are duplicated\n{}""".format("\n".join(duplicates)))
+    
+    # optionally shuffle the image_paths
+    if kwargs.get("shuffle", False):
+        print(timestamp(), "Shuffling input images")
+        random.Random(kwargs["seed"]).shuffle(image_paths)
+    else:
         image_paths = sorted(image_paths)
+
+    # optionally limit the number of images in image_paths
+    if kwargs.get("max_images", False):
+        image_paths = image_paths[: kwargs["max_images"]]        
+
     # process and filter the images
     filtered_image_paths = []
     for i in stream_images(image_paths=image_paths):
@@ -270,10 +274,10 @@ def filter_images(**kwargs):
     if len(filtered_image_paths) == 0:
         raise Exception("No images were found! Please check your input image glob.")
     # handle the case user provided no metadata
-    if not kwargs.get("metadata", False):
+    if not kwargs.get("meta_dir", False):
         return [filtered_image_paths, []]
     # handle user metadata: retain only records with image and metadata
-    l = get_metadata_list(**kwargs)
+    l = get_metadata_list(meta_dir=kwargs['meta_dir'])
     meta_bn = set([clean_filename(i.get("filename", "")) for i in l])
     img_bn = set([clean_filename(i, **kwargs) for i in filtered_image_paths])
     # identify images with metadata and those without metadata
@@ -303,71 +307,60 @@ def filter_images(**kwargs):
     return [images, metadata]
 
 # %% ../nbs/00_clip_plot.ipynb 17
-def get_image_paths(**kwargs):
+def get_image_paths(images:str, out_dir: str) -> List[str]:
     """Called once to provide a list of image paths--handles IIIF manifest input
     
     args:
         images (str): directory location of images
-            - will exit if not provided
-        shuffle (bool, default = False) Optional: shuffle image list
-        max_images (Optional[int], default = None) optional: cap maximum size of images
+        out_dir (str): output directory for downloaded IIIF files
 
     returns:
         image_paths list(str): list of image paths
 
     Note:
-        Will exit if 'images' arg is not provided
-            - Should raise error instead
-        Will save downloaded IIIF files to hardcoded Manifest folder
-            No way to specify output dir
         Old/previous images are not deleted from IIIF directory
-        See comment Carlo_comment#1
+
+    Todo:
+        Consider separate function that handles IIIF images
+        from glob images
     """
-    # handle case where --images points to iiif manifest
+
     image_paths = None
-    if not kwargs["images"]:
-        print("\nError: please provide an images argument, e.g.:")
-        print('clipplot --images "cat_pictures/*.jpg"\n')
-        sys.exit(kwargs)
 
-    print("\n"*5)
-    print(kwargs["images"])
-    print("\n"*5)
-    # handle list of IIIF image inputs
-    if os.path.exists(kwargs["images"]):
-        with open(kwargs["images"]) as f:
-            f = [i.strip() for i in f.read().split("\n") if i.strip()]
-            for i in f:
-                if i.startswith("http"):
-                    try:
-                        Manifest(url=i).save_images(limit=1)
-                    except:
-                        print(timestamp(), "Could not download url " + i)
+    # Is images a iiif file or image directory?
+    if os.path.isfile(images):
+        # Handle list of IIIF image inputs
+        iiif_dir = os.path.join(out_dir,"iiif-downloads")
 
-                """ 
-                Carlo_comment#1
-                There are scenarios where you will be here but no http was found!
-                No warning that it did not work!
-                see tests/IIIF_examples/iif_example_bad.txt
-                """
-            image_paths = sorted(
-                glob2.glob(os.path.join("iiif-downloads", "images", "*"))
-            )
+        # Check if directory already contains anything
+        if os.path.exists(iiif_dir) and os.listdir(iiif_dir):
+            print("Warning: IIIF directory already contains content!")
+
+        with open(images) as f:
+            urls = [url.strip() for url in f.read().split("\n") if url.startswith("http")]
+            count = 0
+            for url in urls:
+                try:
+                    Manifest(url=url, out_dir=iiif_dir).save_images(limit=1)
+                    count += 1
+                except:
+                    print(timestamp(), "Could not download url " + url)
+
+            if count == 0:
+                raise Exception('No IIIF images were successfully downloaded!')
+
+            image_paths = glob2.glob(os.path.join(out_dir,"iiif-downloads", "images", "*"))
+   
     # handle case where images flag points to a glob of images
     if not image_paths:
-        image_paths = sorted(glob2.glob(kwargs["images"]))
+        image_paths = glob2.glob(images)
+
     # handle case user provided no images
     if not image_paths:
-        print("\nError: No input images were found. Please check your --images glob\n")
-        sys.exit()
-    # optionally shuffle the image_paths
-    if kwargs.get("shuffle", False):
-        print(timestamp(), "Shuffling input images")
-        random.Random(kwargs["seed"]).shuffle(image_paths)
-    # optionally limit the number of images in image_paths
-    if kwargs.get("max_images", False):
-        image_paths = image_paths[: kwargs["max_images"]]
+        raise FileNotFoundError("Error: No input images were found. Please check your --images glob")
+
     return image_paths
+
 
 # %% ../nbs/00_clip_plot.ipynb 18
 def stream_images(**kwargs):
@@ -422,43 +415,51 @@ def clean_filename(s, **kwargs):
 ##
 
 
-def get_metadata_list(**kwargs):
-    """Return a list of objects with image metadata
+def get_metadata_list(meta_dir: str) -> List[dict]:
+    """Return a list of objects with image metadata.
+
+    Will create 'tags' key if 'category' is in metadata
+    but not 'tags'.
     
     Args:
         metadata (str, default = None): Metadata location
 
     Returns:
-        l (list): 
+        l (List[dict]): List of metadata 
 
     Notes:
         No check for 'filename' is performed
+
+    Todo:
+        Think about separating .csv and json functionality.
+        Can we use pandas numpy to process csv?
     """
-    if not kwargs.get("metadata", False):
-        return []
+
     # handle csv metadata
-    l = []
-    if kwargs["metadata"].endswith(".csv"):
-        with open(kwargs["metadata"]) as f:
+    metaList = []
+    if meta_dir.endswith(".csv"):
+        with open(meta_dir) as f:
             reader = csv.reader(f)
             headers = [i.lower() for i in next(reader)]
             for i in reader:
-                l.append(
+                metaList.append(
                     {
                         headers[j]: i[j] if len(i) > j and i[j] else ""
                         for j, _ in enumerate(headers)
                     }
                 )
+    
     # handle json metadata
     else:
-        for i in glob2.glob(kwargs["metadata"]):
+        for i in glob2.glob(meta_dir):
             with open(i) as f:
-                l.append(json.load(f))
+                metaList.append(json.load(f))
+
     # if the user provided a category but not a tag, use the category as the tag
-    for i in l:
-        if i.get("category", False) and not i.get("tags", False):
-            i.update({"tags": i["category"]})
-    return l
+    for i in metaList:
+        if "category" in metaList and "tags" in metaList is False:
+            metaList.update({"tags": i["category"]})
+    return metaList
 
 # %% ../nbs/00_clip_plot.ipynb 20
 def write_metadata(metadata, **kwargs):
@@ -1586,7 +1587,7 @@ def parse(args: Optional[dict] = None):
         "--metadata",
         "-m",
         type=str,
-        default=DEFAULTS["metadata"],
+        default=DEFAULTS["meta_dir"],
         help="path to a csv or glob of JSON files with image metadata (see readme for format)",
         required=False,
     )
@@ -1727,7 +1728,7 @@ def get_clip_plot_root() -> Path:
     else:
         return Path(__file__).parents[1]
 
-# %% ../nbs/00_clip_plot.ipynb 41
+# %% ../nbs/00_clip_plot.ipynb 42
 if __name__ == "__main__":
     config = parse()
     copy_root_dir = get_clip_plot_root()
@@ -1736,14 +1737,7 @@ if __name__ == "__main__":
         # at least for now, this means we're in testing mode.
         # TODO: pass explicit "test_mode" flag to argparse
         config["test_mode"] = True
-        test_images = copy_root_dir/"tests/smithsonian_butterflies_10/jpgs/*.jpg"
-        test_out_dir = copy_root_dir/"tests/smithsonian_butterflies_10/output_test_temp"
-        meta_dir = copy_root_dir/"tests/smithsonian_butterflies_10/meta_data/good_meta.csv"
-        if Path(test_out_dir).exists():
-            rmtree(test_out_dir)
-
-        config["images"] = test_images.as_posix()
-        config["out_dir"] = test_out_dir.as_posix()
-        config["metadata"] = meta_dir.as_posix()
+        config = test_butterfly(config)
+        
 
     process_images(**config)
