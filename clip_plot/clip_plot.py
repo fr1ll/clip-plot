@@ -6,15 +6,16 @@ import warnings
 
 
 # %% auto 0
-__all__ = ['DEFAULTS', 'cuml_ready', 'cluster_method', 'timestamp', 'process_images', 'preprocess_kwargs', 'copy_web_assets',
-           'filter_images', 'get_image_paths', 'stream_images', 'clean_filename', 'get_metadata_list', 'write_metadata',
-           'is_number', 'get_manifest', 'get_atlas_data', 'save_atlas', 'get_layouts', 'get_inception_vectors',
-           'get_umap_layout', 'process_single_layout_umap', 'process_multi_layout_umap', 'save_model', 'load_model',
-           'get_umap_model', 'get_rasterfairy_layout', 'get_alphabetic_layout', 'get_pointgrid_layout',
-           'get_custom_layout', 'get_date_layout', 'datestring_to_date', 'date_to_seconds', 'round_date',
-           'get_categorical_layout', 'get_categorical_boxes', 'get_categorical_points', 'Box', 'get_geographic_layout',
-           'process_geojson', 'get_path', 'write_layout', 'round_floats', 'write_json', 'read_json', 'get_hotspots',
-           'get_cluster_model', 'get_heightmap', 'write_images', 'get_version', 'Image', 'parse', 'get_clip_plot_root']
+__all__ = ['DEFAULTS', 'FILE_NAME', 'cuml_ready', 'cluster_method', 'timestamp', 'process_images', 'preprocess_kwargs',
+           'copy_web_assets', 'filter_images', 'get_image_paths', 'stream_images', 'clean_filename',
+           'get_metadata_list', 'write_metadata', 'is_number', 'get_manifest', 'get_atlas_data', 'save_atlas',
+           'get_layouts', 'get_inception_vectors', 'get_umap_layout', 'process_single_layout_umap',
+           'process_multi_layout_umap', 'save_model', 'load_model', 'get_umap_model', 'get_rasterfairy_layout',
+           'get_alphabetic_layout', 'get_pointgrid_layout', 'get_custom_layout', 'get_date_layout',
+           'datestring_to_date', 'date_to_seconds', 'round_date', 'get_categorical_layout', 'get_categorical_boxes',
+           'get_categorical_points', 'Box', 'get_geographic_layout', 'process_geojson', 'get_path', 'write_layout',
+           'round_floats', 'write_json', 'read_json', 'get_hotspots', 'get_cluster_model', 'get_heightmap',
+           'write_images', 'get_version', 'Image', 'parse', 'get_clip_plot_root']
 
 # %% ../nbs/00_clip_plot.ipynb 4
 from . import utils
@@ -110,6 +111,8 @@ DEFAULTS = {
     "geojson": None,
 }
 
+FILE_NAME = "filename"  # Filename name key
+
 print(timestamp(), "Ignoring cuml-umap for now to avoid conditional import")
 print("we may add cuml-umap option back later")
 cuml_ready = False
@@ -138,6 +141,8 @@ def process_images(**kwargs):
     compat.v1.set_random_seed(kwargs["seed"])
     kwargs["out_dir"] = join(kwargs["out_dir"], "data")
     kwargs["image_paths"], kwargs["metadata"] = filter_images(**kwargs)
+    write_metadata(**kwargs)
+    
     kwargs["atlas_dir"] = get_atlas_data(**kwargs)
     kwargs["vecs"] = get_inception_vectors(**kwargs)
     get_manifest(**kwargs)
@@ -207,8 +212,7 @@ def filter_images(**kwargs):
             Checking paths not names
         Improve variable naming
         Unnecessary stream_images
-        Assumes 'filename' is provided in metadata 
-        Overwrites metadata keyword
+        Assumes 'filename' is provided in metadata
         Convoluted compiling of metadata
         missing-metadata.txt saved in current directory
     """
@@ -234,55 +238,61 @@ def filter_images(**kwargs):
         image_paths = image_paths[: kwargs["max_images"]]        
 
     # process and filter the images
-    filtered_image_paths = []
-    for i in stream_images(image_paths=image_paths):
+    filtered_image_paths = {}
+    for img in stream_images(image_paths=image_paths):
         # get image height and width
-        w, h = i.original.size
+        w, h = img.original.size
         # remove images with 0 height or width when resized to lod height
         if (h == 0) or (w == 0):
             print(
                 timestamp(),
-                "Skipping {} because it contains 0 height or width".format(i.path),
+                "Skipping {} because it contains 0 height or width".format(img.path),
             )
             continue
         # remove images that have 0 height or width when resized
         try:
-            resized = i.resize_to_max(kwargs["lod_cell_height"])
+            resized = img.resize_to_max(kwargs["lod_cell_height"])
         except ValueError:
             print(
                 timestamp(),
                 "Skipping {} because it contains 0 height or width when resized".format(
-                    i.path
+                    img.path
                 ),
             )
             continue
         except OSError:
             print(
                 timestamp(),
-                "Skipping {} because it could not be resized".format(i.path),
+                "Skipping {} because it could not be resized".format(img.path),
             )
             continue
         # remove images that are too wide for the atlas
         if (w / h) > (kwargs["atlas_size"] / kwargs["cell_size"]):
             print(
                 timestamp(),
-                "Skipping {} because its dimensions are oblong".format(i.path),
+                "Skipping {} because its dimensions are oblong".format(img.path),
             )
             continue
-        filtered_image_paths.append(i.path)
+        filtered_image_paths[img.path] = img.filename
+
     # if there are no remaining images, throw an error
     if len(filtered_image_paths) == 0:
         raise Exception("No images were found! Please check your input image glob.")
+
     # handle the case user provided no metadata
     if not kwargs.get("meta_dir", False):
-        return [filtered_image_paths, []]
+        return [filtered_image_paths.keys(), []]
+
     # handle user metadata: retain only records with image and metadata
-    l = get_metadata_list(meta_dir=kwargs['meta_dir'])
-    meta_bn = set([clean_filename(i.get("filename", "")) for i in l])
-    img_bn = set([clean_filename(i, **kwargs) for i in filtered_image_paths])
+    metaList = get_metadata_list(meta_dir=kwargs['meta_dir'])
+    metaDict = {clean_filename(i.get(FILE_NAME, "")): i for i in metaList}
+    meta_bn = set(metaDict.keys())
+    img_bn = set(filtered_image_paths.values())
+
     # identify images with metadata and those without metadata
     meta_present = img_bn.intersection(meta_bn)
     meta_missing = list(img_bn - meta_bn)
+
     # notify the user of images that are missing metadata
     if meta_missing:
         print(
@@ -292,37 +302,44 @@ def filter_images(**kwargs):
         )
         if len(meta_missing) > 10:
             print(timestamp(), " ...", len(meta_missing) - 10, "more")
-        with open("missing-metadata.txt", "w") as out:
+
+        if os.path.exists(kwargs['out_dir']) is False:
+            os.makedirs(kwargs['out_dir'])
+            
+        missing_dir = os.path.join(kwargs['out_dir'],"missing-metadata.txt")
+        with open(missing_dir, "w") as out:
             out.write("\n".join(meta_missing))
+
+    if not meta_present:
+        raise Exception( f"""No image has matching metadata. Check if '{FILE_NAME}' key was provided in metadata files""")
+
     # get the sorted lists of images and metadata
-    d = {clean_filename(i["filename"]): i for i in l}
     images = []
     metadata = []
-    for i in filtered_image_paths:
-        if clean_filename(i, **kwargs) in meta_present:
-            images.append(i)
-            metadata.append(copy.deepcopy(d[clean_filename(i, **kwargs)]))
-    kwargs["metadata"] = metadata
-    write_metadata(**kwargs)
+    for path, fileName in filtered_image_paths.items():
+        if fileName in meta_present:
+            images.append(path)
+            metadata.append(copy.deepcopy(metaDict[fileName]))
+
     return [images, metadata]
 
 # %% ../nbs/00_clip_plot.ipynb 17
 def get_image_paths(images:str, out_dir: str) -> List[str]:
-    """Called once to provide a list of image paths--handles IIIF manifest input
+    """Called once to provide a list of image paths--handles IIIF manifest input.
     
     args:
-        images (str): directory location of images
-        out_dir (str): output directory for downloaded IIIF files
+        images (str): directory location of images.
+        out_dir (str): output directory for downloaded IIIF files.
 
     returns:
-        image_paths list(str): list of image paths
+        image_paths list(str): list of image paths.
 
     Note:
-        Old/previous images are not deleted from IIIF directory
+        Old/previous images are not deleted from IIIF directory.
 
     Todo:
         Consider separate function that handles IIIF images
-        from glob images
+        from glob images.
     """
 
     image_paths = None
@@ -492,7 +509,7 @@ def write_metadata(metadata, **kwargs):
     # create the lists of images with each tag
     d = defaultdict(list)
     for i in metadata:
-        filename = clean_filename(i["filename"])
+        filename = clean_filename(i[FILE_NAME])
         i["tags"] = [j.strip() for j in i.get("tags", "").split("|")]
         for j in i["tags"]:
             d["__".join(j.split())].append(filename)
@@ -515,7 +532,7 @@ def write_metadata(metadata, **kwargs):
     for i in metadata:
         date = i.get("year", "")
         if date:
-            date_d[date].append(clean_filename(i["filename"]))
+            date_d[date].append(clean_filename(i[FILE_NAME]))
     # find the min and max dates to show on the date slider
     dates = np.array([int(i.strip()) for i in date_d if is_number(i)])
     domain = {"min": float("inf"), "max": -float("inf")}
@@ -862,7 +879,7 @@ def process_multi_layout_umap(v, **kwargs):
             {
                 "n_neighbors": n_neighbors,
                 "min_dist": min_dist,
-                "filename": filename,
+                FILE_NAME: filename,
                 "out_path": out_path,
             }
         )
@@ -907,7 +924,7 @@ def process_multi_layout_umap(v, **kwargs):
                 "min_dist": i["min_dist"],
                 "layout": i["out_path"],
                 "jittered": get_pointgrid_layout(
-                    i["out_path"], i["filename"], **kwargs
+                    i["out_path"], i[FILE_NAME], **kwargs
                 ),
             }
         )
@@ -1529,6 +1546,7 @@ def get_version():
 class Image:
     def __init__(self, *args, **kwargs):
         self.path = args[0]
+        self.filename = clean_filename(self.path)
         self.original = load_img(self.path)
         self.metadata = kwargs["metadata"] if kwargs["metadata"] else {}
 
