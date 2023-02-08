@@ -78,5 +78,4 @@ d = { 'settings': { 'branch': 'main',
                                      'clip_plot.clip_plot.write_json': ('clip_plot.html#write_json', 'clip_plot/clip_plot.py'),
                                      'clip_plot.clip_plot.write_layout': ('clip_plot.html#write_layout', 'clip_plot/clip_plot.py'),
                                      'clip_plot.clip_plot.write_metadata': ('clip_plot.html#write_metadata', 'clip_plot/clip_plot.py')},
-            'clip_plot.printme': {},
             'clip_plot.utils': {'clip_plot.utils.copytree_agnostic': ('utils.html#copytree_agnostic', 'clip_plot/utils.py')}}}
