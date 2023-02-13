@@ -208,13 +208,8 @@ def filter_images(**kwargs):
         metadata (list[dict])
 
     Notes:
-        Duplicate checking is wrong
-            Checking paths not names
-        Improve variable naming
-        Unnecessary stream_images
         Assumes 'filename' is provided in metadata
         Convoluted compiling of metadata
-        missing-metadata.txt saved in current directory
     """
     # validate that input image names are unique
     image_paths = get_image_paths(images=kwargs["images"], out_dir=kwargs["out_dir"])
@@ -380,7 +375,7 @@ def get_image_paths(images:str, out_dir: str) -> List[str]:
 
 
 # %% ../nbs/00_clip_plot.ipynb 18
-def stream_images(**kwargs):
+def stream_images(image_paths: List[str], metadata: Optional[List[dict]] = None) -> 'Image':
     """Read in all images from args[0], a list of image paths
     
     Args:
@@ -397,14 +392,14 @@ def stream_images(**kwargs):
             
 
     """
-    for idx, i in enumerate(kwargs["image_paths"]):
+    for idx, imgPath in enumerate(image_paths):
         try:
-            metadata = None
-            if kwargs.get("metadata", False) and kwargs["metadata"][idx]:
-                metadata = kwargs["metadata"][idx]
-            yield Image(i, metadata=metadata)
+            meta = None
+            if metadata and metadata[idx]:
+                meta = metadata[idx]
+            yield Image(imgPath, metadata=meta)
         except Exception as exc:
-            print(timestamp(), "Image", i, "could not be processed --", exc)
+            print(timestamp(), "Image", imgPath, "could not be processed --", exc)
 
 
 def clean_filename(s, **kwargs):
@@ -722,7 +717,7 @@ def get_atlas_data(**kwargs):
     y = 0  # y pos in atlas
     positions = []  # l[cell_idx] = atlas data
     atlas = np.zeros((kwargs["atlas_size"], kwargs["atlas_size"], 3))
-    for idx, i in enumerate(stream_images(**kwargs)):
+    for idx, i in enumerate(stream_images(image_paths=kwargs["image_paths"], metadata=kwargs["metadata"])):
         cell_data = i.resize_to_height(kwargs["cell_size"])
         _, v, _ = cell_data.shape
         appendable = False
@@ -806,7 +801,7 @@ def get_inception_vectors(**kwargs):
     print(timestamp(), "Creating image array")
     vecs = []
     with tqdm(total=len(kwargs["image_paths"])) as progress_bar:
-        for idx, i in enumerate(stream_images(**kwargs)):
+        for idx, i in enumerate(stream_images(image_paths=kwargs["image_paths"], metadata=kwargs["metadata"])):
             vector_path = os.path.join(vector_dir, clean_filename(i.path) + ".npy")
             if os.path.exists(vector_path) and kwargs["use_cache"]:
                 vec = np.load(vector_path)
@@ -1046,7 +1041,7 @@ def get_custom_layout(**kwargs):
         return
     found_coords = False
     coords = []
-    for i in stream_images(**kwargs):
+    for i in stream_images(image_paths=kwargs["image_paths"], metadata=kwargs["metadata"]):
         x = i.metadata.get("x")
         y = i.metadata.get("y")
         if x and y:
@@ -1095,7 +1090,7 @@ def get_date_layout(cols=3, bin_units="years", **kwargs):
         }
     # date layout is not cached, so fetch dates and process
     print(timestamp(), "Creating date layout with {} columns".format(cols))
-    datestrings = [i.metadata.get("year", "no_date") for i in stream_images(**kwargs)]
+    datestrings = [i.metadata.get("year", "no_date") for i in stream_images(image_paths=kwargs["image_paths"], metadata=kwargs["metadata"])]
     dates = [datestring_to_date(i) for i in datestrings]
     rounded_dates = [round_date(i, bin_units) for i in dates]
     # create d[formatted_date] = [indices into datestrings of dates that round to formatted_date]
@@ -1234,7 +1229,7 @@ def get_categorical_layout(null_category="Other", margin=2, **kwargs):
     for idx, i in enumerate(keys_and_counts):
         offsets[i["key"]] += sum([j["count"] for j in keys_and_counts[:idx]])
     sorted_points = []
-    for idx, i in enumerate(stream_images(**kwargs)):
+    for idx, i in enumerate(stream_images(image_paths=kwargs["image_paths"], metadata=kwargs["metadata"])):
         category = i.metadata.get("category", null_category)
         sorted_points.append(points[offsets[category] + counts[category]])
         counts[category] += 1
@@ -1345,7 +1340,7 @@ def get_geographic_layout(**kwargs):
     out_path = get_path("layouts", "geographic", **kwargs)
     l = []
     coords = False
-    for idx, i in enumerate(stream_images(**kwargs)):
+    for idx, i in enumerate(stream_images(image_paths=kwargs["image_paths"], metadata=kwargs["metadata"])):
         lat = float(i.metadata.get("lat", 0)) / 180
         lng = (
             float(i.metadata.get("lng", 0)) / 180
@@ -1513,7 +1508,7 @@ def get_heightmap(path, label, **kwargs):
 
 def write_images(**kwargs):
     """Write all originals and thumbs to the output dir"""
-    for i in stream_images(**kwargs):
+    for i in stream_images(image_paths=kwargs["image_paths"], metadata=kwargs["metadata"]):
         filename = clean_filename(i.path)
         # copy original for lightbox
         out_dir = join(kwargs["out_dir"], "originals")
