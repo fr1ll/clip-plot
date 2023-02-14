@@ -32,7 +32,7 @@ from pathlib import Path
 import pkg_resources
 import datetime
 import argparse
-from typing import Optional, List
+from typing import Optional, List, Union, Tuple
 import glob2
 import uuid
 import sys
@@ -78,12 +78,12 @@ from urllib.parse import unquote
 # Keras imports
 # from tensorflow.keras.preprocessing.image import save_img, img_to_array, array_to_img
 from tensorflow.keras.applications.inception_v3 import preprocess_input
-from tensorflow.keras.applications import InceptionV3, imagenet_utils
+from tensorflow.keras.applications import InceptionV3, imagenet_utils # imagenet_utils not being used
 # from tensorflow.keras.preprocessing.image import load_img
 from tensorflow.keras.models import Model
 from tensorflow import compat
 
-# %% ../nbs/00_clip_plot.ipynb 12
+# %% ../nbs/00_clip_plot.ipynb 11
 DEFAULTS = {
     "images": None,
     "meta_dir": None,
@@ -127,7 +127,7 @@ NB: Keras Image class objects return image.size as w,h
     Numpy array representations of images return image.shape as h,w,c
 """
 
-# %% ../nbs/00_clip_plot.ipynb 14
+# %% ../nbs/00_clip_plot.ipynb 13
 def process_images(**kwargs):
     """Main method for processing user images and metadata"""
     kwargs = preprocess_kwargs(**kwargs)
@@ -167,7 +167,7 @@ def preprocess_kwargs(**kwargs):
             kwargs[i] = [kwargs[i]]
     return kwargs
 
-# %% ../nbs/00_clip_plot.ipynb 15
+# %% ../nbs/00_clip_plot.ipynb 14
 def copy_web_assets(out_dir: str) -> None:
     """Copy the /web directory from the clipplot source to the users cwd.
     Copies version number into assets.
@@ -193,7 +193,7 @@ def copy_web_assets(out_dir: str) -> None:
                 out.write(f)
 
 
-# %% ../nbs/00_clip_plot.ipynb 17
+# %% ../nbs/00_clip_plot.ipynb 16
 def filter_images(**kwargs):
     """Main method for filtering images given user metadata (if provided)
 
@@ -245,41 +245,13 @@ def filter_images(**kwargs):
 
     # process and filter the images
     filtered_image_paths = {}
+    oblong_ratio = kwargs["atlas_size"] / kwargs["cell_size"]
     for img in Image.stream_images(image_paths=image_paths):
-        # get image height and width
-        w, h = img.original.size
-        # remove images with 0 height or width when resized to lod height
-        if (h == 0) or (w == 0):
-            print(
-                timestamp(),
-                "Skipping {} because it contains 0 height or width".format(img.path),
-            )
-            continue
-        # remove images that have 0 height or width when resized
-        try:
-            resized = img.resize_to_max(kwargs["lod_cell_height"])
-        except ValueError:
-            print(
-                timestamp(),
-                "Skipping {} because it contains 0 height or width when resized".format(
-                    img.path
-                ),
-            )
-            continue
-        except OSError:
-            print(
-                timestamp(),
-                "Skipping {} because it could not be resized".format(img.path),
-            )
-            continue
-        # remove images that are too wide for the atlas
-        if (w / h) > (kwargs["atlas_size"] / kwargs["cell_size"]):
-            print(
-                timestamp(),
-                "Skipping {} because its dimensions are oblong".format(img.path),
-            )
-            continue
-        filtered_image_paths[img.path] = img.filename
+        valid, msg = img.valid(lod_cell_height=kwargs["lod_cell_height"], oblong_ratio=oblong_ratio) 
+        if valid is True:
+            filtered_image_paths[img.path] = img.filename
+        else:
+            print(timestamp(), msg)
 
     # if there are no remaining images, throw an error
     if len(filtered_image_paths) == 0:
@@ -329,7 +301,7 @@ def filter_images(**kwargs):
 
     return [images, metadata]
 
-# %% ../nbs/00_clip_plot.ipynb 18
+# %% ../nbs/00_clip_plot.ipynb 17
 def get_image_paths(images:str, out_dir: str) -> List[str]:
     """Called once to provide a list of image paths--handles IIIF manifest input.
     
@@ -385,7 +357,7 @@ def get_image_paths(images:str, out_dir: str) -> List[str]:
     return image_paths
 
 
-# %% ../nbs/00_clip_plot.ipynb 19
+# %% ../nbs/00_clip_plot.ipynb 18
 def clean_filename(s, **kwargs):
     """Given a string that points to a filename, return a clean filename
     
@@ -405,7 +377,7 @@ def clean_filename(s, **kwargs):
         s = s.replace(i, "")
     return s
 
-# %% ../nbs/00_clip_plot.ipynb 20
+# %% ../nbs/00_clip_plot.ipynb 19
 ##
 # Metadata
 ##
@@ -457,7 +429,7 @@ def get_metadata_list(meta_dir: str) -> List[dict]:
             metaList.update({"tags": i["category"]})
     return metaList
 
-# %% ../nbs/00_clip_plot.ipynb 21
+# %% ../nbs/00_clip_plot.ipynb 20
 def write_metadata(metadata, **kwargs):
     """Write list `metadata` of objects to disk
     
@@ -533,7 +505,7 @@ def write_metadata(metadata, **kwargs):
             **kwargs
         )
 
-# %% ../nbs/00_clip_plot.ipynb 22
+# %% ../nbs/00_clip_plot.ipynb 21
 def is_number(s):
     """Return a boolean indicating if a string is a number
     
@@ -550,7 +522,7 @@ def is_number(s):
     except:
         return False
 
-# %% ../nbs/00_clip_plot.ipynb 23
+# %% ../nbs/00_clip_plot.ipynb 22
 ##
 # Main
 ##
@@ -656,7 +628,7 @@ def get_manifest(**kwargs):
     }
     write_json(manifest["imagelist"], imagelist, **kwargs)
 
-# %% ../nbs/00_clip_plot.ipynb 24
+# %% ../nbs/00_clip_plot.ipynb 23
 ##
 # Atlases
 ##
@@ -743,7 +715,7 @@ def save_atlas(atlas, out_dir, n):
     out_path = join(out_dir, "atlas-{}.jpg".format(n))
     save_image(out_path, atlas)
 
-# %% ../nbs/00_clip_plot.ipynb 25
+# %% ../nbs/00_clip_plot.ipynb 24
 ##
 # Layouts
 ##
@@ -767,7 +739,7 @@ def get_layouts(**kwargs):
     }
     return layouts
 
-# %% ../nbs/00_clip_plot.ipynb 26
+# %% ../nbs/00_clip_plot.ipynb 25
 def get_inception_vectors(**kwargs):
     """Create and return Inception vector representation of Image() instances"""
     print(
@@ -797,7 +769,7 @@ def get_inception_vectors(**kwargs):
             progress_bar.update(1)
     return np.array(vecs)
 
-# %% ../nbs/00_clip_plot.ipynb 27
+# %% ../nbs/00_clip_plot.ipynb 26
 def get_umap_layout(**kwargs):
     """Get the x,y positions of images passed through a umap projection"""
     vecs = kwargs["vecs"]
@@ -961,7 +933,7 @@ def get_umap_model(**kwargs):
             transform_seed=kwargs["seed"],
         )
 
-# %% ../nbs/00_clip_plot.ipynb 28
+# %% ../nbs/00_clip_plot.ipynb 27
 def get_rasterfairy_layout(**kwargs):
     """Get the x, y position of images passed through a rasterfairy projection"""
     print(timestamp(), "Creating rasterfairy layout")
@@ -1048,7 +1020,7 @@ def get_custom_layout(**kwargs):
         ),
     }
 
-# %% ../nbs/00_clip_plot.ipynb 30
+# %% ../nbs/00_clip_plot.ipynb 29
 def get_date_layout(cols=3, bin_units="years", **kwargs):
     """
     Get the x,y positions of input images based on their dates
@@ -1182,7 +1154,7 @@ def round_date(date, unit):
             date = str(int(date.split()[-1]) // 100) + "00"
     return date
 
-# %% ../nbs/00_clip_plot.ipynb 32
+# %% ../nbs/00_clip_plot.ipynb 31
 def get_categorical_layout(null_category="Other", margin=2, **kwargs):
     """
     Return a numpy array with shape (n_points, 2) with the point
@@ -1318,7 +1290,7 @@ class Box:
         self.x = None if len(args) < 4 else args[3]
         self.y = None if len(args) < 5 else args[4]
 
-# %% ../nbs/00_clip_plot.ipynb 34
+# %% ../nbs/00_clip_plot.ipynb 33
 def get_geographic_layout(**kwargs):
     """Return a 2D array of image positions corresponding to lat, lng coordinates"""
     out_path = get_path("layouts", "geographic", **kwargs)
@@ -1361,7 +1333,7 @@ def process_geojson(geojson_path):
         json.dump(l, out)
 
 
-# %% ../nbs/00_clip_plot.ipynb 36
+# %% ../nbs/00_clip_plot.ipynb 35
 def get_path(*args, **kwargs):
     """Return the path to a JSON file with conditional gz extension"""
     sub_dir, filename = args
@@ -1512,7 +1484,7 @@ def write_images(**kwargs):
         save_image(out_path, img)
 
 
-# %% ../nbs/00_clip_plot.ipynb 37
+# %% ../nbs/00_clip_plot.ipynb 36
 def get_version():
     """
     Return the version of clipplot installed
@@ -1521,7 +1493,7 @@ def get_version():
     # return pkg_resources.get_distribution("clipplot").version
     return "0.0.1"
 
-# %% ../nbs/00_clip_plot.ipynb 38
+# %% ../nbs/00_clip_plot.ipynb 37
 class Image:
     def __init__(self, *args, **kwargs):
         self.path = args[0]
@@ -1529,17 +1501,31 @@ class Image:
         self.original = load_image(self.path) 
         self.metadata = kwargs["metadata"] if kwargs["metadata"] else {}
 
-    def resize_to_max(self, n):
-        """
-        Resize self.original so its longest side has n pixels (maintain proportion)
+    def resize_to_max(self, n: int) -> np.array:
+        """Resize self.original so its longest side has n pixels (maintain proportion).
+
+        Args:
+            n (int): maximum pixel length
+
+        Returns:
+            np.array: re-sized to n length
         """
         w, h = self.original.size
-        size = (n, int(n * h / w)) if w > h else (int(n * w / h), n)
+        if w > h:
+            size = (n, int(n * h / w))
+        else:
+            size = (int(n * w / h), n)
+    
         return image_to_array(self.original.resize(size))
 
-    def resize_to_height(self, height):
-        """
-        Resize self.original into an image with height h and proportional width
+    def resize_to_height(self, height: int) -> np.array:
+        """Resize self.original into an image with height h and proportional width.
+
+        Args:
+            height (int): New height to resize to
+
+        Returns:
+            np.array: re-sized to height
         """
         w, h = self.original.size
         if (w / h * height) < 1:
@@ -1549,10 +1535,15 @@ class Image:
         size = (resizedwidth, height)
         return image_to_array(self.original.resize(size))
 
-    def resize_to_square(self, n, center=False):
-        """
-        Resize self.original to an image with nxn pixels (maintain proportion)
-        if center, center the colored pixels in the square, else left align
+    def resize_to_square(self, n: int, center: Optional[bool] = False) -> np.array:
+        """Resize self.original to an image with nxn pixels (maintain proportion)
+        if center, center the colored pixels in the square, else left align.
+
+        Args:
+            n (int)
+
+        Notes:
+            Function not being used
         """
         a = self.resize_to_max(n)
         h, w, c = a.shape
@@ -1565,6 +1556,35 @@ class Image:
             b[:h, :w, :] = a
         return b
 
+    def valid(self, lod_cell_height: int, oblong_ratio: Union[int,float]) -> tuple[bool, str]:
+        """Validate that image can be opened and loaded correctly.
+
+        Args:
+            lod_cell_height (int):
+            oblong_ratio (int|float): atlas_size/cell_size ratio
+
+        Returns:
+            Tuple[pass,msg]:
+                pass (bool): True if passed validation
+                msg (str): Reason why validation failed 
+        """
+        w, h = self.original.size
+        # remove images with 0 height or width when resized to lod height
+        if (h == 0) or (w == 0):
+            return False, f"Skipping {self.path} because it contains 0 height or width"
+        # remove images that have 0 height or width when resized
+        try:
+            resized = self.resize_to_max(lod_cell_height)
+        except ValueError:
+            return False, f"Skipping {self.path} because it contains 0 height or width when resized"
+        except OSError:
+            return False, f"Skipping {self.path} because it could not be resized"
+        # remove images that are too wide for the atlas
+        if (w / h) > (oblong_ratio):
+            return False, f"Skipping {self.path} because its dimensions are oblong"
+
+        return True, ""
+
     @staticmethod
     def stream_images(image_paths: List[str], metadata: Optional[List[dict]] = None) -> 'Image':
         """Read in all images from args[0], a list of image paths
@@ -1573,15 +1593,12 @@ class Image:
             image_paths (list[str]): list of image locations
             metadata (Optional[list[dist]]): metadata for each image
         
-
         Returns:
             yields Image instance
 
         Notes:
             image is matched to metadata by index location
                 Matching by key would be better
-                
-
         """
         for idx, imgPath in enumerate(image_paths):
             try:
@@ -1592,7 +1609,7 @@ class Image:
             except Exception as exc:
                 print(timestamp(), "Image", imgPath, "could not be processed --", exc)
 
-# %% ../nbs/00_clip_plot.ipynb 40
+# %% ../nbs/00_clip_plot.ipynb 39
 def parse(args: Optional[dict] = None):
     """Read command line args and begin data processing"""
     description = "Create the data required to create a clipplot viewer"
@@ -1744,7 +1761,7 @@ def parse(args: Optional[dict] = None):
 
     return config
 
-# %% ../nbs/00_clip_plot.ipynb 41
+# %% ../nbs/00_clip_plot.ipynb 40
 def get_clip_plot_root() -> Path:
     # ipython doesn't have __file__ attribute
     if in_ipython():
@@ -1752,14 +1769,14 @@ def get_clip_plot_root() -> Path:
     else:
         return Path(__file__).parents[1]
 
-# %% ../nbs/00_clip_plot.ipynb 43
+# %% ../nbs/00_clip_plot.ipynb 42
 import io
 from PIL import Image as pil_image
 
 # The type of float to use throughout a session.
 FLOATX = "float32"
 
-def load_image(path):
+def load_image(path: str) -> pil_image.Image:
     with open(path, "rb") as f:
         img = pil_image.open(io.BytesIO(f.read()))
 
@@ -1769,7 +1786,7 @@ def load_image(path):
     return img
 
 
-def image_to_array(img):
+def image_to_array(img: pil_image.Image) -> np.array:
     """Converts a PIL Image instance to a Numpy array.
 
     Args:
@@ -1795,7 +1812,7 @@ def image_to_array(img):
     return x
 
 
-def array_to_image(x):
+def array_to_image(x: np.array)-> pil_image.Image:
     """Converts a 3D Numpy array to a PIL Image instance.
 
     Args:
@@ -1837,7 +1854,7 @@ def array_to_image(x):
         raise ValueError(f"Unsupported channel number: {x.shape[2]}")
 
 
-def save_image(path, x):
+def save_image(path: str, x: np.array) -> None:
     """Saves an image stored as a Numpy array to a path or file object.
 
     Args:
@@ -1847,7 +1864,7 @@ def save_image(path, x):
     img = array_to_image(x)
     img.save(path,format=None)
 
-# %% ../nbs/00_clip_plot.ipynb 45
+# %% ../nbs/00_clip_plot.ipynb 44
 if __name__ == "__main__":
     config = parse()
     copy_root_dir = get_clip_plot_root()
