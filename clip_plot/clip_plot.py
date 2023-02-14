@@ -6,16 +6,16 @@ import warnings
 
 
 # %% auto 0
-__all__ = ['DEFAULTS', 'FILE_NAME', 'cuml_ready', 'cluster_method', 'timestamp', 'process_images', 'preprocess_kwargs',
-           'copy_web_assets', 'filter_images', 'get_image_paths', 'stream_images', 'clean_filename',
-           'get_metadata_list', 'write_metadata', 'is_number', 'get_manifest', 'get_atlas_data', 'save_atlas',
-           'get_layouts', 'get_inception_vectors', 'get_umap_layout', 'process_single_layout_umap',
-           'process_multi_layout_umap', 'save_model', 'load_model', 'get_umap_model', 'get_rasterfairy_layout',
-           'get_alphabetic_layout', 'get_pointgrid_layout', 'get_custom_layout', 'get_date_layout',
-           'datestring_to_date', 'date_to_seconds', 'round_date', 'get_categorical_layout', 'get_categorical_boxes',
-           'get_categorical_points', 'Box', 'get_geographic_layout', 'process_geojson', 'get_path', 'write_layout',
-           'round_floats', 'write_json', 'read_json', 'get_hotspots', 'get_cluster_model', 'get_heightmap',
-           'write_images', 'get_version', 'Image', 'parse', 'get_clip_plot_root']
+__all__ = ['DEFAULTS', 'FILE_NAME', 'cuml_ready', 'cluster_method', 'FLOATX', 'timestamp', 'process_images', 'preprocess_kwargs',
+           'copy_web_assets', 'filter_images', 'get_image_paths', 'clean_filename', 'get_metadata_list',
+           'write_metadata', 'is_number', 'get_manifest', 'get_atlas_data', 'save_atlas', 'get_layouts',
+           'get_inception_vectors', 'get_umap_layout', 'process_single_layout_umap', 'process_multi_layout_umap',
+           'save_model', 'load_model', 'get_umap_model', 'get_rasterfairy_layout', 'get_alphabetic_layout',
+           'get_pointgrid_layout', 'get_custom_layout', 'get_date_layout', 'datestring_to_date', 'date_to_seconds',
+           'round_date', 'get_categorical_layout', 'get_categorical_boxes', 'get_categorical_points', 'Box',
+           'get_geographic_layout', 'process_geojson', 'get_path', 'write_layout', 'round_floats', 'write_json',
+           'read_json', 'get_hotspots', 'get_cluster_model', 'get_heightmap', 'write_images', 'get_version', 'Image',
+           'parse', 'get_clip_plot_root', 'load_image', 'image_to_array', 'array_to_image', 'save_image']
 
 # %% ../nbs/00_clip_plot.ipynb 4
 from . import utils
@@ -76,14 +76,14 @@ from umap import UMAP, AlignedUMAP
 from urllib.parse import unquote
 
 # Keras imports
-from tensorflow.keras.preprocessing.image import save_img, img_to_array, array_to_img
+# from tensorflow.keras.preprocessing.image import save_img, img_to_array, array_to_img
 from tensorflow.keras.applications.inception_v3 import preprocess_input
 from tensorflow.keras.applications import InceptionV3, imagenet_utils
-from tensorflow.keras.preprocessing.image import load_img
+# from tensorflow.keras.preprocessing.image import load_img
 from tensorflow.keras.models import Model
 from tensorflow import compat
 
-# %% ../nbs/00_clip_plot.ipynb 11
+# %% ../nbs/00_clip_plot.ipynb 12
 DEFAULTS = {
     "images": None,
     "meta_dir": None,
@@ -127,7 +127,7 @@ NB: Keras Image class objects return image.size as w,h
     Numpy array representations of images return image.shape as h,w,c
 """
 
-# %% ../nbs/00_clip_plot.ipynb 13
+# %% ../nbs/00_clip_plot.ipynb 14
 def process_images(**kwargs):
     """Main method for processing user images and metadata"""
     kwargs = preprocess_kwargs(**kwargs)
@@ -167,7 +167,7 @@ def preprocess_kwargs(**kwargs):
             kwargs[i] = [kwargs[i]]
     return kwargs
 
-# %% ../nbs/00_clip_plot.ipynb 14
+# %% ../nbs/00_clip_plot.ipynb 15
 def copy_web_assets(out_dir: str) -> None:
     """Copy the /web directory from the clipplot source to the users cwd.
     Copies version number into assets.
@@ -193,9 +193,18 @@ def copy_web_assets(out_dir: str) -> None:
                 out.write(f)
 
 
-# %% ../nbs/00_clip_plot.ipynb 16
+# %% ../nbs/00_clip_plot.ipynb 17
 def filter_images(**kwargs):
     """Main method for filtering images given user metadata (if provided)
+
+    -Validate image:
+        Loading (done by stream_images and Images)
+        Size
+        resizing
+        oblong
+
+    -Compare against metadata
+
     
     Args:
         atlas_size (int, default = 2048)
@@ -210,6 +219,8 @@ def filter_images(**kwargs):
     Notes:
         Assumes 'filename' is provided in metadata
         Convoluted compiling of metadata
+        Should All Validation should belong to Image class?
+        Need to split function
     """
     # validate that input image names are unique
     image_paths = get_image_paths(images=kwargs["images"], out_dir=kwargs["out_dir"])
@@ -234,7 +245,7 @@ def filter_images(**kwargs):
 
     # process and filter the images
     filtered_image_paths = {}
-    for img in stream_images(image_paths=image_paths):
+    for img in Image.stream_images(image_paths=image_paths):
         # get image height and width
         w, h = img.original.size
         # remove images with 0 height or width when resized to lod height
@@ -318,7 +329,7 @@ def filter_images(**kwargs):
 
     return [images, metadata]
 
-# %% ../nbs/00_clip_plot.ipynb 17
+# %% ../nbs/00_clip_plot.ipynb 18
 def get_image_paths(images:str, out_dir: str) -> List[str]:
     """Called once to provide a list of image paths--handles IIIF manifest input.
     
@@ -374,34 +385,7 @@ def get_image_paths(images:str, out_dir: str) -> List[str]:
     return image_paths
 
 
-# %% ../nbs/00_clip_plot.ipynb 18
-def stream_images(image_paths: List[str], metadata: Optional[List[dict]] = None) -> 'Image':
-    """Read in all images from args[0], a list of image paths
-    
-    Args:
-        image_paths (list[str]): list of image locations
-        metadata (Optional[list[dist]]): metadata for each image
-    
-
-    Returns:
-        yields Image instance
-
-    Notes:
-        image is matched to metadata by index location
-            Matching by key would be better
-            
-
-    """
-    for idx, imgPath in enumerate(image_paths):
-        try:
-            meta = None
-            if metadata and metadata[idx]:
-                meta = metadata[idx]
-            yield Image(imgPath, metadata=meta)
-        except Exception as exc:
-            print(timestamp(), "Image", imgPath, "could not be processed --", exc)
-
-
+# %% ../nbs/00_clip_plot.ipynb 19
 def clean_filename(s, **kwargs):
     """Given a string that points to a filename, return a clean filename
     
@@ -421,7 +405,7 @@ def clean_filename(s, **kwargs):
         s = s.replace(i, "")
     return s
 
-# %% ../nbs/00_clip_plot.ipynb 19
+# %% ../nbs/00_clip_plot.ipynb 20
 ##
 # Metadata
 ##
@@ -473,7 +457,7 @@ def get_metadata_list(meta_dir: str) -> List[dict]:
             metaList.update({"tags": i["category"]})
     return metaList
 
-# %% ../nbs/00_clip_plot.ipynb 20
+# %% ../nbs/00_clip_plot.ipynb 21
 def write_metadata(metadata, **kwargs):
     """Write list `metadata` of objects to disk
     
@@ -549,7 +533,7 @@ def write_metadata(metadata, **kwargs):
             **kwargs
         )
 
-# %% ../nbs/00_clip_plot.ipynb 21
+# %% ../nbs/00_clip_plot.ipynb 22
 def is_number(s):
     """Return a boolean indicating if a string is a number
     
@@ -566,7 +550,7 @@ def is_number(s):
     except:
         return False
 
-# %% ../nbs/00_clip_plot.ipynb 22
+# %% ../nbs/00_clip_plot.ipynb 23
 ##
 # Main
 ##
@@ -672,7 +656,7 @@ def get_manifest(**kwargs):
     }
     write_json(manifest["imagelist"], imagelist, **kwargs)
 
-# %% ../nbs/00_clip_plot.ipynb 23
+# %% ../nbs/00_clip_plot.ipynb 24
 ##
 # Atlases
 ##
@@ -717,7 +701,7 @@ def get_atlas_data(**kwargs):
     y = 0  # y pos in atlas
     positions = []  # l[cell_idx] = atlas data
     atlas = np.zeros((kwargs["atlas_size"], kwargs["atlas_size"], 3))
-    for idx, i in enumerate(stream_images(image_paths=kwargs["image_paths"], metadata=kwargs["metadata"])):
+    for idx, i in enumerate(Image.stream_images(image_paths=kwargs["image_paths"], metadata=kwargs["metadata"])):
         cell_data = i.resize_to_height(kwargs["cell_size"])
         _, v, _ = cell_data.shape
         appendable = False
@@ -757,9 +741,9 @@ def get_atlas_data(**kwargs):
 def save_atlas(atlas, out_dir, n):
     """Save an atlas to disk"""
     out_path = join(out_dir, "atlas-{}.jpg".format(n))
-    save_img(out_path, atlas)
+    save_image(out_path, atlas)
 
-# %% ../nbs/00_clip_plot.ipynb 24
+# %% ../nbs/00_clip_plot.ipynb 25
 ##
 # Layouts
 ##
@@ -783,7 +767,7 @@ def get_layouts(**kwargs):
     }
     return layouts
 
-# %% ../nbs/00_clip_plot.ipynb 25
+# %% ../nbs/00_clip_plot.ipynb 26
 def get_inception_vectors(**kwargs):
     """Create and return Inception vector representation of Image() instances"""
     print(
@@ -801,19 +785,19 @@ def get_inception_vectors(**kwargs):
     print(timestamp(), "Creating image array")
     vecs = []
     with tqdm(total=len(kwargs["image_paths"])) as progress_bar:
-        for idx, i in enumerate(stream_images(image_paths=kwargs["image_paths"], metadata=kwargs["metadata"])):
+        for idx, i in enumerate(Image.stream_images(image_paths=kwargs["image_paths"], metadata=kwargs["metadata"])):
             vector_path = os.path.join(vector_dir, clean_filename(i.path) + ".npy")
             if os.path.exists(vector_path) and kwargs["use_cache"]:
                 vec = np.load(vector_path)
             else:
-                im = preprocess_input(img_to_array(i.original.resize((299, 299))))
+                im = preprocess_input(image_to_array(i.original.resize((299, 299))))
                 vec = model.predict(np.expand_dims(im, 0)).squeeze()
                 np.save(vector_path, vec)
             vecs.append(vec)
             progress_bar.update(1)
     return np.array(vecs)
 
-# %% ../nbs/00_clip_plot.ipynb 26
+# %% ../nbs/00_clip_plot.ipynb 27
 def get_umap_layout(**kwargs):
     """Get the x,y positions of images passed through a umap projection"""
     vecs = kwargs["vecs"]
@@ -977,7 +961,7 @@ def get_umap_model(**kwargs):
             transform_seed=kwargs["seed"],
         )
 
-# %% ../nbs/00_clip_plot.ipynb 27
+# %% ../nbs/00_clip_plot.ipynb 28
 def get_rasterfairy_layout(**kwargs):
     """Get the x, y position of images passed through a rasterfairy projection"""
     print(timestamp(), "Creating rasterfairy layout")
@@ -1041,7 +1025,7 @@ def get_custom_layout(**kwargs):
         return
     found_coords = False
     coords = []
-    for i in stream_images(image_paths=kwargs["image_paths"], metadata=kwargs["metadata"]):
+    for i in Image.stream_images(image_paths=kwargs["image_paths"], metadata=kwargs["metadata"]):
         x = i.metadata.get("x")
         y = i.metadata.get("y")
         if x and y:
@@ -1064,7 +1048,7 @@ def get_custom_layout(**kwargs):
         ),
     }
 
-# %% ../nbs/00_clip_plot.ipynb 29
+# %% ../nbs/00_clip_plot.ipynb 30
 def get_date_layout(cols=3, bin_units="years", **kwargs):
     """
     Get the x,y positions of input images based on their dates
@@ -1090,7 +1074,7 @@ def get_date_layout(cols=3, bin_units="years", **kwargs):
         }
     # date layout is not cached, so fetch dates and process
     print(timestamp(), "Creating date layout with {} columns".format(cols))
-    datestrings = [i.metadata.get("year", "no_date") for i in stream_images(image_paths=kwargs["image_paths"], metadata=kwargs["metadata"])]
+    datestrings = [i.metadata.get("year", "no_date") for i in Image.stream_images(image_paths=kwargs["image_paths"], metadata=kwargs["metadata"])]
     dates = [datestring_to_date(i) for i in datestrings]
     rounded_dates = [round_date(i, bin_units) for i in dates]
     # create d[formatted_date] = [indices into datestrings of dates that round to formatted_date]
@@ -1198,7 +1182,7 @@ def round_date(date, unit):
             date = str(int(date.split()[-1]) // 100) + "00"
     return date
 
-# %% ../nbs/00_clip_plot.ipynb 31
+# %% ../nbs/00_clip_plot.ipynb 32
 def get_categorical_layout(null_category="Other", margin=2, **kwargs):
     """
     Return a numpy array with shape (n_points, 2) with the point
@@ -1229,7 +1213,7 @@ def get_categorical_layout(null_category="Other", margin=2, **kwargs):
     for idx, i in enumerate(keys_and_counts):
         offsets[i["key"]] += sum([j["count"] for j in keys_and_counts[:idx]])
     sorted_points = []
-    for idx, i in enumerate(stream_images(image_paths=kwargs["image_paths"], metadata=kwargs["metadata"])):
+    for idx, i in enumerate(Image.stream_images(image_paths=kwargs["image_paths"], metadata=kwargs["metadata"])):
         category = i.metadata.get("category", null_category)
         sorted_points.append(points[offsets[category] + counts[category]])
         counts[category] += 1
@@ -1334,13 +1318,13 @@ class Box:
         self.x = None if len(args) < 4 else args[3]
         self.y = None if len(args) < 5 else args[4]
 
-# %% ../nbs/00_clip_plot.ipynb 33
+# %% ../nbs/00_clip_plot.ipynb 34
 def get_geographic_layout(**kwargs):
     """Return a 2D array of image positions corresponding to lat, lng coordinates"""
     out_path = get_path("layouts", "geographic", **kwargs)
     l = []
     coords = False
-    for idx, i in enumerate(stream_images(image_paths=kwargs["image_paths"], metadata=kwargs["metadata"])):
+    for idx, i in enumerate(Image.stream_images(image_paths=kwargs["image_paths"], metadata=kwargs["metadata"])):
         lat = float(i.metadata.get("lat", 0)) / 180
         lng = (
             float(i.metadata.get("lng", 0)) / 180
@@ -1377,7 +1361,7 @@ def process_geojson(geojson_path):
         json.dump(l, out)
 
 
-# %% ../nbs/00_clip_plot.ipynb 35
+# %% ../nbs/00_clip_plot.ipynb 36
 def get_path(*args, **kwargs):
     """Return the path to a JSON file with conditional gz extension"""
     sub_dir, filename = args
@@ -1508,7 +1492,7 @@ def get_heightmap(path, label, **kwargs):
 
 def write_images(**kwargs):
     """Write all originals and thumbs to the output dir"""
-    for i in stream_images(image_paths=kwargs["image_paths"], metadata=kwargs["metadata"]):
+    for i in Image.stream_images(image_paths=kwargs["image_paths"], metadata=kwargs["metadata"]):
         filename = clean_filename(i.path)
         # copy original for lightbox
         out_dir = join(kwargs["out_dir"], "originals")
@@ -1517,18 +1501,18 @@ def write_images(**kwargs):
         out_path = join(out_dir, filename)
         if not os.path.exists(out_path):
             resized = i.resize_to_height(600)
-            resized = array_to_img(resized)
-            save_img(out_path, resized)
+            resized = array_to_image(resized)
+            save_image(out_path, resized)
         # copy thumb for lod texture
         out_dir = join(kwargs["out_dir"], "thumbs")
         if not exists(out_dir):
             os.makedirs(out_dir)
         out_path = join(out_dir, filename)
-        img = array_to_img(i.resize_to_max(kwargs["lod_cell_height"]))
-        save_img(out_path, img)
+        img = array_to_image(i.resize_to_max(kwargs["lod_cell_height"]))
+        save_image(out_path, img)
 
 
-# %% ../nbs/00_clip_plot.ipynb 36
+# %% ../nbs/00_clip_plot.ipynb 37
 def get_version():
     """
     Return the version of clipplot installed
@@ -1537,12 +1521,12 @@ def get_version():
     # return pkg_resources.get_distribution("clipplot").version
     return "0.0.1"
 
-# %% ../nbs/00_clip_plot.ipynb 37
+# %% ../nbs/00_clip_plot.ipynb 38
 class Image:
     def __init__(self, *args, **kwargs):
         self.path = args[0]
         self.filename = clean_filename(self.path)
-        self.original = load_img(self.path)
+        self.original = load_image(self.path) 
         self.metadata = kwargs["metadata"] if kwargs["metadata"] else {}
 
     def resize_to_max(self, n):
@@ -1551,7 +1535,7 @@ class Image:
         """
         w, h = self.original.size
         size = (n, int(n * h / w)) if w > h else (int(n * w / h), n)
-        return img_to_array(self.original.resize(size))
+        return image_to_array(self.original.resize(size))
 
     def resize_to_height(self, height):
         """
@@ -1563,7 +1547,7 @@ class Image:
         else:
             resizedwidth = int(w / h * height)
         size = (resizedwidth, height)
-        return img_to_array(self.original.resize(size))
+        return image_to_array(self.original.resize(size))
 
     def resize_to_square(self, n, center=False):
         """
@@ -1581,7 +1565,34 @@ class Image:
             b[:h, :w, :] = a
         return b
 
-# %% ../nbs/00_clip_plot.ipynb 39
+    @staticmethod
+    def stream_images(image_paths: List[str], metadata: Optional[List[dict]] = None) -> 'Image':
+        """Read in all images from args[0], a list of image paths
+        
+        Args:
+            image_paths (list[str]): list of image locations
+            metadata (Optional[list[dist]]): metadata for each image
+        
+
+        Returns:
+            yields Image instance
+
+        Notes:
+            image is matched to metadata by index location
+                Matching by key would be better
+                
+
+        """
+        for idx, imgPath in enumerate(image_paths):
+            try:
+                meta = None
+                if metadata and metadata[idx]:
+                    meta = metadata[idx]
+                yield Image(imgPath, metadata=meta)
+            except Exception as exc:
+                print(timestamp(), "Image", imgPath, "could not be processed --", exc)
+
+# %% ../nbs/00_clip_plot.ipynb 40
 def parse(args: Optional[dict] = None):
     """Read command line args and begin data processing"""
     description = "Create the data required to create a clipplot viewer"
@@ -1733,7 +1744,7 @@ def parse(args: Optional[dict] = None):
 
     return config
 
-# %% ../nbs/00_clip_plot.ipynb 40
+# %% ../nbs/00_clip_plot.ipynb 41
 def get_clip_plot_root() -> Path:
     # ipython doesn't have __file__ attribute
     if in_ipython():
@@ -1741,7 +1752,102 @@ def get_clip_plot_root() -> Path:
     else:
         return Path(__file__).parents[1]
 
-# %% ../nbs/00_clip_plot.ipynb 42
+# %% ../nbs/00_clip_plot.ipynb 43
+import io
+from PIL import Image as pil_image
+
+# The type of float to use throughout a session.
+FLOATX = "float32"
+
+def load_image(path):
+    with open(path, "rb") as f:
+        img = pil_image.open(io.BytesIO(f.read()))
+
+    if img.mode != "RGB":
+        img = img.convert("RGB")
+
+    return img
+
+
+def image_to_array(img):
+    """Converts a PIL Image instance to a Numpy array.
+
+    Args:
+        img: Input PIL Image instance.
+
+    Returns:
+        A 3D Numpy array.
+
+    Raises:
+        ValueError: if invalid `img` or `data_format` is passed.
+    """
+
+    # Numpy array x has format (height, width, channel)
+    # or (channel, height, width)
+    # but original PIL image has format (width, height, channel)
+    x = np.asarray(img, dtype=FLOATX)
+    if len(x.shape) not in [2, 3]:
+        raise ValueError(f"Unsupported image shape: {x.shape}")
+
+    if len(x.shape) == 2:
+        x = x.reshape((x.shape[0], x.shape[1], 1))
+        
+    return x
+
+
+def array_to_image(x):
+    """Converts a 3D Numpy array to a PIL Image instance.
+
+    Args:
+        x: Input data, in any form that can be converted to a Numpy array.
+
+    Returns:
+        A PIL Image instance.
+
+    Raises:
+        ValueError: if invalid `x` or `data_format` is passed.
+    """
+    x = np.asarray(x, dtype=FLOATX)
+    if x.ndim != 3:
+        raise ValueError(
+            "Expected image array to have rank 3 (single image). "
+            f"Got array with shape: {x.shape}"
+        )
+
+    # Original Numpy array x has format (height, width, channel)
+    # or (channel, height, width)
+    # but target PIL image has format (width, height, channel)
+
+    x = x - np.min(x)
+    x_max = np.max(x)
+    if x_max != 0:
+        x /= x_max
+    x *= 255
+
+    if x.shape[2] == 4:  # RGBA
+        return pil_image.fromarray(x.astype("uint8"), "RGBA")
+    elif x.shape[2] == 3:  # RGB
+        return pil_image.fromarray(x.astype("uint8"), "RGB")
+    elif x.shape[2] == 1:  # grayscale
+        if np.max(x) > 255:
+            # 32-bit signed integer grayscale image. PIL mode "I"
+            return pil_image.fromarray(x[:, :, 0].astype("int32"), "I")
+        return pil_image.fromarray(x[:, :, 0].astype("uint8"), "L")
+    else:
+        raise ValueError(f"Unsupported channel number: {x.shape[2]}")
+
+
+def save_image(path, x):
+    """Saves an image stored as a Numpy array to a path or file object.
+
+    Args:
+        path: Path or file object.
+        x: Numpy array.
+    """
+    img = array_to_image(x)
+    img.save(path,format=None)
+
+# %% ../nbs/00_clip_plot.ipynb 45
 if __name__ == "__main__":
     config = parse()
     copy_root_dir = get_clip_plot_root()
