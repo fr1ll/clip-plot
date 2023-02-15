@@ -424,9 +424,9 @@ def get_metadata_list(meta_dir: str) -> List[dict]:
                 metaList.append(json.load(f))
 
     # if the user provided a category but not a tag, use the category as the tag
-    for i in metaList:
-        if "category" in metaList and "tags" in metaList is False:
-            metaList.update({"tags": i["category"]})
+    for metaDict in metaList:
+        if "category" in metaDict and ("tags" in metaDict) is False:
+            metaDict.update({"tags": metaDict["category"]})
     return metaList
 
 # %% ../nbs/00_clip_plot.ipynb 20
@@ -452,11 +452,13 @@ def write_metadata(metadata, **kwargs):
     """
     if not metadata:
         return
+
     out_dir = join(kwargs["out_dir"], "metadata")
     for i in ["filters", "options", "file"]:
         out_path = join(out_dir, i)
         if not exists(out_path):
             os.makedirs(out_path)
+    
     # create the lists of images with each tag
     d = defaultdict(list)
     for i in metadata:
@@ -465,6 +467,7 @@ def write_metadata(metadata, **kwargs):
         for j in i["tags"]:
             d["__".join(j.split())].append(filename)
         write_json(os.path.join(out_dir, "file", filename + ".json"), i, **kwargs)
+
     write_json(
         os.path.join(out_dir, "filters", "filters.json"),
         [
@@ -475,6 +478,7 @@ def write_metadata(metadata, **kwargs):
         ],
         **kwargs
     )
+
     # create the options for the category dropdown
     for i in d:
         write_json(os.path.join(out_dir, "options", i + ".json"), d[i], **kwargs)
@@ -484,6 +488,7 @@ def write_metadata(metadata, **kwargs):
         date = i.get("year", "")
         if date:
             date_d[date].append(clean_filename(i[FILE_NAME]))
+
     # find the min and max dates to show on the date slider
     dates = np.array([int(i.strip()) for i in date_d if is_number(i)])
     domain = {"min": float("inf"), "max": -float("inf")}
@@ -494,6 +499,7 @@ def write_metadata(metadata, **kwargs):
         if abs(mean - i) < (std * 4):
             domain["min"] = int(min(i, domain["min"]))
             domain["max"] = int(max(i, domain["max"]))
+
     # write the dates json
     if len(date_d) > 1:
         write_json(
