@@ -1750,6 +1750,7 @@ if __name__ == "__main__":
     process_images(**config)
 
 # %% ../nbs/00_clip_plot.ipynb 43
+@call_parse
 def project_imgs(images:Param(type=str,
                         help="path to a glob of images to process"
                         )=DEFAULTS["images"],
@@ -1824,13 +1825,14 @@ def project_imgs(images:Param(type=str,
                         help="path to a GeoJSON file with shapes to be rendered on a map"
                         )=DEFAULTS["geojson"]
                 ):
+                "Convert a folder of images into a clip-plot visualization"
 
                 config = parse()
                 copy_root_dir = get_clip_plot_root()
 
                 if in_ipython() and config["images"] == None:
                         # at least for now, this means we're in testing mode.
-                        # TODO: pass explicit "test_mode" flag to argparse
+                        # TODO: pass explicit "test_mode" flag
                         config["test_mode"] = True
                         test_images = copy_root_dir/"tests/smithsonian_butterflies_10/jpgs/*.jpg"
                         test_out_dir = copy_root_dir/"tests/smithsonian_butterflies_10/output_test_temp"
