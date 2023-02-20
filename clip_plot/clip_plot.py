@@ -15,7 +15,8 @@ __all__ = ['DEFAULTS', 'FILE_NAME', 'cuml_ready', 'cluster_method', 'FLOATX', 't
            'round_date', 'get_categorical_layout', 'get_categorical_boxes', 'get_categorical_points', 'Box',
            'get_geographic_layout', 'process_geojson', 'get_path', 'write_layout', 'round_floats', 'write_json',
            'read_json', 'get_hotspots', 'get_cluster_model', 'get_heightmap', 'write_images', 'get_version', 'Image',
-           'parse', 'get_clip_plot_root', 'load_image', 'image_to_array', 'array_to_image', 'save_image']
+           'parse', 'get_clip_plot_root', 'load_image', 'image_to_array', 'array_to_image', 'save_image', 'test_iiif',
+           'test_butterfly_duplicate', 'test_butterfly', 'test_butterfly_missing_meta', 'test_no_meta_dir']
 
 # %% ../nbs/00_clip_plot.ipynb 5
 from . import utils
@@ -1871,6 +1872,75 @@ def save_image(path: str, x: np.array) -> None:
     img.save(path,format=None)
 
 # %% ../nbs/00_clip_plot.ipynb 45
+def test_iiif(config):
+    test_images = copy_root_dir/"tests/IIIF_examples/iif_example.txt"
+    test_out_dir = copy_root_dir/"tests/smithsonian_butterflies_10/output_test_temp"
+    # meta_dir = copy_root_dir/"tests/smithsonian_butterflies_10/meta_data/good_meta.csv"
+    if Path(test_out_dir).exists():
+        rmtree(test_out_dir)
+
+    config["images"] = test_images.as_posix()
+    config["out_dir"] = test_out_dir.as_posix()
+    # config["meta_dir"] = meta_dir.as_posix()
+
+    return config
+
+
+def test_butterfly_duplicate(config):
+    test_images = copy_root_dir/"tests/smithsonian_butterflies_10/jpgs_duplicates/**/*.jpg"
+    test_out_dir = copy_root_dir/"tests/smithsonian_butterflies_10/output_test_temp"
+    meta_dir = copy_root_dir/"tests/smithsonian_butterflies_10/meta_data/good_meta.csv"
+    if Path(test_out_dir).exists():
+        rmtree(test_out_dir)
+
+    config["images"] = test_images.as_posix()
+    config["out_dir"] = test_out_dir.as_posix()
+    config["meta_dir"] = meta_dir.as_posix()
+
+    return config
+
+
+def test_butterfly(config):
+    test_images = copy_root_dir/"tests/smithsonian_butterflies_10/jpgs/*.jpg"
+    test_out_dir = copy_root_dir/"tests/smithsonian_butterflies_10/output_test_temp"
+    meta_dir = copy_root_dir/"tests/smithsonian_butterflies_10/meta_data/good_meta.csv"
+    if Path(test_out_dir).exists():
+        rmtree(test_out_dir)
+
+    config["images"] = test_images.as_posix()
+    config["out_dir"] = test_out_dir.as_posix()
+    config["meta_dir"] = meta_dir.as_posix()
+
+    return config
+
+
+def test_butterfly_missing_meta(config):
+    test_images = copy_root_dir/"tests/smithsonian_butterflies_10/jpgs/*.jpg"
+    test_out_dir = copy_root_dir/"tests/smithsonian_butterflies_10/output_test_temp"
+    meta_dir = copy_root_dir/"tests/smithsonian_butterflies_10/meta_data/meta_missing_filename.csv"
+    if Path(test_out_dir).exists():
+        rmtree(test_out_dir)
+
+    config["images"] = test_images.as_posix()
+    config["out_dir"] = test_out_dir.as_posix()
+    config["meta_dir"] = meta_dir.as_posix()
+
+    return config
+
+
+def test_no_meta_dir(config):
+    test_images = copy_root_dir/"tests/smithsonian_butterflies_10/jpgs/*.jpg"
+    test_out_dir = copy_root_dir/"tests/smithsonian_butterflies_10/output_test_temp"
+    if Path(test_out_dir).exists():
+        rmtree(test_out_dir)
+
+    config["images"] = test_images.as_posix()
+    config["out_dir"] = test_out_dir.as_posix()
+
+    return config
+
+
+# %% ../nbs/00_clip_plot.ipynb 46
 if __name__ == "__main__":
     config = parse()
     copy_root_dir = get_clip_plot_root()
