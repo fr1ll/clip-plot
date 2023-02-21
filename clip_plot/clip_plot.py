@@ -6,21 +6,22 @@ import warnings
 
 
 # %% auto 0
-__all__ = ['DEFAULTS', 'FILE_NAME', 'cuml_ready', 'cluster_method', 'FLOATX', 'timestamp', 'process_images', 'preprocess_kwargs',
-           'copy_web_assets', 'filter_images', 'get_image_paths', 'clean_filename', 'get_metadata_list',
-           'write_metadata', 'is_number', 'get_manifest', 'get_atlas_data', 'save_atlas', 'get_layouts',
-           'get_inception_vectors', 'get_umap_layout', 'process_single_layout_umap', 'process_multi_layout_umap',
-           'save_model', 'load_model', 'get_umap_model', 'get_rasterfairy_layout', 'get_alphabetic_layout',
-           'get_pointgrid_layout', 'get_custom_layout', 'get_date_layout', 'datestring_to_date', 'date_to_seconds',
-           'round_date', 'get_categorical_layout', 'get_categorical_boxes', 'get_categorical_points', 'Box',
-           'get_geographic_layout', 'process_geojson', 'get_path', 'write_layout', 'round_floats', 'write_json',
-           'read_json', 'get_hotspots', 'get_cluster_model', 'get_heightmap', 'write_images', 'get_version', 'Image',
-           'parse', 'get_clip_plot_root', 'load_image', 'image_to_array', 'array_to_image', 'save_image', 'test_iiif',
-           'test_butterfly_duplicate', 'test_butterfly', 'test_butterfly_missing_meta', 'test_no_meta_dir']
+__all__ = ['DEFAULTS', 'FILE_NAME', 'cuml_ready', 'cluster_method', 'copy_root_dir', 'FLOATX', 'timestamp', 'get_clip_plot_root',
+           'process_images', 'preprocess_kwargs', 'copy_web_assets', 'filter_images', 'get_image_paths',
+           'clean_filename', 'get_metadata_list', 'write_metadata', 'is_number', 'get_manifest', 'get_atlas_data',
+           'save_atlas', 'get_layouts', 'get_inception_vectors', 'get_umap_layout', 'process_single_layout_umap',
+           'process_multi_layout_umap', 'save_model', 'load_model', 'get_umap_model', 'get_rasterfairy_layout',
+           'get_alphabetic_layout', 'get_pointgrid_layout', 'get_custom_layout', 'get_date_layout',
+           'datestring_to_date', 'date_to_seconds', 'round_date', 'get_categorical_layout', 'get_categorical_boxes',
+           'get_categorical_points', 'Box', 'get_geographic_layout', 'process_geojson', 'get_path', 'write_layout',
+           'round_floats', 'write_json', 'read_json', 'get_hotspots', 'get_cluster_model', 'get_heightmap',
+           'write_images', 'get_version', 'Image', 'parse', 'load_image', 'image_to_array', 'array_to_image',
+           'save_image', 'test_iiif', 'test_butterfly_duplicate', 'test_butterfly', 'test_butterfly_missing_meta',
+           'test_no_meta_dir', 'project_imgs']
 
 # %% ../nbs/00_clip_plot.ipynb 5
 from . import utils
-from fastcore.all import in_ipython
+from fastcore.all import *
 
 # %% ../nbs/00_clip_plot.ipynb 6
 warnings.filterwarnings("ignore")
@@ -58,7 +59,7 @@ from scipy.stats import kde
 from PIL import ImageFile
 import matplotlib.pyplot as plt
 import multiprocessing
-from tqdm import tqdm
+from tqdm.autonotebook import tqdm
 import rasterfairy
 import numpy as np
 import itertools
@@ -129,6 +130,18 @@ NB: Keras Image class objects return image.size as w,h
 """
 
 # %% ../nbs/00_clip_plot.ipynb 14
+def get_clip_plot_root() -> Path:
+    # ipython doesn't have __file__ attribute
+    if in_ipython():
+        return Path(utils.__file__).parents[1]
+    else:
+        print(__file__)
+        return Path(__file__).parents[1]
+
+# %% ../nbs/00_clip_plot.ipynb 15
+copy_root_dir = get_clip_plot_root()
+
+# %% ../nbs/00_clip_plot.ipynb 16
 def process_images(**kwargs):
     """Main method for processing user images and metadata"""
     kwargs = preprocess_kwargs(**kwargs)
@@ -168,7 +181,7 @@ def preprocess_kwargs(**kwargs):
             kwargs[i] = [kwargs[i]]
     return kwargs
 
-# %% ../nbs/00_clip_plot.ipynb 15
+# %% ../nbs/00_clip_plot.ipynb 17
 def copy_web_assets(out_dir: str) -> None:
     """Copy the /web directory from the clipplot source to the users cwd.
     Copies version number into assets.
@@ -179,6 +192,7 @@ def copy_web_assets(out_dir: str) -> None:
     Returns:
         None
     """
+    copy_root_dir = get_clip_plot_root()
     src = copy_root_dir / "clip_plot/web"
 
     # resolve will handle cases with ../ in the path
@@ -194,7 +208,7 @@ def copy_web_assets(out_dir: str) -> None:
                 out.write(f)
 
 
-# %% ../nbs/00_clip_plot.ipynb 17
+# %% ../nbs/00_clip_plot.ipynb 19
 def filter_images(**kwargs):
     """Main method for filtering images given user metadata (if provided)
 
@@ -302,7 +316,7 @@ def filter_images(**kwargs):
 
     return [images, metadata]
 
-# %% ../nbs/00_clip_plot.ipynb 18
+# %% ../nbs/00_clip_plot.ipynb 20
 def get_image_paths(images:str, out_dir: str) -> List[str]:
     """Called once to provide a list of image paths--handles IIIF manifest input.
     
@@ -358,7 +372,7 @@ def get_image_paths(images:str, out_dir: str) -> List[str]:
     return image_paths
 
 
-# %% ../nbs/00_clip_plot.ipynb 19
+# %% ../nbs/00_clip_plot.ipynb 21
 def clean_filename(s, **kwargs):
     """Given a string that points to a filename, return a clean filename
     
@@ -378,7 +392,7 @@ def clean_filename(s, **kwargs):
         s = s.replace(i, "")
     return s
 
-# %% ../nbs/00_clip_plot.ipynb 20
+# %% ../nbs/00_clip_plot.ipynb 22
 ##
 # Metadata
 ##
@@ -430,7 +444,7 @@ def get_metadata_list(meta_dir: str) -> List[dict]:
             metaDict.update({"tags": metaDict["category"]})
     return metaList
 
-# %% ../nbs/00_clip_plot.ipynb 21
+# %% ../nbs/00_clip_plot.ipynb 23
 def write_metadata(metadata, **kwargs):
     """Write list `metadata` of objects to disk
     
@@ -512,7 +526,7 @@ def write_metadata(metadata, **kwargs):
             **kwargs
         )
 
-# %% ../nbs/00_clip_plot.ipynb 22
+# %% ../nbs/00_clip_plot.ipynb 24
 def is_number(s):
     """Return a boolean indicating if a string is a number
     
@@ -529,7 +543,7 @@ def is_number(s):
     except:
         return False
 
-# %% ../nbs/00_clip_plot.ipynb 23
+# %% ../nbs/00_clip_plot.ipynb 25
 ##
 # Main
 ##
@@ -635,7 +649,7 @@ def get_manifest(**kwargs):
     }
     write_json(manifest["imagelist"], imagelist, **kwargs)
 
-# %% ../nbs/00_clip_plot.ipynb 24
+# %% ../nbs/00_clip_plot.ipynb 26
 ##
 # Atlases
 ##
@@ -722,7 +736,7 @@ def save_atlas(atlas, out_dir, n):
     out_path = join(out_dir, "atlas-{}.jpg".format(n))
     save_image(out_path, atlas)
 
-# %% ../nbs/00_clip_plot.ipynb 25
+# %% ../nbs/00_clip_plot.ipynb 27
 ##
 # Layouts
 ##
@@ -746,7 +760,7 @@ def get_layouts(**kwargs):
     }
     return layouts
 
-# %% ../nbs/00_clip_plot.ipynb 26
+# %% ../nbs/00_clip_plot.ipynb 28
 def get_inception_vectors(**kwargs):
     """Create and return Inception vector representation of Image() instances"""
     print(
@@ -776,7 +790,7 @@ def get_inception_vectors(**kwargs):
             progress_bar.update(1)
     return np.array(vecs)
 
-# %% ../nbs/00_clip_plot.ipynb 27
+# %% ../nbs/00_clip_plot.ipynb 29
 def get_umap_layout(**kwargs):
     """Get the x,y positions of images passed through a umap projection"""
     vecs = kwargs["vecs"]
@@ -940,7 +954,7 @@ def get_umap_model(**kwargs):
             transform_seed=kwargs["seed"],
         )
 
-# %% ../nbs/00_clip_plot.ipynb 28
+# %% ../nbs/00_clip_plot.ipynb 30
 def get_rasterfairy_layout(**kwargs):
     """Get the x, y position of images passed through a rasterfairy projection"""
     print(timestamp(), "Creating rasterfairy layout")
@@ -1027,7 +1041,7 @@ def get_custom_layout(**kwargs):
         ),
     }
 
-# %% ../nbs/00_clip_plot.ipynb 30
+# %% ../nbs/00_clip_plot.ipynb 32
 def get_date_layout(cols=3, bin_units="years", **kwargs):
     """
     Get the x,y positions of input images based on their dates
@@ -1161,7 +1175,7 @@ def round_date(date, unit):
             date = str(int(date.split()[-1]) // 100) + "00"
     return date
 
-# %% ../nbs/00_clip_plot.ipynb 32
+# %% ../nbs/00_clip_plot.ipynb 34
 def get_categorical_layout(null_category="Other", margin=2, **kwargs):
     """
     Return a numpy array with shape (n_points, 2) with the point
@@ -1297,7 +1311,7 @@ class Box:
         self.x = None if len(args) < 4 else args[3]
         self.y = None if len(args) < 5 else args[4]
 
-# %% ../nbs/00_clip_plot.ipynb 34
+# %% ../nbs/00_clip_plot.ipynb 36
 def get_geographic_layout(**kwargs):
     """Return a 2D array of image positions corresponding to lat, lng coordinates"""
     out_path = get_path("layouts", "geographic", **kwargs)
@@ -1340,7 +1354,7 @@ def process_geojson(geojson_path):
         json.dump(l, out)
 
 
-# %% ../nbs/00_clip_plot.ipynb 36
+# %% ../nbs/00_clip_plot.ipynb 38
 def get_path(*args, **kwargs):
     """Return the path to a JSON file with conditional gz extension"""
     sub_dir, filename = args
@@ -1491,7 +1505,7 @@ def write_images(**kwargs):
         save_image(out_path, img)
 
 
-# %% ../nbs/00_clip_plot.ipynb 37
+# %% ../nbs/00_clip_plot.ipynb 39
 def get_version():
     """
     Return the version of clipplot installed
@@ -1500,7 +1514,7 @@ def get_version():
     # return pkg_resources.get_distribution("clipplot").version
     return "0.0.1"
 
-# %% ../nbs/00_clip_plot.ipynb 38
+# %% ../nbs/00_clip_plot.ipynb 40
 class Image:
     def __init__(self, *args, **kwargs):
         self.path = args[0]
@@ -1616,8 +1630,8 @@ class Image:
             except Exception as exc:
                 print(timestamp(), "Image", imgPath, "could not be processed --", exc)
 
-# %% ../nbs/00_clip_plot.ipynb 40
-def parse(args: Optional[dict] = None):
+# %% ../nbs/00_clip_plot.ipynb 42
+def parse():
     """Read command line args and begin data processing"""
     description = "Create the data required to create a clipplot viewer"
     parser = argparse.ArgumentParser(
@@ -1768,15 +1782,7 @@ def parse(args: Optional[dict] = None):
 
     return config
 
-# %% ../nbs/00_clip_plot.ipynb 41
-def get_clip_plot_root() -> Path:
-    # ipython doesn't have __file__ attribute
-    if in_ipython():
-        return Path(utils.__file__).parents[1]
-    else:
-        return Path(__file__).parents[1]
-
-# %% ../nbs/00_clip_plot.ipynb 43
+# %% ../nbs/00_clip_plot.ipynb 44
 import io
 from PIL import Image as pil_image
 
@@ -1871,7 +1877,7 @@ def save_image(path: str, x: np.array) -> None:
     img = array_to_image(x)
     img.save(path,format=None)
 
-# %% ../nbs/00_clip_plot.ipynb 45
+# %% ../nbs/00_clip_plot.ipynb 46
 def test_iiif(config):
     test_images = copy_root_dir/"tests/IIIF_examples/iif_example.txt"
     test_out_dir = copy_root_dir/"tests/smithsonian_butterflies_10/output_test_temp"
@@ -1940,7 +1946,7 @@ def test_no_meta_dir(config):
     return config
 
 
-# %% ../nbs/00_clip_plot.ipynb 46
+# %% ../nbs/00_clip_plot.ipynb 47
 if __name__ == "__main__":
     config = parse()
     copy_root_dir = get_clip_plot_root()
@@ -1953,3 +1959,100 @@ if __name__ == "__main__":
         
 
     process_images(**config)
+
+# %% ../nbs/00_clip_plot.ipynb 48
+@call_parse
+def project_imgs(images:Param(type=str,
+                        help="path to a glob of images to process"
+                        )=DEFAULTS["images"],
+                metadata:Param(type=str,
+                        help="path to a csv or glob of JSON files with image metadata (see readme for format)"
+                        )=DEFAULTS["meta_dir"],
+                max_images:Param(type=int,
+                        help="maximum number of images to process from the input glob"
+                        )=DEFAULTS["max_images"],
+                use_cache:Param(type=bool,
+                        help="given inputs identical to prior inputs, load outputs from cache"
+                        )=DEFAULTS["use_cache"],
+                encoding:Param(type=str,
+                        help="the encoding of input metadata"
+                        )=DEFAULTS["encoding"],
+                min_cluster_size:Param(type=int,
+                        help="the minimum number of images in a cluster",
+                        required=False
+                        )=DEFAULTS["min_cluster_size"],
+                max_clusters:Param(type=int,
+                        help="the maximum number of clusters to return",
+                        required=False
+                        )=DEFAULTS["max_clusters"],
+                out_dir:Param(type=str,
+                        help="the directory to which outputs will be saved",
+                        required=False
+                        )=DEFAULTS["out_dir"],
+                cell_size:Param(type=int,
+                        help="the size of atlas cells in px",
+                        required=False
+                        )=DEFAULTS["cell_size"],
+                n_neighbors:Param(type=int,
+                        nargs="+",
+                        help="the n_neighbors arguments for UMAP"
+                        )=DEFAULTS["n_neighbors"],
+                min_dist:Param(type=float,
+                        nargs="+",
+                        help="the min_dist arguments for UMAP"
+                        )=DEFAULTS["min_dist"],
+                n_components:Param(type=int,
+                        help="the n_components argument for UMAP"
+                        )=DEFAULTS["n_components"],
+                metric:Param(type=str,
+                        help="the metric argument for umap"
+                        )=DEFAULTS["metric"],
+                pointgrid_fill:Param(type=float,
+                        help="float 0:1 that determines sparsity of jittered distributions (lower means more sparse)"
+                        )=DEFAULTS["pointgrid_fill"],
+                copy_web_only:Param(type=bool,
+                        action="store_true",
+                        help="update ./output/assets without reprocessing data"
+                        )=False,
+                min_size:Param(type=float,
+                        help="min size of cropped images"
+                        )=DEFAULTS["min_size"],
+                gzip:Param(type=bool,
+                        action="store_true", help="save outputs with gzip compression"
+                        )=False,
+                shuffle:Param(type=bool,
+                        action="store_true",
+                        help="shuffle the input images before data processing begins"
+                        )=False,
+                plot_id:Param(type=str,
+                        help="unique id for a plot; useful for resuming processing on a started plot"
+                        )=DEFAULTS["plot_id"],
+                seed:Param(type=int, help="seed for random processes"
+                           )=DEFAULTS["seed"],
+                n_clusters:Param(type=int,
+                        help="number of clusters if using kmeans"
+                        )=DEFAULTS["n_clusters"],
+                geojson:Param(type=str,
+                        help="path to a GeoJSON file with shapes to be rendered on a map"
+                        )=DEFAULTS["geojson"]
+                ):
+                "Convert a folder of images into a clip-plot visualization"
+
+                config = parse()
+                copy_root_dir = get_clip_plot_root()
+
+                if in_ipython() and config["images"] == None:
+                        print("we're in ipython")
+                        # at least for now, this means we're in testing mode.
+                        # TODO: pass explicit "test_mode" flag
+                        config["test_mode"] = True
+                        test_images = copy_root_dir/"tests/smithsonian_butterflies_10/jpgs/*.jpg"
+                        test_out_dir = copy_root_dir/"tests/smithsonian_butterflies_10/output_test_temp"
+                        meta_dir = copy_root_dir/"tests/smithsonian_butterflies_10/meta_data/good_meta.csv"
+                        if Path(test_out_dir).exists(): rmtree(test_out_dir)
+
+                        config["images"] = test_images.as_posix()
+                        config["out_dir"] = test_out_dir.as_posix()
+                        config["metadata"] = meta_dir.as_posix()
+
+                process_images(**config)
