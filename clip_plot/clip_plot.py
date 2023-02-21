@@ -6,8 +6,8 @@ import warnings
 
 
 # %% auto 0
-__all__ = ['DEFAULTS', 'cuml_ready', 'cluster_method', 'copy_root_dir', 'timestamp', 'get_clip_plot_root', 'process_images',
-           'preprocess_kwargs', 'copy_web_assets', 'filter_images', 'get_image_paths', 'stream_images',
+__all__ = ['DEFAULTS', 'FILE_NAME', 'cuml_ready', 'cluster_method', 'copy_root_dir', 'FLOATX', 'timestamp', 'get_clip_plot_root',
+           'process_images', 'preprocess_kwargs', 'copy_web_assets', 'filter_images', 'get_image_paths',
            'clean_filename', 'get_metadata_list', 'write_metadata', 'is_number', 'get_manifest', 'get_atlas_data',
            'save_atlas', 'get_layouts', 'get_inception_vectors', 'get_umap_layout', 'process_single_layout_umap',
            'process_multi_layout_umap', 'save_model', 'load_model', 'get_umap_model', 'get_rasterfairy_layout',
@@ -15,7 +15,9 @@ __all__ = ['DEFAULTS', 'cuml_ready', 'cluster_method', 'copy_root_dir', 'timesta
            'datestring_to_date', 'date_to_seconds', 'round_date', 'get_categorical_layout', 'get_categorical_boxes',
            'get_categorical_points', 'Box', 'get_geographic_layout', 'process_geojson', 'get_path', 'write_layout',
            'round_floats', 'write_json', 'read_json', 'get_hotspots', 'get_cluster_model', 'get_heightmap',
-           'write_images', 'get_version', 'Image', 'parse', 'project_imgs']
+           'write_images', 'get_version', 'Image', 'parse', 'load_image', 'image_to_array', 'array_to_image',
+           'save_image', 'test_iiif', 'test_butterfly_duplicate', 'test_butterfly', 'test_butterfly_missing_meta',
+           'test_no_meta_dir', 'project_imgs']
 
 # %% ../nbs/00_clip_plot.ipynb 5
 from . import utils
@@ -32,7 +34,7 @@ from pathlib import Path
 import pkg_resources
 import datetime
 import argparse
-from typing import Optional
+from typing import Optional, List, Union, Tuple
 import glob2
 import uuid
 import sys
@@ -76,17 +78,17 @@ from umap import UMAP, AlignedUMAP
 from urllib.parse import unquote
 
 # Keras imports
-from tensorflow.keras.preprocessing.image import save_img, img_to_array, array_to_img
+# from tensorflow.keras.preprocessing.image import save_img, img_to_array, array_to_img
 from tensorflow.keras.applications.inception_v3 import preprocess_input
-from tensorflow.keras.applications import InceptionV3, imagenet_utils
-from tensorflow.keras.preprocessing.image import load_img
+from tensorflow.keras.applications import InceptionV3, imagenet_utils # imagenet_utils not being used
+# from tensorflow.keras.preprocessing.image import load_img
 from tensorflow.keras.models import Model
 from tensorflow import compat
 
 # %% ../nbs/00_clip_plot.ipynb 12
 DEFAULTS = {
     "images": None,
-    "metadata": None,
+    "meta_dir": None,
     "out_dir": "output",
     "max_images": None,
     "use_cache": True,
@@ -110,6 +112,8 @@ DEFAULTS = {
     "n_clusters": 12,
     "geojson": None,
 }
+
+FILE_NAME = "filename"  # Filename name key
 
 print(timestamp(), "Ignoring cuml-umap for now to avoid conditional import")
 print("we may add cuml-umap option back later")
@@ -141,11 +145,18 @@ copy_root_dir = get_clip_plot_root()
 def process_images(**kwargs):
     """Main method for processing user images and metadata"""
     kwargs = preprocess_kwargs(**kwargs)
-    copy_web_assets(**kwargs)
+
+    copy_web_assets(out_dir=kwargs['out_dir'])
+    if kwargs["copy_web_only"]:
+        print(timestamp(), "Done!")
+        sys.exit()
+    
     np.random.seed(kwargs["seed"])
     compat.v1.set_random_seed(kwargs["seed"])
     kwargs["out_dir"] = join(kwargs["out_dir"], "data")
     kwargs["image_paths"], kwargs["metadata"] = filter_images(**kwargs)
+    write_metadata(**kwargs)
+    
     kwargs["atlas_dir"] = get_atlas_data(**kwargs)
     kwargs["vecs"] = get_inception_vectors(**kwargs)
     get_manifest(**kwargs)
@@ -171,25 +182,23 @@ def preprocess_kwargs(**kwargs):
     return kwargs
 
 # %% ../nbs/00_clip_plot.ipynb 17
-def copy_web_assets(**kwargs):
-    """Copy the /web directory from the clipplot source to the users cwd
+def copy_web_assets(out_dir: str) -> None:
+    """Copy the /web directory from the clipplot source to the users cwd.
+    Copies version number into assets.
     
     Args: 
         out_dir (str): directory to copy web assets
-        copy_web_only (Optional[bool], default = False): 
 
     Returns:
         None
-
-    Notes:
-        Will exit process if copy_web_only is True
-    
     """
     copy_root_dir = get_clip_plot_root()
     src = copy_root_dir / "clip_plot/web"
+
     # resolve will handle cases with ../ in the path
-    dest = Path.cwd() / Path(kwargs["out_dir"]).resolve()
+    dest = Path.cwd() / Path(out_dir).resolve()
     utils.copytree_agnostic(src.as_posix(), dest.as_posix())
+
     # write version numbers into output
     for i in ["index.html", os.path.join("assets", "js", "tsne.js")]:
         path = join(dest, i)
@@ -197,13 +206,20 @@ def copy_web_assets(**kwargs):
             f = f.read().replace("VERSION_NUMBER", get_version())
             with open(path, "w") as out:
                 out.write(f)
-    if kwargs["copy_web_only"]:
-        print(timestamp(), "Done!")
-        sys.exit()
+
 
 # %% ../nbs/00_clip_plot.ipynb 19
 def filter_images(**kwargs):
     """Main method for filtering images given user metadata (if provided)
+
+    -Validate image:
+        Loading (done by stream_images and Images)
+        Size
+        resizing
+        oblong
+
+    -Compare against metadata
+
     
     Args:
         atlas_size (int, default = 2048)
@@ -216,83 +232,60 @@ def filter_images(**kwargs):
         metadata (list[dict])
 
     Notes:
-        Duplicate checking is wrong
-            Checking paths not names
-        Improve variable naming
-        Unnecessary stream_images
-        Assumes 'filename' is provided in metadata 
-        Overwrites metadata keyword
+        Assumes 'filename' is provided in metadata
         Convoluted compiling of metadata
-        missing-metadata.txt saved in current directory
+        Should All Validation should belong to Image class?
+        Need to split function
     """
     # validate that input image names are unique
-    image_paths = set()
-    duplicates = set()
-    for i in stream_images(image_paths=get_image_paths(**kwargs)):
-        if i.path in image_paths:
-            duplicates.add(i.path)
-        image_paths.add(i.path)
+    image_paths = get_image_paths(images=kwargs["images"], out_dir=kwargs["out_dir"])
+    image_names = list(map(clean_filename,image_paths))
+    duplicates = set([x for x in image_names if image_names.count(x) > 1])
+
     if duplicates:
         raise Exception(
-            """
-      Image filenames should be unique, but the following filenames are duplicated\n
-      {}
-      """.format(
-                "\n".join(duplicates)
-            )
-        )
-    if not kwargs.get("shuffle", False):
+            """Image filenames should be unique, but the following 
+            filenames are duplicated\n{}""".format("\n".join(duplicates)))
+    
+    # optionally shuffle the image_paths
+    if kwargs.get("shuffle", False):
+        print(timestamp(), "Shuffling input images")
+        random.Random(kwargs["seed"]).shuffle(image_paths)
+    else:
         image_paths = sorted(image_paths)
+
+    # optionally limit the number of images in image_paths
+    if kwargs.get("max_images", False):
+        image_paths = image_paths[: kwargs["max_images"]]        
+
     # process and filter the images
-    filtered_image_paths = []
-    for i in stream_images(image_paths=image_paths):
-        # get image height and width
-        w, h = i.original.size
-        # remove images with 0 height or width when resized to lod height
-        if (h == 0) or (w == 0):
-            print(
-                timestamp(),
-                "Skipping {} because it contains 0 height or width".format(i.path),
-            )
-            continue
-        # remove images that have 0 height or width when resized
-        try:
-            resized = i.resize_to_max(kwargs["lod_cell_height"])
-        except ValueError:
-            print(
-                timestamp(),
-                "Skipping {} because it contains 0 height or width when resized".format(
-                    i.path
-                ),
-            )
-            continue
-        except OSError:
-            print(
-                timestamp(),
-                "Skipping {} because it could not be resized".format(i.path),
-            )
-            continue
-        # remove images that are too wide for the atlas
-        if (w / h) > (kwargs["atlas_size"] / kwargs["cell_size"]):
-            print(
-                timestamp(),
-                "Skipping {} because its dimensions are oblong".format(i.path),
-            )
-            continue
-        filtered_image_paths.append(i.path)
+    filtered_image_paths = {}
+    oblong_ratio = kwargs["atlas_size"] / kwargs["cell_size"]
+    for img in Image.stream_images(image_paths=image_paths):
+        valid, msg = img.valid(lod_cell_height=kwargs["lod_cell_height"], oblong_ratio=oblong_ratio) 
+        if valid is True:
+            filtered_image_paths[img.path] = img.filename
+        else:
+            print(timestamp(), msg)
+
     # if there are no remaining images, throw an error
     if len(filtered_image_paths) == 0:
         raise Exception("No images were found! Please check your input image glob.")
+
     # handle the case user provided no metadata
-    if not kwargs.get("metadata", False):
-        return [filtered_image_paths, []]
+    if not kwargs.get("meta_dir", False):
+        return [filtered_image_paths.keys(), []]
+
     # handle user metadata: retain only records with image and metadata
-    l = get_metadata_list(**kwargs)
-    meta_bn = set([clean_filename(i.get("filename", "")) for i in l])
-    img_bn = set([clean_filename(i, **kwargs) for i in filtered_image_paths])
+    metaList = get_metadata_list(meta_dir=kwargs['meta_dir'])
+    metaDict = {clean_filename(i.get(FILE_NAME, "")): i for i in metaList}
+    meta_bn = set(metaDict.keys())
+    img_bn = set(filtered_image_paths.values())
+
     # identify images with metadata and those without metadata
     meta_present = img_bn.intersection(meta_bn)
     meta_missing = list(img_bn - meta_bn)
+
     # notify the user of images that are missing metadata
     if meta_missing:
         print(
@@ -302,115 +295,84 @@ def filter_images(**kwargs):
         )
         if len(meta_missing) > 10:
             print(timestamp(), " ...", len(meta_missing) - 10, "more")
-        with open("missing-metadata.txt", "w") as out:
+
+        if os.path.exists(kwargs['out_dir']) is False:
+            os.makedirs(kwargs['out_dir'])
+            
+        missing_dir = os.path.join(kwargs['out_dir'],"missing-metadata.txt")
+        with open(missing_dir, "w") as out:
             out.write("\n".join(meta_missing))
+
+    if not meta_present:
+        raise Exception( f"""No image has matching metadata. Check if '{FILE_NAME}' key was provided in metadata files""")
+
     # get the sorted lists of images and metadata
-    d = {clean_filename(i["filename"]): i for i in l}
     images = []
     metadata = []
-    for i in filtered_image_paths:
-        if clean_filename(i, **kwargs) in meta_present:
-            images.append(i)
-            metadata.append(copy.deepcopy(d[clean_filename(i, **kwargs)]))
-    kwargs["metadata"] = metadata
-    write_metadata(**kwargs)
+    for path, fileName in filtered_image_paths.items():
+        if fileName in meta_present:
+            images.append(path)
+            metadata.append(copy.deepcopy(metaDict[fileName]))
+
     return [images, metadata]
 
 # %% ../nbs/00_clip_plot.ipynb 20
-def get_image_paths(**kwargs):
-    """Called once to provide a list of image paths--handles IIIF manifest input
+def get_image_paths(images:str, out_dir: str) -> List[str]:
+    """Called once to provide a list of image paths--handles IIIF manifest input.
     
     args:
-        images (str): directory location of images
-            - will exit if not provided
-        shuffle (bool, default = False) Optional: shuffle image list
-        max_images (Optional[int], default = None) optional: cap maximum size of images
+        images (str): directory location of images.
+        out_dir (str): output directory for downloaded IIIF files.
 
     returns:
-        image_paths list(str): list of image paths
+        image_paths list(str): list of image paths.
 
     Note:
-        Will exit if 'images' arg is not provided
-            - Should raise error instead
-        Will save downloaded IIIF files to hardcoded Manifest folder
-            No way to specify output dir
-        Old/previous images are not deleted from IIIF directory
-        See comment Carlo_comment#1
+        Old/previous images are not deleted from IIIF directory.
+
+    Todo:
+        Consider separate function that handles IIIF images
+        from glob images.
     """
-    # handle case where --images points to iiif manifest
+
     image_paths = None
-    if not kwargs["images"]:
-        print("\nError: please provide an images argument, e.g.:")
-        print('clipplot --images "cat_pictures/*.jpg"\n')
-        sys.exit(kwargs)
 
-    print("\n"*5)
-    print(kwargs["images"])
-    print("\n"*5)
-    # handle list of IIIF image inputs
-    if os.path.exists(kwargs["images"]):
-        with open(kwargs["images"]) as f:
-            f = [i.strip() for i in f.read().split("\n") if i.strip()]
-            for i in f:
-                if i.startswith("http"):
-                    try:
-                        Manifest(url=i).save_images(limit=1)
-                    except:
-                        print(timestamp(), "Could not download url " + i)
+    # Is images a iiif file or image directory?
+    if os.path.isfile(images):
+        # Handle list of IIIF image inputs
+        iiif_dir = os.path.join(out_dir,"iiif-downloads")
 
-                """ 
-                Carlo_comment#1
-                There are scenarios where you will be here but no http was found!
-                No warning that it did not work!
-                see tests/IIIF_examples/iif_example_bad.txt
-                """
-            image_paths = sorted(
-                glob2.glob(os.path.join("iiif-downloads", "images", "*"))
-            )
+        # Check if directory already contains anything
+        if os.path.exists(iiif_dir) and os.listdir(iiif_dir):
+            print("Warning: IIIF directory already contains content!")
+
+        with open(images) as f:
+            urls = [url.strip() for url in f.read().split("\n") if url.startswith("http")]
+            count = 0
+            for url in urls:
+                try:
+                    Manifest(url=url, out_dir=iiif_dir).save_images(limit=1)
+                    count += 1
+                except:
+                    print(timestamp(), "Could not download url " + url)
+
+            if count == 0:
+                raise Exception('No IIIF images were successfully downloaded!')
+
+            image_paths = glob2.glob(os.path.join(out_dir,"iiif-downloads", "images", "*"))
+   
     # handle case where images flag points to a glob of images
     if not image_paths:
-        image_paths = sorted(glob2.glob(kwargs["images"]))
+        image_paths = glob2.glob(images)
+
     # handle case user provided no images
     if not image_paths:
-        print("\nError: No input images were found. Please check your --images glob\n")
-        sys.exit()
-    # optionally shuffle the image_paths
-    if kwargs.get("shuffle", False):
-        print(timestamp(), "Shuffling input images")
-        random.Random(kwargs["seed"]).shuffle(image_paths)
-    # optionally limit the number of images in image_paths
-    if kwargs.get("max_images", False):
-        image_paths = image_paths[: kwargs["max_images"]]
+        raise FileNotFoundError("Error: No input images were found. Please check your --images glob")
+
     return image_paths
 
+
 # %% ../nbs/00_clip_plot.ipynb 21
-def stream_images(**kwargs):
-    """Read in all images from args[0], a list of image paths
-    
-    Args:
-        image_paths (list[str]): list of image locations
-        metadata (Optional[list[dist]]): metadata for each image
-    
-
-    Returns:
-        yields Image instance
-
-    Notes:
-        image is matched to metadata by index location
-            Matching by key would be better
-            
-
-    """
-    for idx, i in enumerate(kwargs["image_paths"]):
-        try:
-            metadata = None
-            if kwargs.get("metadata", False) and kwargs["metadata"][idx]:
-                metadata = kwargs["metadata"][idx]
-            yield Image(i, metadata=metadata)
-        except Exception as exc:
-            print(timestamp(), "Image", i, "could not be processed --", exc)
-
-
 def clean_filename(s, **kwargs):
     """Given a string that points to a filename, return a clean filename
     
@@ -436,43 +398,51 @@ def clean_filename(s, **kwargs):
 ##
 
 
-def get_metadata_list(**kwargs):
-    """Return a list of objects with image metadata
+def get_metadata_list(meta_dir: str) -> List[dict]:
+    """Return a list of objects with image metadata.
+
+    Will create 'tags' key if 'category' is in metadata
+    but not 'tags'.
     
     Args:
         metadata (str, default = None): Metadata location
 
     Returns:
-        l (list): 
+        l (List[dict]): List of metadata 
 
     Notes:
         No check for 'filename' is performed
+
+    Todo:
+        Think about separating .csv and json functionality.
+        Can we use pandas numpy to process csv?
     """
-    if not kwargs.get("metadata", False):
-        return []
+
     # handle csv metadata
-    l = []
-    if kwargs["metadata"].endswith(".csv"):
-        with open(kwargs["metadata"]) as f:
+    metaList = []
+    if meta_dir.endswith(".csv"):
+        with open(meta_dir) as f:
             reader = csv.reader(f)
             headers = [i.lower() for i in next(reader)]
             for i in reader:
-                l.append(
+                metaList.append(
                     {
                         headers[j]: i[j] if len(i) > j and i[j] else ""
                         for j, _ in enumerate(headers)
                     }
                 )
+    
     # handle json metadata
     else:
-        for i in glob2.glob(kwargs["metadata"]):
+        for i in glob2.glob(meta_dir):
             with open(i) as f:
-                l.append(json.load(f))
+                metaList.append(json.load(f))
+
     # if the user provided a category but not a tag, use the category as the tag
-    for i in l:
-        if i.get("category", False) and not i.get("tags", False):
-            i.update({"tags": i["category"]})
-    return l
+    for metaDict in metaList:
+        if "category" in metaDict and ("tags" in metaDict) is False:
+            metaDict.update({"tags": metaDict["category"]})
+    return metaList
 
 # %% ../nbs/00_clip_plot.ipynb 23
 def write_metadata(metadata, **kwargs):
@@ -497,19 +467,22 @@ def write_metadata(metadata, **kwargs):
     """
     if not metadata:
         return
+
     out_dir = join(kwargs["out_dir"], "metadata")
     for i in ["filters", "options", "file"]:
         out_path = join(out_dir, i)
         if not exists(out_path):
             os.makedirs(out_path)
+    
     # create the lists of images with each tag
     d = defaultdict(list)
     for i in metadata:
-        filename = clean_filename(i["filename"])
+        filename = clean_filename(i[FILE_NAME])
         i["tags"] = [j.strip() for j in i.get("tags", "").split("|")]
         for j in i["tags"]:
             d["__".join(j.split())].append(filename)
         write_json(os.path.join(out_dir, "file", filename + ".json"), i, **kwargs)
+
     write_json(
         os.path.join(out_dir, "filters", "filters.json"),
         [
@@ -520,6 +493,7 @@ def write_metadata(metadata, **kwargs):
         ],
         **kwargs
     )
+
     # create the options for the category dropdown
     for i in d:
         write_json(os.path.join(out_dir, "options", i + ".json"), d[i], **kwargs)
@@ -528,7 +502,8 @@ def write_metadata(metadata, **kwargs):
     for i in metadata:
         date = i.get("year", "")
         if date:
-            date_d[date].append(clean_filename(i["filename"]))
+            date_d[date].append(clean_filename(i[FILE_NAME]))
+
     # find the min and max dates to show on the date slider
     dates = np.array([int(i.strip()) for i in date_d if is_number(i)])
     domain = {"min": float("inf"), "max": -float("inf")}
@@ -539,6 +514,7 @@ def write_metadata(metadata, **kwargs):
         if abs(mean - i) < (std * 4):
             domain["min"] = int(min(i, domain["min"]))
             domain["max"] = int(max(i, domain["max"]))
+
     # write the dates json
     if len(date_d) > 1:
         write_json(
@@ -718,7 +694,7 @@ def get_atlas_data(**kwargs):
     y = 0  # y pos in atlas
     positions = []  # l[cell_idx] = atlas data
     atlas = np.zeros((kwargs["atlas_size"], kwargs["atlas_size"], 3))
-    for idx, i in enumerate(stream_images(**kwargs)):
+    for idx, i in enumerate(Image.stream_images(image_paths=kwargs["image_paths"], metadata=kwargs["metadata"])):
         cell_data = i.resize_to_height(kwargs["cell_size"])
         _, v, _ = cell_data.shape
         appendable = False
@@ -758,7 +734,7 @@ def get_atlas_data(**kwargs):
 def save_atlas(atlas, out_dir, n):
     """Save an atlas to disk"""
     out_path = join(out_dir, "atlas-{}.jpg".format(n))
-    save_img(out_path, atlas)
+    save_image(out_path, atlas)
 
 # %% ../nbs/00_clip_plot.ipynb 27
 ##
@@ -802,12 +778,12 @@ def get_inception_vectors(**kwargs):
     print(timestamp(), "Creating image array")
     vecs = []
     with tqdm(total=len(kwargs["image_paths"])) as progress_bar:
-        for idx, i in enumerate(stream_images(**kwargs)):
+        for idx, i in enumerate(Image.stream_images(image_paths=kwargs["image_paths"], metadata=kwargs["metadata"])):
             vector_path = os.path.join(vector_dir, clean_filename(i.path) + ".npy")
             if os.path.exists(vector_path) and kwargs["use_cache"]:
                 vec = np.load(vector_path)
             else:
-                im = preprocess_input(img_to_array(i.original.resize((299, 299))))
+                im = preprocess_input(image_to_array(i.original.resize((299, 299))))
                 vec = model.predict(np.expand_dims(im, 0)).squeeze()
                 np.save(vector_path, vec)
             vecs.append(vec)
@@ -875,7 +851,7 @@ def process_multi_layout_umap(v, **kwargs):
             {
                 "n_neighbors": n_neighbors,
                 "min_dist": min_dist,
-                "filename": filename,
+                FILE_NAME: filename,
                 "out_path": out_path,
             }
         )
@@ -920,7 +896,7 @@ def process_multi_layout_umap(v, **kwargs):
                 "min_dist": i["min_dist"],
                 "layout": i["out_path"],
                 "jittered": get_pointgrid_layout(
-                    i["out_path"], i["filename"], **kwargs
+                    i["out_path"], i[FILE_NAME], **kwargs
                 ),
             }
         )
@@ -1042,7 +1018,7 @@ def get_custom_layout(**kwargs):
         return
     found_coords = False
     coords = []
-    for i in stream_images(**kwargs):
+    for i in Image.stream_images(image_paths=kwargs["image_paths"], metadata=kwargs["metadata"]):
         x = i.metadata.get("x")
         y = i.metadata.get("y")
         if x and y:
@@ -1091,7 +1067,7 @@ def get_date_layout(cols=3, bin_units="years", **kwargs):
         }
     # date layout is not cached, so fetch dates and process
     print(timestamp(), "Creating date layout with {} columns".format(cols))
-    datestrings = [i.metadata.get("year", "no_date") for i in stream_images(**kwargs)]
+    datestrings = [i.metadata.get("year", "no_date") for i in Image.stream_images(image_paths=kwargs["image_paths"], metadata=kwargs["metadata"])]
     dates = [datestring_to_date(i) for i in datestrings]
     rounded_dates = [round_date(i, bin_units) for i in dates]
     # create d[formatted_date] = [indices into datestrings of dates that round to formatted_date]
@@ -1230,7 +1206,7 @@ def get_categorical_layout(null_category="Other", margin=2, **kwargs):
     for idx, i in enumerate(keys_and_counts):
         offsets[i["key"]] += sum([j["count"] for j in keys_and_counts[:idx]])
     sorted_points = []
-    for idx, i in enumerate(stream_images(**kwargs)):
+    for idx, i in enumerate(Image.stream_images(image_paths=kwargs["image_paths"], metadata=kwargs["metadata"])):
         category = i.metadata.get("category", null_category)
         sorted_points.append(points[offsets[category] + counts[category]])
         counts[category] += 1
@@ -1341,7 +1317,7 @@ def get_geographic_layout(**kwargs):
     out_path = get_path("layouts", "geographic", **kwargs)
     l = []
     coords = False
-    for idx, i in enumerate(stream_images(**kwargs)):
+    for idx, i in enumerate(Image.stream_images(image_paths=kwargs["image_paths"], metadata=kwargs["metadata"])):
         lat = float(i.metadata.get("lat", 0)) / 180
         lng = (
             float(i.metadata.get("lng", 0)) / 180
@@ -1509,7 +1485,7 @@ def get_heightmap(path, label, **kwargs):
 
 def write_images(**kwargs):
     """Write all originals and thumbs to the output dir"""
-    for i in stream_images(**kwargs):
+    for i in Image.stream_images(image_paths=kwargs["image_paths"], metadata=kwargs["metadata"]):
         filename = clean_filename(i.path)
         # copy original for lightbox
         out_dir = join(kwargs["out_dir"], "originals")
@@ -1518,15 +1494,15 @@ def write_images(**kwargs):
         out_path = join(out_dir, filename)
         if not os.path.exists(out_path):
             resized = i.resize_to_height(600)
-            resized = array_to_img(resized)
-            save_img(out_path, resized)
+            resized = array_to_image(resized)
+            save_image(out_path, resized)
         # copy thumb for lod texture
         out_dir = join(kwargs["out_dir"], "thumbs")
         if not exists(out_dir):
             os.makedirs(out_dir)
         out_path = join(out_dir, filename)
-        img = array_to_img(i.resize_to_max(kwargs["lod_cell_height"]))
-        save_img(out_path, img)
+        img = array_to_image(i.resize_to_max(kwargs["lod_cell_height"]))
+        save_image(out_path, img)
 
 
 # %% ../nbs/00_clip_plot.ipynb 39
@@ -1542,20 +1518,35 @@ def get_version():
 class Image:
     def __init__(self, *args, **kwargs):
         self.path = args[0]
-        self.original = load_img(self.path)
+        self.filename = clean_filename(self.path)
+        self.original = load_image(self.path) 
         self.metadata = kwargs["metadata"] if kwargs["metadata"] else {}
 
-    def resize_to_max(self, n):
-        """
-        Resize self.original so its longest side has n pixels (maintain proportion)
+    def resize_to_max(self, n: int) -> np.array:
+        """Resize self.original so its longest side has n pixels (maintain proportion).
+
+        Args:
+            n (int): maximum pixel length
+
+        Returns:
+            np.array: re-sized to n length
         """
         w, h = self.original.size
-        size = (n, int(n * h / w)) if w > h else (int(n * w / h), n)
-        return img_to_array(self.original.resize(size))
+        if w > h:
+            size = (n, int(n * h / w))
+        else:
+            size = (int(n * w / h), n)
+    
+        return image_to_array(self.original.resize(size))
 
-    def resize_to_height(self, height):
-        """
-        Resize self.original into an image with height h and proportional width
+    def resize_to_height(self, height: int) -> np.array:
+        """Resize self.original into an image with height h and proportional width.
+
+        Args:
+            height (int): New height to resize to
+
+        Returns:
+            np.array: re-sized to height
         """
         w, h = self.original.size
         if (w / h * height) < 1:
@@ -1563,12 +1554,17 @@ class Image:
         else:
             resizedwidth = int(w / h * height)
         size = (resizedwidth, height)
-        return img_to_array(self.original.resize(size))
+        return image_to_array(self.original.resize(size))
 
-    def resize_to_square(self, n, center=False):
-        """
-        Resize self.original to an image with nxn pixels (maintain proportion)
-        if center, center the colored pixels in the square, else left align
+    def resize_to_square(self, n: int, center: Optional[bool] = False) -> np.array:
+        """Resize self.original to an image with nxn pixels (maintain proportion)
+        if center, center the colored pixels in the square, else left align.
+
+        Args:
+            n (int)
+
+        Notes:
+            Function not being used
         """
         a = self.resize_to_max(n)
         h, w, c = a.shape
@@ -1580,6 +1576,59 @@ class Image:
         else:
             b[:h, :w, :] = a
         return b
+
+    def valid(self, lod_cell_height: int, oblong_ratio: Union[int,float]) -> tuple[bool, str]:
+        """Validate that image can be opened and loaded correctly.
+
+        Args:
+            lod_cell_height (int):
+            oblong_ratio (int|float): atlas_size/cell_size ratio
+
+        Returns:
+            Tuple[pass,msg]:
+                pass (bool): True if passed validation
+                msg (str): Reason why validation failed 
+        """
+        w, h = self.original.size
+        # remove images with 0 height or width when resized to lod height
+        if (h == 0) or (w == 0):
+            return False, f"Skipping {self.path} because it contains 0 height or width"
+        # remove images that have 0 height or width when resized
+        try:
+            resized = self.resize_to_max(lod_cell_height)
+        except ValueError:
+            return False, f"Skipping {self.path} because it contains 0 height or width when resized"
+        except OSError:
+            return False, f"Skipping {self.path} because it could not be resized"
+        # remove images that are too wide for the atlas
+        if (w / h) > (oblong_ratio):
+            return False, f"Skipping {self.path} because its dimensions are oblong"
+
+        return True, ""
+
+    @staticmethod
+    def stream_images(image_paths: List[str], metadata: Optional[List[dict]] = None) -> 'Image':
+        """Read in all images from args[0], a list of image paths
+        
+        Args:
+            image_paths (list[str]): list of image locations
+            metadata (Optional[list[dist]]): metadata for each image
+        
+        Returns:
+            yields Image instance
+
+        Notes:
+            image is matched to metadata by index location
+                Matching by key would be better
+        """
+        for idx, imgPath in enumerate(image_paths):
+            try:
+                meta = None
+                if metadata and metadata[idx]:
+                    meta = metadata[idx]
+                yield Image(imgPath, metadata=meta)
+            except Exception as exc:
+                print(timestamp(), "Image", imgPath, "could not be processed --", exc)
 
 # %% ../nbs/00_clip_plot.ipynb 42
 def parse():
@@ -1600,7 +1649,7 @@ def parse():
         "--metadata",
         "-m",
         type=str,
-        default=DEFAULTS["metadata"],
+        default=DEFAULTS["meta_dir"],
         help="path to a csv or glob of JSON files with image metadata (see readme for format)",
         required=False,
     )
@@ -1733,7 +1782,171 @@ def parse():
 
     return config
 
-# %% ../nbs/00_clip_plot.ipynb 43
+# %% ../nbs/00_clip_plot.ipynb 44
+import io
+from PIL import Image as pil_image
+
+# The type of float to use throughout a session.
+FLOATX = "float32"
+
+def load_image(path: str) -> pil_image.Image:
+    with open(path, "rb") as f:
+        img = pil_image.open(io.BytesIO(f.read()))
+
+    if img.mode != "RGB":
+        img = img.convert("RGB")
+
+    return img
+
+
+def image_to_array(img: pil_image.Image) -> np.array:
+    """Converts a PIL Image instance to a Numpy array.
+
+    Args:
+        img: Input PIL Image instance.
+
+    Returns:
+        A 3D Numpy array.
+
+    Raises:
+        ValueError: if invalid `img` or `data_format` is passed.
+    """
+
+    # Numpy array x has format (height, width, channel)
+    # or (channel, height, width)
+    # but original PIL image has format (width, height, channel)
+    x = np.asarray(img, dtype=FLOATX)
+    if len(x.shape) not in [2, 3]:
+        raise ValueError(f"Unsupported image shape: {x.shape}")
+
+    if len(x.shape) == 2:
+        x = x.reshape((x.shape[0], x.shape[1], 1))
+        
+    return x
+
+
+def array_to_image(x: np.array)-> pil_image.Image:
+    """Converts a 3D Numpy array to a PIL Image instance.
+
+    Args:
+        x: Input data, in any form that can be converted to a Numpy array.
+
+    Returns:
+        A PIL Image instance.
+
+    Raises:
+        ValueError: if invalid `x` or `data_format` is passed.
+    """
+    x = np.asarray(x, dtype=FLOATX)
+    if x.ndim != 3:
+        raise ValueError(
+            "Expected image array to have rank 3 (single image). "
+            f"Got array with shape: {x.shape}"
+        )
+
+    # Original Numpy array x has format (height, width, channel)
+    # or (channel, height, width)
+    # but target PIL image has format (width, height, channel)
+
+    x = x - np.min(x)
+    x_max = np.max(x)
+    if x_max != 0:
+        x /= x_max
+    x *= 255
+
+    if x.shape[2] == 4:  # RGBA
+        return pil_image.fromarray(x.astype("uint8"), "RGBA")
+    elif x.shape[2] == 3:  # RGB
+        return pil_image.fromarray(x.astype("uint8"), "RGB")
+    elif x.shape[2] == 1:  # grayscale
+        if np.max(x) > 255:
+            # 32-bit signed integer grayscale image. PIL mode "I"
+            return pil_image.fromarray(x[:, :, 0].astype("int32"), "I")
+        return pil_image.fromarray(x[:, :, 0].astype("uint8"), "L")
+    else:
+        raise ValueError(f"Unsupported channel number: {x.shape[2]}")
+
+
+def save_image(path: str, x: np.array) -> None:
+    """Saves an image stored as a Numpy array to a path or file object.
+
+    Args:
+        path: Path or file object.
+        x: Numpy array.
+    """
+    img = array_to_image(x)
+    img.save(path,format=None)
+
+# %% ../nbs/00_clip_plot.ipynb 46
+def test_iiif(config):
+    test_images = copy_root_dir/"tests/IIIF_examples/iif_example.txt"
+    test_out_dir = copy_root_dir/"tests/smithsonian_butterflies_10/output_test_temp"
+    # meta_dir = copy_root_dir/"tests/smithsonian_butterflies_10/meta_data/good_meta.csv"
+    if Path(test_out_dir).exists():
+        rmtree(test_out_dir)
+
+    config["images"] = test_images.as_posix()
+    config["out_dir"] = test_out_dir.as_posix()
+    # config["meta_dir"] = meta_dir.as_posix()
+
+    return config
+
+
+def test_butterfly_duplicate(config):
+    test_images = copy_root_dir/"tests/smithsonian_butterflies_10/jpgs_duplicates/**/*.jpg"
+    test_out_dir = copy_root_dir/"tests/smithsonian_butterflies_10/output_test_temp"
+    meta_dir = copy_root_dir/"tests/smithsonian_butterflies_10/meta_data/good_meta.csv"
+    if Path(test_out_dir).exists():
+        rmtree(test_out_dir)
+
+    config["images"] = test_images.as_posix()
+    config["out_dir"] = test_out_dir.as_posix()
+    config["meta_dir"] = meta_dir.as_posix()
+
+    return config
+
+
+def test_butterfly(config):
+    test_images = copy_root_dir/"tests/smithsonian_butterflies_10/jpgs/*.jpg"
+    test_out_dir = copy_root_dir/"tests/smithsonian_butterflies_10/output_test_temp"
+    meta_dir = copy_root_dir/"tests/smithsonian_butterflies_10/meta_data/good_meta.csv"
+    if Path(test_out_dir).exists():
+        rmtree(test_out_dir)
+
+    config["images"] = test_images.as_posix()
+    config["out_dir"] = test_out_dir.as_posix()
+    config["meta_dir"] = meta_dir.as_posix()
+
+    return config
+
+
+def test_butterfly_missing_meta(config):
+    test_images = copy_root_dir/"tests/smithsonian_butterflies_10/jpgs/*.jpg"
+    test_out_dir = copy_root_dir/"tests/smithsonian_butterflies_10/output_test_temp"
+    meta_dir = copy_root_dir/"tests/smithsonian_butterflies_10/meta_data/meta_missing_filename.csv"
+    if Path(test_out_dir).exists():
+        rmtree(test_out_dir)
+
+    config["images"] = test_images.as_posix()
+    config["out_dir"] = test_out_dir.as_posix()
+    config["meta_dir"] = meta_dir.as_posix()
+
+    return config
+
+
+def test_no_meta_dir(config):
+    test_images = copy_root_dir/"tests/smithsonian_butterflies_10/jpgs/*.jpg"
+    test_out_dir = copy_root_dir/"tests/smithsonian_butterflies_10/output_test_temp"
+    if Path(test_out_dir).exists():
+        rmtree(test_out_dir)
+
+    config["images"] = test_images.as_posix()
+    config["out_dir"] = test_out_dir.as_posix()
+
+    return config
+
+
+# %% ../nbs/00_clip_plot.ipynb 47
 if __name__ == "__main__":
     config = parse()
     copy_root_dir = get_clip_plot_root()
@@ -1742,26 +1955,19 @@ if __name__ == "__main__":
         # at least for now, this means we're in testing mode.
         # TODO: pass explicit "test_mode" flag to argparse
         config["test_mode"] = True
-        test_images = copy_root_dir/"tests/smithsonian_butterflies_10/jpgs/*.jpg"
-        test_out_dir = copy_root_dir/"tests/smithsonian_butterflies_10/output_test_temp"
-        meta_dir = copy_root_dir/"tests/smithsonian_butterflies_10/meta_data/good_meta.csv"
-        if Path(test_out_dir).exists():
-            rmtree(test_out_dir)
-
-        config["images"] = test_images.as_posix()
-        config["out_dir"] = test_out_dir.as_posix()
-        config["metadata"] = meta_dir.as_posix()
+        config = test_butterfly(config)
+        
 
     process_images(**config)
 
-# %% ../nbs/00_clip_plot.ipynb 44
+# %% ../nbs/00_clip_plot.ipynb 48
 @call_parse
 def project_imgs(images:Param(type=str,
                         help="path to a glob of images to process"
                         )=DEFAULTS["images"],
                 metadata:Param(type=str,
                         help="path to a csv or glob of JSON files with image metadata (see readme for format)"
-                        )=DEFAULTS["metadata"],
+                        )=DEFAULTS["meta_dir"],
                 max_images:Param(type=int,
                         help="maximum number of images to process from the input glob"
                         )=DEFAULTS["max_images"],
