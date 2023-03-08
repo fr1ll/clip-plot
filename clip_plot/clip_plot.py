@@ -1947,7 +1947,7 @@ def test_no_meta_dir(config):
     return config
 
 
-# %% ../nbs/00_clip_plot.ipynb 47
+# %% ../nbs/00_clip_plot.ipynb 46
 @call_parse
 def project_imgs(images:Param(type=str,
                         help="path to a glob of images to process"
@@ -2035,3 +2035,7 @@ def project_imgs(images:Param(type=str,
                         config = test_butterfly(config)
 
                 process_images(**config)
+
+# %% ../nbs/00_clip_plot.ipynb 48
+if __name__ == "__main__":
+    project_imgs()
