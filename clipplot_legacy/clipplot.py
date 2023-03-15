@@ -96,7 +96,7 @@ config = {
     "metadata": None,
     "out_dir": "output",
     "max_images": None,
-    "use_cache": True,
+    "use_cache": False,
     "encoding": "utf8",
     "min_cluster_size": 20,
     "max_clusters": 10,

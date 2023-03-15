@@ -1,0 +1,15 @@
+[
+    {
+        "filter_name": "select",
+        "filter_values": [
+            "Colorful",
+            "Beautiful",
+            "Broken",
+            "Tiny",
+            "Spots",
+            "Moth",
+            "Gray",
+            "Ugly"
+        ]
+    }
+]

@@ -1,0 +1,58 @@
+{
+    "version": "0.0.1",
+    "plot_id": "test_diff",
+    "output_directory": "/home/carlo/source/clip-plot/tests/smithsonian_butterflies_10/output_test_temp",
+    "layouts": {
+        "umap": {
+            "variants": [
+                {
+                    "n_neighbors": 15,
+                    "min_dist": 0.01,
+                    "layout": "/home/carlo/source/clip-plot/tests/smithsonian_butterflies_10/output_test_temp/data/layouts/umap-test_diff.json",
+                    "jittered": "/home/carlo/source/clip-plot/tests/smithsonian_butterflies_10/output_test_temp/data/layouts/umap-jittered-test_diff.json"
+                }
+            ]
+        },
+        "alphabetic": {
+            "layout": "/home/carlo/source/clip-plot/tests/smithsonian_butterflies_10/output_test_temp/data/layouts/grid-test_diff.json"
+        },
+        "grid": {
+            "layout": "/home/carlo/source/clip-plot/tests/smithsonian_butterflies_10/output_test_temp/data/layouts/rasterfairy-test_diff.json"
+        },
+        "categorical": {
+            "layout": "/home/carlo/source/clip-plot/tests/smithsonian_butterflies_10/output_test_temp/data/layouts/categorical-test_diff.json",
+            "labels": "/home/carlo/source/clip-plot/tests/smithsonian_butterflies_10/output_test_temp/data/layouts/categorical-labels-test_diff.json"
+        },
+        "date": {
+            "layout": "/home/carlo/source/clip-plot/tests/smithsonian_butterflies_10/output_test_temp/data/layouts/timeline-test_diff.json",
+            "labels": "/home/carlo/source/clip-plot/tests/smithsonian_butterflies_10/output_test_temp/data/layouts/timeline-labels-test_diff.json"
+        },
+        "geographic": null,
+        "custom": null
+    },
+    "initial_layout": "umap",
+    "point_sizes": {
+        "min": 0,
+        "grid": 0.25,
+        "max": 0.3,
+        "scatter": 0.05,
+        "initial": 0.05,
+        "categorical": 0.15,
+        "geographic": 0.00625,
+        "date": 0.022727272727272728
+    },
+    "imagelist": "/home/carlo/source/clip-plot/tests/smithsonian_butterflies_10/output_test_temp/data/imagelists/imagelist-test_diff.json",
+    "atlas_dir": "/home/carlo/source/clip-plot/tests/smithsonian_butterflies_10/output_test_temp/data/atlases/test_diff",
+    "metadata": true,
+    "default_hotspots": "/home/carlo/source/clip-plot/tests/smithsonian_butterflies_10/output_test_temp/data/hotspots/hotspot-test_diff.json",
+    "custom_hotspots": "/home/carlo/source/clip-plot/tests/smithsonian_butterflies_10/output_test_temp/data/hotspots/user_hotspots.json",
+    "gzipped": false,
+    "config": {
+        "sizes": {
+            "atlas": 2048,
+            "cell": 32,
+            "lod": 128
+        }
+    },
+    "creation_date": "15-March-2023-14:44:31"
+}
