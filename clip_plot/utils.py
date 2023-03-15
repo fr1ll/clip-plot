@@ -15,13 +15,3 @@ def copytree_agnostic(a,b):
     else:
         from distutils.dir_util import copy_tree
         copy_tree(a, b)
-
-# %% ../nbs/01_utils.ipynb 5
-# def get_clip_plot_root() -> Path:
-#     # ipython doesn't have __file__ attribute
-#     # return 
-#     return Path().resolve().parents[0]
-
-
-# %% ../nbs/01_utils.ipynb 6
-# print(get_clip_plot_root())
