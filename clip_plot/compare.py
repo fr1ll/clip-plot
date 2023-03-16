@@ -2,8 +2,7 @@
 
 # %% auto 0
 __all__ = ['basedir', 'clip_plt_dir', 'pix_plt_dir', 'temp_dir', 'MANIFEST1', 'MANIFEST2', 'COMPARE_FILES', 'log_output',
-           'clean_diff_output', 'compare_files_similar_text', 'compare_outputs', 'replace_and_save', 'delete_temp',
-           'copy_file', 'fix_expected_diff', 'comFile']
+           'clean_diff_output', 'replace_and_save', 'delete_temp', 'copy_file', 'fix_expected_diff', 'comFile']
 
 # %% ../nbs/02_compare.ipynb 4
 import filecmp
@@ -24,7 +23,7 @@ temp_dir = basedir / "tests/butterflies_baseline_temp"
 # pix_plt_dir = basedir / "output"
 
 
-# %% ../nbs/02_compare.ipynb 6
+# %% ../nbs/02_compare.ipynb 7
 MANIFEST1 = "data/manifests/manifest-test_diff.json"
 MANIFEST2 = "data/manifest.json"
 
@@ -75,16 +74,16 @@ COMPARE_FILES = [
     "data/metadata/dates.json",    
 ]
 
-# %% ../nbs/02_compare.ipynb 7
-def log_output(txt, space=0):
+# %% ../nbs/02_compare.ipynb 9
+def log_output(txt: str, space: Optional[int] = 0) -> None:
     # Hook for logging results
-    if isinstance(txt,str):
+    if isinstance(txt, str):
         print(f'{" " * space}{txt}')
     else:
         print("".join(txt))
 
 
-def clean_diff_output(msg):
+def clean_diff_output(msg: str) -> str:
     """Clean differ.compare() output to only show difference
     """
     cleanMsg = ""
@@ -95,52 +94,7 @@ def clean_diff_output(msg):
     return cleanMsg
 
 
-def compare_files_similar_text(file1: str, file2:str) -> Tuple[bool,str]:
-    """    This function compares two files to check if they are the same,
-    
-    Args:
-        file1 (str): path for file 1
-        file2 (str): path for file 2
-
-    Returns:
-        tuple(bool, str):
-            bool: true is files are the same
-            str: feedback if file difference
-    """
-    try:
-        if filecmp.cmp(file1, file2) is False:
-            if os.path.isfile(file1) and os.path.isfile(file2):
-                with open(file1, 'r') as f1, open(file2, 'r') as f2:
-                    differ = difflib.Differ()
-                    file1_lines = f1.readlines()
-                    file2_lines = f2.readlines()
-                    diff = list(differ.compare(file1_lines, file2_lines))
-                    return False, diff
-        else:
-            return True, ""
-    except FileNotFoundError:
-        return False, "Could not open files"
-
-
-def compare_outputs():
-    """Function loops named files in the COMPARE_FILES
-    list to compare the files form the legacy output and
-    the new output.  
-    """
-    for j, file in enumerate(COMPARE_FILES):
-        log_output(f"\n#{j} Comparing {file}")
-        file_clip = clip_plt_dir / file
-        file_pix = pix_plt_dir / file
-        chk, txt = compare_files_similar_text(file_clip, file_pix)
-        if chk is False:
-            log_output(f'- Fail', 2)
-            log_output(txt, 4)
-        else:
-            log_output(f'+ Identical', 2)
-
-
-# %% ../nbs/02_compare.ipynb 8
-def replace_and_save(file):
+def replace_and_save(file: str) -> None:
     """Functions replaces creation date and
     replaces directory references to match clip_plot
     """
@@ -191,7 +145,7 @@ def fix_expected_diff():
     replace_and_save(MANIFEST1)
     replace_and_save(MANIFEST2)
 
-# %% ../nbs/02_compare.ipynb 9
+# %% ../nbs/02_compare.ipynb 13
 def comFile():
     """Compare two directories
 
@@ -257,6 +211,6 @@ def comFile():
 
     return fail
 
-# %% ../nbs/02_compare.ipynb 10
+# %% ../nbs/02_compare.ipynb 14
 if __name__ == "__main__":
     comFile()
