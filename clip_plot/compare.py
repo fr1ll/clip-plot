@@ -2,8 +2,8 @@
 
 # %% auto 0
 __all__ = ['basedir', 'clip_plt_dir', 'pix_plt_dir', 'temp_dir', 'MANIFEST1', 'MANIFEST2', 'COMPARE_FILES', 'log_output',
-           'compare_files_similar_text', 'compare_outputs', 'comFile', 'replace_and_save', 'delete_temp', 'copy_file',
-           'fix_expected_diff']
+           'clean_diff_output', 'compare_files_similar_text', 'compare_outputs', 'replace_and_save', 'delete_temp',
+           'copy_file', 'fix_expected_diff', 'comFile']
 
 # %% ../nbs/02_compare.ipynb 4
 import filecmp
@@ -84,6 +84,17 @@ def log_output(txt, space=0):
         print("".join(txt))
 
 
+def clean_diff_output(msg):
+    """Clean differ.compare() output to only show difference
+    """
+    cleanMsg = ""
+    for line in msg:
+        if line.startswith('?') or line.startswith('-') or line.startswith('+'):
+            cleanMsg += line
+
+    return cleanMsg
+
+
 def compare_files_similar_text(file1: str, file2:str) -> Tuple[bool,str]:
     """    This function compares two files to check if they are the same,
     
@@ -129,52 +140,6 @@ def compare_outputs():
 
 
 # %% ../nbs/02_compare.ipynb 8
-def comFile():
-    """Compare two directories
-
-    Call out missing files and folders and files with
-    different content.
-    """
-    fail = False
-    log_output("Comparing Files and folders")
-    fileComp = filecmp.dircmp(clip_plt_dir, pix_plt_dir)
-
-    # Create a queue
-    currs = [fileComp]
-    while currs:
-        curr = currs.pop()
-
-        try:
-            # Check for different files
-            if curr.diff_files:
-                loc = str(curr.right).replace(str(pix_plt_dir),"")
-                log_output(f'Different at {loc}:\n    {curr.diff_files}\n',2)
-                fail = True
-            for k, v in curr.subdirs.items():
-                currs.append(v)
-
-            # Check if pix_plt_dir is missing files/folders
-            for asset in curr.left_list:
-                if asset not in curr.right_list:
-                    fail = True
-                    log_output(f'Pix-plot Missing: {asset}',2)
-
-            # Check if clip_plt_dir is missing files/folders
-            for asset in curr.right_list:
-                if asset not in curr.left_list:
-                    fail = True
-                    log_output(f'Clip-plot Missing: {asset}',2)
-
-        except FileNotFoundError as e:
-            msg = f'{str(e)} \n   Check directories path for clip_plt_dir and pix_plt_dir!'
-            log_output(msg,2)
-
-    if fail is False:
-        log_output("No difference found!")
-
-    return fail
-
-# %% ../nbs/02_compare.ipynb 9
 def replace_and_save(file):
     """Functions replaces creation date and
     replaces directory references to match clip_plot
@@ -183,26 +148,27 @@ def replace_and_save(file):
         ogData = json.load(f)
         date = ogData['creation_date']
     
-    with open(pix_plt_dir / file) as f:
+    with open(temp_dir / file) as f:
         newData = json.load(f)
         newData['creation_date'] = date
 
-    with open(pix_plt_dir / file, "w") as out:
+    with open(temp_dir / file, "w") as out:
         json.dump(newData, out, indent=4)
 
     # Open the file in read mode
-    with open(pix_plt_dir / file, 'r') as read:
+    with open(temp_dir / file, 'r') as read:
         # Read the contents of the file
         file_contents = read.read()
 
         # Replace the old text with the new text
         new_contents = file_contents.replace(str(pix_plt_dir), str(clip_plt_dir))
 
-    with open(pix_plt_dir / file, 'w') as out:
+    with open(temp_dir / file, 'w') as out:
         out.write(new_contents)
 
 
 def delete_temp():
+    # Delete temporary directory
     if Path(temp_dir).exists():
         rmtree(temp_dir)
 
@@ -225,13 +191,72 @@ def fix_expected_diff():
     replace_and_save(MANIFEST1)
     replace_and_save(MANIFEST2)
 
-# %% ../nbs/02_compare.ipynb 10
-if __name__ == "__main__":
+# %% ../nbs/02_compare.ipynb 9
+def comFile():
+    """Compare two directories
+
+    Call out missing files and folders and files with
+    different content.
+    """
     try:
+        # Create temporary copy of base line
         copy_file()
+
+        # Edit temp copy and fix expected difference
         fix_expected_diff()
-        comFile()
+
+        fail = False
+        log_output("Comparing Files and folders")
+        fileComp = filecmp.dircmp(clip_plt_dir, temp_dir)
+
+        # Create a queue
+        currs = [fileComp]
+        while currs:
+            curr = currs.pop()
+
+            try:
+                # Check for different files
+                if curr.diff_files:
+                    loc = str(curr.right).replace(str(temp_dir),"")
+                    log_output(f'Different at {loc}:\n    {curr.diff_files}\n',2)
+                    for asset in curr.diff_files:
+                        _, msg = compare_files_similar_text(f'{curr.right}/{asset}', f'{curr.left}/{asset}')
+                        log_output(f'{asset} Difference', 2)
+                        log_output(clean_diff_output(msg))
+                    fail = True
+
+                # Update queue
+                for k, v in curr.subdirs.items():
+                    currs.append(v)
+
+                # Check if pix_plt_dir is missing files/folders
+                for asset in curr.left_list:
+                    if asset not in curr.right_list:
+                        fail = True
+                        log_output(f'Pix-plot Missing: {asset}',2)
+
+                # Check if clip_plt_dir is missing files/folders
+                for asset in curr.right_list:
+                    if asset not in curr.left_list:
+                        fail = True
+                        log_output(f'Clip-plot Missing: {asset}',2)
+
+            except FileNotFoundError as e:
+                msg = f'{str(e)} \n   Check directories path for clip_plt_dir and pix_plt_dir!'
+                log_output(msg,2)
+
+    except Exception as e:
+        print(e)
+        fail = True
+
     finally:
         delete_temp()
 
-    # compare_outputs()
+    if fail is False:
+        log_output("No difference found!")
+
+    return fail
+
+# %% ../nbs/02_compare.ipynb 10
+if __name__ == "__main__":
+    comFile()
