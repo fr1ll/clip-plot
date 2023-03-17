@@ -2,9 +2,8 @@
 
 # %% auto 0
 __all__ = ['project_root', 'clip_plt_dir', 'baseline_dir', 'temp_dir', 'baseline_proj_root', 'MANIFEST1', 'MANIFEST2',
-           'COMPARE_FILES', 'log_output', 'clean_diff_output', 'replace_and_save', 'delete_temp',
-           'manifest_replace_write', 'copy_file', 'fix_expected_diff', 'try_read_text', 'useful_text_diff',
-           'compare_named_files', 'comFile']
+           'COMPARE_FILES', 'log_output', 'clean_diff_output', 'delete_temp', 'manifest_replace_write', 'copy_file',
+           'fix_expected_diff', 'try_read_text', 'useful_text_diff', 'compare_named_files', 'comFile']
 
 # %% ../nbs/02_compare.ipynb 4
 import filecmp
@@ -97,35 +96,8 @@ def clean_diff_output(msg: List[str]) -> str:
     return cleanMsg
 
 
-def replace_and_save(file: str) -> None:
-    """Functions replaces creation date and
-    replaces directory references to match clip_plot
-    """
-    with open(clip_plt_dir / file) as f:
-        ogData = json.load(f)
-        date = ogData['creation_date']
-    
-    with open(temp_dir / file) as f:
-        newData = json.load(f)
-        newData['creation_date'] = date
-
-    with open(temp_dir / file, "w") as out:
-        json.dump(newData, out, indent=4)
-
-    # Open the file in read mode
-    with open(temp_dir / file, 'r') as read:
-        # Read the contents of the file
-        file_contents = read.read()
-
-        # Replace the old text with the new text
-        new_contents = file_contents.replace(baseline_proj_root, project_root.as_posix())
-
-    with open(temp_dir / file, 'w') as out:
-        out.write(new_contents)
-
-
 def delete_temp():
-    # Delete temporary directory
+    """Delete temporary directory"""
     if temp_dir.exists():
         rmtree(temp_dir)
 
@@ -160,9 +132,7 @@ def fix_expected_diff():
         Creation date
         Directory references 
     """
-    # Update date
-    # replace_and_save(MANIFEST1)
-    # replace_and_save(MANIFEST2)
+    # Replace date and directory references
     manifest_replace_write(MANIFEST1)
     manifest_replace_write(MANIFEST2)
 
@@ -176,7 +146,7 @@ def try_read_text(filename: Path) -> Union[List[str], None]:
     except (UnicodeDecodeError, IsADirectoryError):
         return None
 
-# %% ../nbs/02_compare.ipynb 16
+# %% ../nbs/02_compare.ipynb 15
 def useful_text_diff(file1:str, file2:str) -> Tuple[Union[bool, None],str]:
     """    This function compares two files to return text difference, if they are textfiles.
     
@@ -208,7 +178,7 @@ def useful_text_diff(file1:str, file2:str) -> Tuple[Union[bool, None],str]:
         return None, "Could not open files"
 
 
-# %% ../nbs/02_compare.ipynb 18
+# %% ../nbs/02_compare.ipynb 16
 def compare_named_files():
     """Function loops named files in the COMPARE_FILES
     list to compare the files form the legacy output and
@@ -225,7 +195,7 @@ def compare_named_files():
         else:
             log_output(f'+ Identical', 2)
 
-# %% ../nbs/02_compare.ipynb 20
+# %% ../nbs/02_compare.ipynb 18
 def comFile():
     """Compare two directories
 
@@ -293,6 +263,6 @@ def comFile():
 
     return fail
 
-# %% ../nbs/02_compare.ipynb 21
+# %% ../nbs/02_compare.ipynb 19
 if __name__ == "__main__":
     comFile()

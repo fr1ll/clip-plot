@@ -101,7 +101,6 @@ d = { 'settings': { 'branch': 'main',
                                    'clip_plot.compare.log_output': ('compare.html#log_output', 'clip_plot/compare.py'),
                                    'clip_plot.compare.manifest_replace_write': ( 'compare.html#manifest_replace_write',
                                                                                  'clip_plot/compare.py'),
-                                   'clip_plot.compare.replace_and_save': ('compare.html#replace_and_save', 'clip_plot/compare.py'),
                                    'clip_plot.compare.try_read_text': ('compare.html#try_read_text', 'clip_plot/compare.py'),
                                    'clip_plot.compare.useful_text_diff': ('compare.html#useful_text_diff', 'clip_plot/compare.py')},
             'clip_plot.utils': {'clip_plot.utils.copytree_agnostic': ('utils.html#copytree_agnostic', 'clip_plot/utils.py')}}}
