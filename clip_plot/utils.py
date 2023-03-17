@@ -5,7 +5,9 @@ __all__ = ['copytree_agnostic']
 
 # %% ../nbs/01_utils.ipynb 2
 import sys
+import os
 from shutil import copytree
+from pathlib import Path
 
 # %% ../nbs/01_utils.ipynb 4
 def copytree_agnostic(a,b):

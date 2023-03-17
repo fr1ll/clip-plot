@@ -174,3 +174,4 @@ checklink/cookies.txt
 
 # Quarto
 .quarto
+# tests/butterflies_baseline/**/*

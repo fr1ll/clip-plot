@@ -4,7 +4,6 @@
 from __future__ import division
 import warnings
 
-
 # %% auto 0
 __all__ = ['DEFAULTS', 'FILE_NAME', 'cuml_ready', 'cluster_method', 'copy_root_dir', 'FLOATX', 'timestamp', 'get_clip_plot_root',
            'process_images', 'preprocess_kwargs', 'copy_web_assets', 'filter_images', 'get_image_paths',
@@ -1916,6 +1915,8 @@ def test_butterfly(config):
     config["images"] = test_images.as_posix()
     config["out_dir"] = test_out_dir.as_posix()
     config["meta_dir"] = meta_dir.as_posix()
+    config["plot_id"] = "test_diff"
+    
     config["test_mode"] = True
 
     return config
