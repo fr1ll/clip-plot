@@ -83,6 +83,9 @@ from tensorflow.keras.applications import InceptionV3, imagenet_utils # imagenet
 # from tensorflow.keras.preprocessing.image import load_img
 from tensorflow.keras.models import Model
 from tensorflow import compat
+# surpress annoying info and warning logs from tensorflow
+import logging
+logging.getLogger("tensorflow").setLevel(logging.ERROR)
 
 # %% ../nbs/00_clip_plot.ipynb 11
 DEFAULTS = {
