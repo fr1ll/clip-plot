@@ -12,16 +12,17 @@ __all__ = ['DEFAULTS', 'FILE_NAME', 'cuml_ready', 'cluster_method', 'copy_root_d
            'get_umap_model', 'get_rasterfairy_layout', 'get_alphabetic_layout', 'get_pointgrid_layout',
            'get_custom_layout', 'get_date_layout', 'datestring_to_date', 'date_to_seconds', 'round_date',
            'get_categorical_layout', 'get_categorical_boxes', 'get_categorical_points', 'Box', 'get_geographic_layout',
-           'process_geojson', 'get_path', 'write_layout', 'round_floats', 'write_json', 'read_json', 'get_hotspots',
-           'get_cluster_model', 'get_heightmap', 'write_images', 'get_version', 'parse', 'test_iiif',
-           'test_butterfly_duplicate', 'test_butterfly', 'test_butterfly_missing_meta', 'test_no_meta_dir',
-           'project_imgs']
+           'process_geojson', 'write_layout', 'get_hotspots', 'get_cluster_model', 'get_heightmap', 'write_images',
+           'parse', 'test_iiif', 'test_butterfly_duplicate', 'test_butterfly', 'test_butterfly_missing_meta',
+           'test_no_meta_dir', 'project_imgs']
 
 # %% ../nbs/00_clip_plot.ipynb 4
 from fastcore.all import *
 
 from . import utils
 from .utils import clean_filename, timestamp
+
+from .utils import round_floats, get_path, get_version, round_floats, write_json, read_json
 from .images import *
 from .embeddings import get_inception_vectors
 
@@ -1303,16 +1304,6 @@ def process_geojson(geojson_path):
 
 
 # %% ../nbs/00_clip_plot.ipynb 34
-def get_path(*args, **kwargs):
-    """Return the path to a JSON file with conditional gz extension"""
-    sub_dir, filename = args
-    out_dir = join(kwargs["out_dir"], sub_dir) if sub_dir else kwargs["out_dir"]
-    if kwargs.get("add_hash", True):
-        filename += "-" + kwargs["plot_id"]
-    path = join(out_dir, filename + ".json")
-    return path + ".gz" if kwargs.get("gzip", False) else path
-
-
 def write_layout(path, obj, **kwargs):
     """Write layout json `obj` to disk and return the path to the saved file"""
     if kwargs.get("scale", True) != False:
@@ -1322,35 +1313,6 @@ def write_layout(path, obj, **kwargs):
     if isinstance(obj, np.ndarray):
         obj = obj.tolist()
     return write_json(path, obj, **kwargs)
-
-
-def round_floats(obj, digits=5):
-    """Return 2D array obj with rounded float precision"""
-    return [[round(float(j), digits) for j in i] for i in obj]
-
-
-def write_json(path, obj, **kwargs):
-    """Write json object `obj` to disk and return the path to that file"""
-    out_dir, filename = os.path.split(path)
-    if not os.path.exists(out_dir):
-        os.makedirs(out_dir)
-    if kwargs.get("gzip", False):
-        with gzip.GzipFile(path, "w") as out:
-            out.write(json.dumps(obj, indent=4).encode(kwargs["encoding"]))
-        return path
-    else:
-        with open(path, "w") as out:
-            json.dump(obj, out, indent=4)
-        return path
-
-
-def read_json(path, **kwargs):
-    """Read and return the json object written by the current process at `path`"""
-    if kwargs.get("gzip", False):
-        with gzip.GzipFile(path, "r") as f:
-            return json.loads(f.read().decode(kwargs["encoding"]))
-    with open(path) as f:
-        return json.load(f)
 
 
 def get_hotspots(layouts={}, use_high_dimensional_vectors=True, **kwargs):
@@ -1452,15 +1414,6 @@ def write_images(**kwargs):
         img = array_to_image(i.resize_to_max(kwargs["lod_cell_height"]))
         save_image(out_path, img)
 
-
-# %% ../nbs/00_clip_plot.ipynb 35
-def get_version():
-    """
-    Return the version of clipplot installed
-    Hardcoded for now
-    """
-    # return pkg_resources.get_distribution("clipplot").version
-    return "0.0.1"
 
 # %% ../nbs/00_clip_plot.ipynb 37
 def parse():
