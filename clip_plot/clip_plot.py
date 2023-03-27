@@ -5,22 +5,23 @@ from __future__ import division
 import warnings
 
 # %% auto 0
-__all__ = ['DEFAULTS', 'FILE_NAME', 'cuml_ready', 'cluster_method', 'copy_root_dir', 'FLOATX', 'timestamp', 'get_clip_plot_root',
-           'process_images', 'preprocess_kwargs', 'copy_web_assets', 'filter_images', 'get_image_paths',
-           'clean_filename', 'get_metadata_list', 'write_metadata', 'is_number', 'get_manifest', 'get_atlas_data',
-           'save_atlas', 'get_layouts', 'get_inception_vectors', 'get_umap_layout', 'process_single_layout_umap',
-           'process_multi_layout_umap', 'save_model', 'load_model', 'get_umap_model', 'get_rasterfairy_layout',
-           'get_alphabetic_layout', 'get_pointgrid_layout', 'get_custom_layout', 'get_date_layout',
-           'datestring_to_date', 'date_to_seconds', 'round_date', 'get_categorical_layout', 'get_categorical_boxes',
-           'get_categorical_points', 'Box', 'get_geographic_layout', 'process_geojson', 'get_path', 'write_layout',
-           'round_floats', 'write_json', 'read_json', 'get_hotspots', 'get_cluster_model', 'get_heightmap',
-           'write_images', 'get_version', 'Image', 'parse', 'load_image', 'image_to_array', 'array_to_image',
-           'save_image', 'test_iiif', 'test_butterfly_duplicate', 'test_butterfly', 'test_butterfly_missing_meta',
-           'test_no_meta_dir', 'project_imgs']
+__all__ = ['DEFAULTS', 'FILE_NAME', 'cuml_ready', 'cluster_method', 'copy_root_dir', 'get_clip_plot_root', 'process_images',
+           'preprocess_kwargs', 'copy_web_assets', 'filter_images', 'get_image_paths', 'get_metadata_list',
+           'write_metadata', 'is_number', 'get_manifest', 'get_atlas_data', 'save_atlas', 'get_layouts',
+           'get_inception_vectors', 'get_umap_layout', 'process_single_layout_umap', 'process_multi_layout_umap',
+           'save_model', 'load_model', 'get_umap_model', 'get_rasterfairy_layout', 'get_alphabetic_layout',
+           'get_pointgrid_layout', 'get_custom_layout', 'get_date_layout', 'datestring_to_date', 'date_to_seconds',
+           'round_date', 'get_categorical_layout', 'get_categorical_boxes', 'get_categorical_points', 'Box',
+           'get_geographic_layout', 'process_geojson', 'get_path', 'write_layout', 'round_floats', 'write_json',
+           'read_json', 'get_hotspots', 'get_cluster_model', 'get_heightmap', 'write_images', 'get_version', 'parse',
+           'test_iiif', 'test_butterfly_duplicate', 'test_butterfly', 'test_butterfly_missing_meta', 'test_no_meta_dir',
+           'project_imgs']
 
 # %% ../nbs/00_clip_plot.ipynb 4
 from . import utils
+from .utils import clean_filename, timestamp
 from fastcore.all import *
+from .images import *
 
 # %% ../nbs/00_clip_plot.ipynb 5
 warnings.filterwarnings("ignore")
@@ -39,12 +40,7 @@ import uuid
 import sys
 import os
 
-# %% ../nbs/00_clip_plot.ipynb 7
-def timestamp():
-    """Return a string for printing the current time"""
-    return str(datetime.datetime.now()) + ":"
-
-# %% ../nbs/00_clip_plot.ipynb 9
+# %% ../nbs/00_clip_plot.ipynb 8
 from sklearn.metrics import pairwise_distances_argmin_min
 from collections import defaultdict, namedtuple
 from dateutil.parser import parse as parse_date
@@ -74,8 +70,6 @@ import csv
 from hdbscan import HDBSCAN
 from umap import UMAP, AlignedUMAP
 
-from urllib.parse import unquote
-
 # Keras imports
 # from tensorflow.keras.preprocessing.image import save_img, img_to_array, array_to_img
 from tensorflow.keras.applications.inception_v3 import preprocess_input
@@ -87,7 +81,7 @@ from tensorflow import compat
 import logging
 logging.getLogger("tensorflow").setLevel(logging.ERROR)
 
-# %% ../nbs/00_clip_plot.ipynb 11
+# %% ../nbs/00_clip_plot.ipynb 10
 DEFAULTS = {
     "images": None,
     "meta_dir": None,
@@ -131,7 +125,7 @@ NB: Keras Image class objects return image.size as w,h
     Numpy array representations of images return image.shape as h,w,c
 """
 
-# %% ../nbs/00_clip_plot.ipynb 13
+# %% ../nbs/00_clip_plot.ipynb 12
 def get_clip_plot_root() -> Path:
     # ipython doesn't have __file__ attribute
     if in_ipython():
@@ -140,10 +134,10 @@ def get_clip_plot_root() -> Path:
         print(__file__)
         return Path(__file__).parents[1]
 
-# %% ../nbs/00_clip_plot.ipynb 14
+# %% ../nbs/00_clip_plot.ipynb 13
 copy_root_dir = get_clip_plot_root()
 
-# %% ../nbs/00_clip_plot.ipynb 15
+# %% ../nbs/00_clip_plot.ipynb 14
 def process_images(**kwargs):
     """Main method for processing user images and metadata"""
     kwargs = preprocess_kwargs(**kwargs)
@@ -183,7 +177,7 @@ def preprocess_kwargs(**kwargs):
             kwargs[i] = [kwargs[i]]
     return kwargs
 
-# %% ../nbs/00_clip_plot.ipynb 16
+# %% ../nbs/00_clip_plot.ipynb 15
 def copy_web_assets(out_dir: str) -> None:
     """Copy the /web directory from the clipplot source to the users cwd.
     Copies version number into assets.
@@ -210,7 +204,7 @@ def copy_web_assets(out_dir: str) -> None:
                 out.write(f)
 
 
-# %% ../nbs/00_clip_plot.ipynb 18
+# %% ../nbs/00_clip_plot.ipynb 17
 def filter_images(**kwargs):
     """Main method for filtering images given user metadata (if provided)
 
@@ -318,7 +312,7 @@ def filter_images(**kwargs):
 
     return [images, metadata]
 
-# %% ../nbs/00_clip_plot.ipynb 19
+# %% ../nbs/00_clip_plot.ipynb 18
 def get_image_paths(images:str, out_dir: str) -> List[str]:
     """Called once to provide a list of image paths--handles IIIF manifest input.
     
@@ -374,27 +368,7 @@ def get_image_paths(images:str, out_dir: str) -> List[str]:
     return image_paths
 
 
-# %% ../nbs/00_clip_plot.ipynb 20
-def clean_filename(s, **kwargs):
-    """Given a string that points to a filename, return a clean filename
-    
-    Args:
-        s (str): filename path
-
-    Returns:
-        s (str): clean file name
-
-    Notes:
-        kwargs is not used at all
-    
-    """
-    s = unquote(os.path.basename(s))
-    invalid_chars = '<>:;,"/\\|?*[]'
-    for i in invalid_chars:
-        s = s.replace(i, "")
-    return s
-
-# %% ../nbs/00_clip_plot.ipynb 21
+# %% ../nbs/00_clip_plot.ipynb 19
 ##
 # Metadata
 ##
@@ -446,7 +420,7 @@ def get_metadata_list(meta_dir: str) -> List[dict]:
             metaDict.update({"tags": metaDict["category"]})
     return metaList
 
-# %% ../nbs/00_clip_plot.ipynb 22
+# %% ../nbs/00_clip_plot.ipynb 20
 def write_metadata(metadata, **kwargs):
     """Write list `metadata` of objects to disk
     
@@ -528,7 +502,7 @@ def write_metadata(metadata, **kwargs):
             **kwargs
         )
 
-# %% ../nbs/00_clip_plot.ipynb 23
+# %% ../nbs/00_clip_plot.ipynb 21
 def is_number(s):
     """Return a boolean indicating if a string is a number
     
@@ -545,7 +519,7 @@ def is_number(s):
     except:
         return False
 
-# %% ../nbs/00_clip_plot.ipynb 24
+# %% ../nbs/00_clip_plot.ipynb 22
 ##
 # Main
 ##
@@ -651,7 +625,7 @@ def get_manifest(**kwargs):
     }
     write_json(manifest["imagelist"], imagelist, **kwargs)
 
-# %% ../nbs/00_clip_plot.ipynb 25
+# %% ../nbs/00_clip_plot.ipynb 23
 ##
 # Atlases
 ##
@@ -738,7 +712,7 @@ def save_atlas(atlas, out_dir, n):
     out_path = join(out_dir, "atlas-{}.jpg".format(n))
     save_image(out_path, atlas)
 
-# %% ../nbs/00_clip_plot.ipynb 26
+# %% ../nbs/00_clip_plot.ipynb 24
 ##
 # Layouts
 ##
@@ -762,7 +736,7 @@ def get_layouts(**kwargs):
     }
     return layouts
 
-# %% ../nbs/00_clip_plot.ipynb 27
+# %% ../nbs/00_clip_plot.ipynb 25
 def get_inception_vectors(**kwargs):
     """Create and return Inception vector representation of Image() instances"""
     print(
@@ -792,7 +766,7 @@ def get_inception_vectors(**kwargs):
             progress_bar.update(1)
     return np.array(vecs)
 
-# %% ../nbs/00_clip_plot.ipynb 28
+# %% ../nbs/00_clip_plot.ipynb 26
 def get_umap_layout(**kwargs):
     """Get the x,y positions of images passed through a umap projection"""
     vecs = kwargs["vecs"]
@@ -956,7 +930,7 @@ def get_umap_model(**kwargs):
             transform_seed=kwargs["seed"],
         )
 
-# %% ../nbs/00_clip_plot.ipynb 29
+# %% ../nbs/00_clip_plot.ipynb 27
 def get_rasterfairy_layout(**kwargs):
     """Get the x, y position of images passed through a rasterfairy projection"""
     print(timestamp(), "Creating rasterfairy layout")
@@ -1043,7 +1017,7 @@ def get_custom_layout(**kwargs):
         ),
     }
 
-# %% ../nbs/00_clip_plot.ipynb 31
+# %% ../nbs/00_clip_plot.ipynb 29
 def get_date_layout(cols=3, bin_units="years", **kwargs):
     """
     Get the x,y positions of input images based on their dates
@@ -1177,7 +1151,7 @@ def round_date(date, unit):
             date = str(int(date.split()[-1]) // 100) + "00"
     return date
 
-# %% ../nbs/00_clip_plot.ipynb 33
+# %% ../nbs/00_clip_plot.ipynb 31
 def get_categorical_layout(null_category="Other", margin=2, **kwargs):
     """
     Return a numpy array with shape (n_points, 2) with the point
@@ -1313,7 +1287,7 @@ class Box:
         self.x = None if len(args) < 4 else args[3]
         self.y = None if len(args) < 5 else args[4]
 
-# %% ../nbs/00_clip_plot.ipynb 35
+# %% ../nbs/00_clip_plot.ipynb 33
 def get_geographic_layout(**kwargs):
     """Return a 2D array of image positions corresponding to lat, lng coordinates"""
     out_path = get_path("layouts", "geographic", **kwargs)
@@ -1356,7 +1330,7 @@ def process_geojson(geojson_path):
         json.dump(l, out)
 
 
-# %% ../nbs/00_clip_plot.ipynb 37
+# %% ../nbs/00_clip_plot.ipynb 35
 def get_path(*args, **kwargs):
     """Return the path to a JSON file with conditional gz extension"""
     sub_dir, filename = args
@@ -1507,7 +1481,7 @@ def write_images(**kwargs):
         save_image(out_path, img)
 
 
-# %% ../nbs/00_clip_plot.ipynb 38
+# %% ../nbs/00_clip_plot.ipynb 36
 def get_version():
     """
     Return the version of clipplot installed
@@ -1516,123 +1490,7 @@ def get_version():
     # return pkg_resources.get_distribution("clipplot").version
     return "0.0.1"
 
-# %% ../nbs/00_clip_plot.ipynb 39
-class Image:
-    def __init__(self, *args, **kwargs):
-        self.path = args[0]
-        self.filename = clean_filename(self.path)
-        self.original = load_image(self.path) 
-        self.metadata = kwargs["metadata"] if kwargs["metadata"] else {}
-
-    def resize_to_max(self, n: int) -> np.array:
-        """Resize self.original so its longest side has n pixels (maintain proportion).
-
-        Args:
-            n (int): maximum pixel length
-
-        Returns:
-            np.array: re-sized to n length
-        """
-        w, h = self.original.size
-        if w > h:
-            size = (n, int(n * h / w))
-        else:
-            size = (int(n * w / h), n)
-    
-        return image_to_array(self.original.resize(size))
-
-    def resize_to_height(self, height: int) -> np.array:
-        """Resize self.original into an image with height h and proportional width.
-
-        Args:
-            height (int): New height to resize to
-
-        Returns:
-            np.array: re-sized to height
-        """
-        w, h = self.original.size
-        if (w / h * height) < 1:
-            resizedwidth = 1
-        else:
-            resizedwidth = int(w / h * height)
-        size = (resizedwidth, height)
-        return image_to_array(self.original.resize(size))
-
-    def resize_to_square(self, n: int, center: Optional[bool] = False) -> np.array:
-        """Resize self.original to an image with nxn pixels (maintain proportion)
-        if center, center the colored pixels in the square, else left align.
-
-        Args:
-            n (int)
-
-        Notes:
-            Function not being used
-        """
-        a = self.resize_to_max(n)
-        h, w, c = a.shape
-        pad_lr = int((n - w) / 2)  # left right pad
-        pad_tb = int((n - h) / 2)  # top bottom pad
-        b = np.zeros((n, n, 3))
-        if center:
-            b[pad_tb : pad_tb + h, pad_lr : pad_lr + w, :] = a
-        else:
-            b[:h, :w, :] = a
-        return b
-
-    def valid(self, lod_cell_height: int, oblong_ratio: Union[int,float]) -> tuple[bool, str]:
-        """Validate that image can be opened and loaded correctly.
-
-        Args:
-            lod_cell_height (int):
-            oblong_ratio (int|float): atlas_size/cell_size ratio
-
-        Returns:
-            Tuple[pass,msg]:
-                pass (bool): True if passed validation
-                msg (str): Reason why validation failed 
-        """
-        w, h = self.original.size
-        # remove images with 0 height or width when resized to lod height
-        if (h == 0) or (w == 0):
-            return False, f"Skipping {self.path} because it contains 0 height or width"
-        # remove images that have 0 height or width when resized
-        try:
-            resized = self.resize_to_max(lod_cell_height)
-        except ValueError:
-            return False, f"Skipping {self.path} because it contains 0 height or width when resized"
-        except OSError:
-            return False, f"Skipping {self.path} because it could not be resized"
-        # remove images that are too wide for the atlas
-        if (w / h) > (oblong_ratio):
-            return False, f"Skipping {self.path} because its dimensions are oblong"
-
-        return True, ""
-
-    @staticmethod
-    def stream_images(image_paths: List[str], metadata: Optional[List[dict]] = None) -> 'Image':
-        """Read in all images from args[0], a list of image paths
-        
-        Args:
-            image_paths (list[str]): list of image locations
-            metadata (Optional[list[dist]]): metadata for each image
-        
-        Returns:
-            yields Image instance
-
-        Notes:
-            image is matched to metadata by index location
-                Matching by key would be better
-        """
-        for idx, imgPath in enumerate(image_paths):
-            try:
-                meta = None
-                if metadata and metadata[idx]:
-                    meta = metadata[idx]
-                yield Image(imgPath, metadata=meta)
-            except Exception as exc:
-                print(timestamp(), "Image", imgPath, "could not be processed --", exc)
-
-# %% ../nbs/00_clip_plot.ipynb 41
+# %% ../nbs/00_clip_plot.ipynb 38
 def parse():
     """Read command line args and begin data processing"""
     description = "Create the data required to create a clipplot viewer"
@@ -1784,102 +1642,7 @@ def parse():
 
     return config
 
-# %% ../nbs/00_clip_plot.ipynb 43
-import io
-from PIL import Image as pil_image
-
-# The type of float to use throughout a session.
-FLOATX = "float32"
-
-def load_image(path: str) -> pil_image.Image:
-    with open(path, "rb") as f:
-        img = pil_image.open(io.BytesIO(f.read()))
-
-    if img.mode != "RGB":
-        img = img.convert("RGB")
-
-    return img
-
-
-def image_to_array(img: pil_image.Image) -> np.array:
-    """Converts a PIL Image instance to a Numpy array.
-
-    Args:
-        img: Input PIL Image instance.
-
-    Returns:
-        A 3D Numpy array.
-
-    Raises:
-        ValueError: if invalid `img` or `data_format` is passed.
-    """
-
-    # Numpy array x has format (height, width, channel)
-    # or (channel, height, width)
-    # but original PIL image has format (width, height, channel)
-    x = np.asarray(img, dtype=FLOATX)
-    if len(x.shape) not in [2, 3]:
-        raise ValueError(f"Unsupported image shape: {x.shape}")
-
-    if len(x.shape) == 2:
-        x = x.reshape((x.shape[0], x.shape[1], 1))
-        
-    return x
-
-
-def array_to_image(x: np.array)-> pil_image.Image:
-    """Converts a 3D Numpy array to a PIL Image instance.
-
-    Args:
-        x: Input data, in any form that can be converted to a Numpy array.
-
-    Returns:
-        A PIL Image instance.
-
-    Raises:
-        ValueError: if invalid `x` or `data_format` is passed.
-    """
-    x = np.asarray(x, dtype=FLOATX)
-    if x.ndim != 3:
-        raise ValueError(
-            "Expected image array to have rank 3 (single image). "
-            f"Got array with shape: {x.shape}"
-        )
-
-    # Original Numpy array x has format (height, width, channel)
-    # or (channel, height, width)
-    # but target PIL image has format (width, height, channel)
-
-    x = x - np.min(x)
-    x_max = np.max(x)
-    if x_max != 0:
-        x /= x_max
-    x *= 255
-
-    if x.shape[2] == 4:  # RGBA
-        return pil_image.fromarray(x.astype("uint8"), "RGBA")
-    elif x.shape[2] == 3:  # RGB
-        return pil_image.fromarray(x.astype("uint8"), "RGB")
-    elif x.shape[2] == 1:  # grayscale
-        if np.max(x) > 255:
-            # 32-bit signed integer grayscale image. PIL mode "I"
-            return pil_image.fromarray(x[:, :, 0].astype("int32"), "I")
-        return pil_image.fromarray(x[:, :, 0].astype("uint8"), "L")
-    else:
-        raise ValueError(f"Unsupported channel number: {x.shape[2]}")
-
-
-def save_image(path: str, x: np.array) -> None:
-    """Saves an image stored as a Numpy array to a path or file object.
-
-    Args:
-        path: Path or file object.
-        x: Numpy array.
-    """
-    img = array_to_image(x)
-    img.save(path,format=None)
-
-# %% ../nbs/00_clip_plot.ipynb 45
+# %% ../nbs/00_clip_plot.ipynb 40
 def test_iiif(config):
     test_images = copy_root_dir/"tests/IIIF_examples/iif_example.txt"
     test_out_dir = copy_root_dir/"tests/smithsonian_butterflies_10/output_test_temp"
@@ -1951,7 +1714,7 @@ def test_no_meta_dir(config):
     return config
 
 
-# %% ../nbs/00_clip_plot.ipynb 46
+# %% ../nbs/00_clip_plot.ipynb 41
 @call_parse
 def project_imgs(images:Param(type=str,
                         help="path to a glob of images to process"
@@ -2040,6 +1803,6 @@ def project_imgs(images:Param(type=str,
 
                 process_images(**config)
 
-# %% ../nbs/00_clip_plot.ipynb 48
+# %% ../nbs/00_clip_plot.ipynb 43
 if __name__ == "__main__":
     project_imgs()
