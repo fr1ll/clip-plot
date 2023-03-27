@@ -8,20 +8,22 @@ import warnings
 __all__ = ['DEFAULTS', 'FILE_NAME', 'cuml_ready', 'cluster_method', 'copy_root_dir', 'get_clip_plot_root', 'process_images',
            'preprocess_kwargs', 'copy_web_assets', 'filter_images', 'get_image_paths', 'get_metadata_list',
            'write_metadata', 'is_number', 'get_manifest', 'get_atlas_data', 'save_atlas', 'get_layouts',
-           'get_inception_vectors', 'get_umap_layout', 'process_single_layout_umap', 'process_multi_layout_umap',
-           'save_model', 'load_model', 'get_umap_model', 'get_rasterfairy_layout', 'get_alphabetic_layout',
-           'get_pointgrid_layout', 'get_custom_layout', 'get_date_layout', 'datestring_to_date', 'date_to_seconds',
-           'round_date', 'get_categorical_layout', 'get_categorical_boxes', 'get_categorical_points', 'Box',
-           'get_geographic_layout', 'process_geojson', 'get_path', 'write_layout', 'round_floats', 'write_json',
-           'read_json', 'get_hotspots', 'get_cluster_model', 'get_heightmap', 'write_images', 'get_version', 'parse',
-           'test_iiif', 'test_butterfly_duplicate', 'test_butterfly', 'test_butterfly_missing_meta', 'test_no_meta_dir',
+           'get_umap_layout', 'process_single_layout_umap', 'process_multi_layout_umap', 'save_model', 'load_model',
+           'get_umap_model', 'get_rasterfairy_layout', 'get_alphabetic_layout', 'get_pointgrid_layout',
+           'get_custom_layout', 'get_date_layout', 'datestring_to_date', 'date_to_seconds', 'round_date',
+           'get_categorical_layout', 'get_categorical_boxes', 'get_categorical_points', 'Box', 'get_geographic_layout',
+           'process_geojson', 'get_path', 'write_layout', 'round_floats', 'write_json', 'read_json', 'get_hotspots',
+           'get_cluster_model', 'get_heightmap', 'write_images', 'get_version', 'parse', 'test_iiif',
+           'test_butterfly_duplicate', 'test_butterfly', 'test_butterfly_missing_meta', 'test_no_meta_dir',
            'project_imgs']
 
 # %% ../nbs/00_clip_plot.ipynb 4
+from fastcore.all import *
+
 from . import utils
 from .utils import clean_filename, timestamp
-from fastcore.all import *
 from .images import *
+from .embeddings import get_inception_vectors
 
 # %% ../nbs/00_clip_plot.ipynb 5
 warnings.filterwarnings("ignore")
@@ -737,36 +739,6 @@ def get_layouts(**kwargs):
     return layouts
 
 # %% ../nbs/00_clip_plot.ipynb 25
-def get_inception_vectors(**kwargs):
-    """Create and return Inception vector representation of Image() instances"""
-    print(
-        timestamp(),
-        "Creating Inception vectors for {} images".format(len(kwargs["image_paths"])),
-    )
-    vector_dir = os.path.join(kwargs["out_dir"], "image-vectors", "inception")
-    if not os.path.exists(vector_dir):
-        os.makedirs(vector_dir)
-    base = InceptionV3(
-        include_top=True,
-        weights="imagenet",
-    )
-    model = Model(inputs=base.input, outputs=base.get_layer("avg_pool").output)
-    print(timestamp(), "Creating image array")
-    vecs = []
-    with tqdm(total=len(kwargs["image_paths"])) as progress_bar:
-        for idx, i in enumerate(Image.stream_images(image_paths=kwargs["image_paths"], metadata=kwargs["metadata"])):
-            vector_path = os.path.join(vector_dir, clean_filename(i.path) + ".npy")
-            if os.path.exists(vector_path) and kwargs["use_cache"]:
-                vec = np.load(vector_path)
-            else:
-                im = preprocess_input(image_to_array(i.original.resize((299, 299))))
-                vec = model.predict(np.expand_dims(im, 0)).squeeze()
-                np.save(vector_path, vec)
-            vecs.append(vec)
-            progress_bar.update(1)
-    return np.array(vecs)
-
-# %% ../nbs/00_clip_plot.ipynb 26
 def get_umap_layout(**kwargs):
     """Get the x,y positions of images passed through a umap projection"""
     vecs = kwargs["vecs"]
@@ -930,7 +902,7 @@ def get_umap_model(**kwargs):
             transform_seed=kwargs["seed"],
         )
 
-# %% ../nbs/00_clip_plot.ipynb 27
+# %% ../nbs/00_clip_plot.ipynb 26
 def get_rasterfairy_layout(**kwargs):
     """Get the x, y position of images passed through a rasterfairy projection"""
     print(timestamp(), "Creating rasterfairy layout")
@@ -1017,7 +989,7 @@ def get_custom_layout(**kwargs):
         ),
     }
 
-# %% ../nbs/00_clip_plot.ipynb 29
+# %% ../nbs/00_clip_plot.ipynb 28
 def get_date_layout(cols=3, bin_units="years", **kwargs):
     """
     Get the x,y positions of input images based on their dates
@@ -1151,7 +1123,7 @@ def round_date(date, unit):
             date = str(int(date.split()[-1]) // 100) + "00"
     return date
 
-# %% ../nbs/00_clip_plot.ipynb 31
+# %% ../nbs/00_clip_plot.ipynb 30
 def get_categorical_layout(null_category="Other", margin=2, **kwargs):
     """
     Return a numpy array with shape (n_points, 2) with the point
@@ -1287,7 +1259,7 @@ class Box:
         self.x = None if len(args) < 4 else args[3]
         self.y = None if len(args) < 5 else args[4]
 
-# %% ../nbs/00_clip_plot.ipynb 33
+# %% ../nbs/00_clip_plot.ipynb 32
 def get_geographic_layout(**kwargs):
     """Return a 2D array of image positions corresponding to lat, lng coordinates"""
     out_path = get_path("layouts", "geographic", **kwargs)
@@ -1330,7 +1302,7 @@ def process_geojson(geojson_path):
         json.dump(l, out)
 
 
-# %% ../nbs/00_clip_plot.ipynb 35
+# %% ../nbs/00_clip_plot.ipynb 34
 def get_path(*args, **kwargs):
     """Return the path to a JSON file with conditional gz extension"""
     sub_dir, filename = args
@@ -1481,7 +1453,7 @@ def write_images(**kwargs):
         save_image(out_path, img)
 
 
-# %% ../nbs/00_clip_plot.ipynb 36
+# %% ../nbs/00_clip_plot.ipynb 35
 def get_version():
     """
     Return the version of clipplot installed
@@ -1490,7 +1462,7 @@ def get_version():
     # return pkg_resources.get_distribution("clipplot").version
     return "0.0.1"
 
-# %% ../nbs/00_clip_plot.ipynb 38
+# %% ../nbs/00_clip_plot.ipynb 37
 def parse():
     """Read command line args and begin data processing"""
     description = "Create the data required to create a clipplot viewer"
@@ -1642,7 +1614,7 @@ def parse():
 
     return config
 
-# %% ../nbs/00_clip_plot.ipynb 40
+# %% ../nbs/00_clip_plot.ipynb 39
 def test_iiif(config):
     test_images = copy_root_dir/"tests/IIIF_examples/iif_example.txt"
     test_out_dir = copy_root_dir/"tests/smithsonian_butterflies_10/output_test_temp"
@@ -1714,7 +1686,7 @@ def test_no_meta_dir(config):
     return config
 
 
-# %% ../nbs/00_clip_plot.ipynb 41
+# %% ../nbs/00_clip_plot.ipynb 40
 @call_parse
 def project_imgs(images:Param(type=str,
                         help="path to a glob of images to process"
@@ -1803,6 +1775,6 @@ def project_imgs(images:Param(type=str,
 
                 process_images(**config)
 
-# %% ../nbs/00_clip_plot.ipynb 43
+# %% ../nbs/00_clip_plot.ipynb 42
 if __name__ == "__main__":
     project_imgs()
