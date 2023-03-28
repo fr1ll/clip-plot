@@ -26,7 +26,7 @@ import math
 import operator
 import multiprocessing
 
-#TODO: Change math references to numpy
+# TODO: Change math references to numpy
 
 
 from hdbscan import HDBSCAN

@@ -43,7 +43,6 @@ import os
 # %% ../nbs/00_clip_plot.ipynb 8
 from sklearn.metrics import pairwise_distances_argmin_min
 from collections import defaultdict, namedtuple
-from dateutil.parser import parse as parse_date
 from scipy.spatial.distance import cdist
 from iiif_downloader import Manifest
 from PIL import ImageFile
