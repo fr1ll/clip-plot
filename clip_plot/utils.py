@@ -5,18 +5,14 @@ __all__ = ['FILE_NAME', 'get_version', 'round_floats', 'is_number', 'date_to_sec
            'datestring_to_date', 'get_path', 'write_json', 'read_json', 'copytree_agnostic', 'clean_filename']
 
 # %% ../nbs/01_utils.ipynb 2
-import sys
 import os
-from os.path import join
-import gzip
-from shutil import copytree
-from pathlib import Path
-import datetime
-from dateutil.parser import parse as parse_date
-
+import sys
 import json
+import gzip
+import datetime
+from shutil import copytree
 from urllib.parse import unquote
-
+from dateutil.parser import parse as parse_date
 
 # %% ../nbs/01_utils.ipynb 3
 FILE_NAME = "filename"  # Filename name key
@@ -114,10 +110,10 @@ def datestring_to_date(datestring):
 def get_path(*args, **kwargs):
     """Return the path to a JSON file with conditional gz extension"""
     sub_dir, filename = args
-    out_dir = join(kwargs["out_dir"], sub_dir) if sub_dir else kwargs["out_dir"]
+    out_dir = os.path.join(kwargs["out_dir"], sub_dir) if sub_dir else kwargs["out_dir"]
     if kwargs.get("add_hash", True):
         filename += "-" + kwargs["plot_id"]
-    path = join(out_dir, filename + ".json")
+    path = os.path.join(out_dir, filename + ".json")
     return path + ".gz" if kwargs.get("gzip", False) else path
 
 # %% ../nbs/01_utils.ipynb 14

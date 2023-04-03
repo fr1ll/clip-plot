@@ -14,59 +14,41 @@ __all__ = ['DEFAULTS', 'PillLoadTruncated', 'copy_root_dir', 'get_clip_plot_root
 from fastcore.all import *
 
 from . import utils
+from .layouts import get_layouts
 from .utils import clean_filename, timestamp
-
-from .utils import is_number, get_path, get_version, round_floats, write_json, read_json
-from .utils import date_to_seconds, round_date, datestring_to_date
-from .utils import FILE_NAME
-# from clip_plot.images import *
-from .images import PillLoadTruncated, save_image, write_images, Image, get_image_paths
+from .utils import  get_version, FILE_NAME
 from .embeddings import get_inception_vectors
 from .metadata import get_manifest, write_metadata, get_metadata_list
-
-from .layouts import *
+from .images import PillLoadTruncated, save_image, write_images, Image, get_image_paths
 
 # %% ../nbs/00_clip_plot.ipynb 5
 warnings.filterwarnings("ignore")
 
 # %% ../nbs/00_clip_plot.ipynb 6
-from os.path import join, exists, dirname, realpath
 from shutil import rmtree
-from distutils.dir_util import copy_tree
 from pathlib import Path
-import pkg_resources
-import datetime
 import argparse
 from typing import Optional, List, Union, Tuple
-import glob2
 import uuid
 import sys
 import os
 
 # %% ../nbs/00_clip_plot.ipynb 8
-from sklearn.metrics import pairwise_distances_argmin_min
-from collections import defaultdict, namedtuple
-from scipy.spatial.distance import cdist
-
-from tqdm.autonotebook import tqdm
-
 import numpy as np
 import random
 import copy
-import math
-import gzip
 import json
-import csv
 
 
 # Keras imports
 # from tensorflow.keras.preprocessing.image import save_img, img_to_array, array_to_img
-from tensorflow.keras.applications.inception_v3 import preprocess_input
-from tensorflow.keras.applications import InceptionV3, imagenet_utils # imagenet_utils not being used
+# from tensorflow.keras.applications.inception_v3 import preprocess_input
+# from tensorflow.keras.applications import InceptionV3, imagenet_utils # imagenet_utils not being used
 # from tensorflow.keras.preprocessing.image import load_img
-from tensorflow.keras.models import Model
+# from tensorflow.keras.models import Model
 from tensorflow import compat
-# surpress annoying info and warning logs from tensorflow
+
+# Suppress annoying info and warning logs from tensorflow
 import logging
 logging.getLogger("tensorflow").setLevel(logging.ERROR)
 
@@ -130,7 +112,7 @@ def process_images(**kwargs):
     
     np.random.seed(kwargs["seed"])
     compat.v1.set_random_seed(kwargs["seed"])
-    kwargs["out_dir"] = join(kwargs["out_dir"], "data")
+    kwargs["out_dir"] = os.path.join(kwargs["out_dir"], "data")
     kwargs["image_paths"], kwargs["metadata"] = filter_images(**kwargs)
     write_metadata(**kwargs)
     
@@ -178,7 +160,7 @@ def copy_web_assets(out_dir: str) -> None:
 
     # write version numbers into output
     for i in ["index.html", os.path.join("assets", "js", "tsne.js")]:
-        path = join(dest, i)
+        path = os.path.join(dest, i)
         with open(path, "r") as f:
             f = f.read().replace("VERSION_NUMBER", get_version())
             with open(path, "w") as out:
@@ -377,7 +359,7 @@ def get_atlas_data(**kwargs):
 
 def save_atlas(atlas, out_dir, n):
     """Save an atlas to disk"""
-    out_path = join(out_dir, "atlas-{}.jpg".format(n))
+    out_path = os.path.join(out_dir, "atlas-{}.jpg".format(n))
     save_image(out_path, atlas)
 
 # %% ../nbs/00_clip_plot.ipynb 19

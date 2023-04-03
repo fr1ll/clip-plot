@@ -13,21 +13,20 @@ from .utils import timestamp, get_path, write_json, read_json, round_floats
 from .utils import datestring_to_date, round_date, date_to_seconds, clean_filename
 
 
-from collections import defaultdict
-import itertools
-import json
 import os
-from os.path import join
+import json
+import math
+import pickle
+import itertools
+from typing import List
+from collections import defaultdict
 
 import numpy as np
-import pickle
-from typing import List
-import math
+
 import operator
 import multiprocessing
 
 # TODO: Change math references to numpy
-
 
 from hdbscan import HDBSCAN
 from umap import UMAP, AlignedUMAP
