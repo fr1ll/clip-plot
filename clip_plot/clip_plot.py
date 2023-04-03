@@ -5,7 +5,7 @@ from __future__ import division
 import warnings
 
 # %% auto 0
-__all__ = ['DEFAULTS', 'PillLoadTruncated', 'copy_root_dir', 'get_clip_plot_root', 'process_images', 'preprocess_kwargs',
+__all__ = ['DEFAULTS', 'PILLoadTruncated', 'copy_root_dir', 'get_clip_plot_root', 'process_images', 'preprocess_kwargs',
            'copy_web_assets', 'filter_images', 'get_atlas_data', 'save_atlas', 'parse', 'test_iiif',
            'test_butterfly_duplicate', 'test_butterfly', 'test_butterfly_missing_meta', 'test_no_meta_dir',
            'project_imgs']
@@ -19,7 +19,7 @@ from .utils import clean_filename, timestamp
 from .utils import  get_version, FILE_NAME
 from .embeddings import get_inception_vectors
 from .metadata import get_manifest, write_metadata, get_metadata_list
-from .images import PillLoadTruncated, save_image, write_images, Image, get_image_paths
+from .images import PILLoadTruncated, save_image, write_images, Image, get_image_paths
 
 # %% ../nbs/00_clip_plot.ipynb 5
 warnings.filterwarnings("ignore")
@@ -81,7 +81,7 @@ DEFAULTS = {
 }
 
 # handle truncated images in PIL (managed by Pillow)
-PillLoadTruncated  = True
+PILLoadTruncated  = True
 
 """
 NB: Keras Image class objects return image.size as w,h
