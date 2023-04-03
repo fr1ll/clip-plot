@@ -5,10 +5,10 @@ from __future__ import division
 import warnings
 
 # %% auto 0
-__all__ = ['DEFAULTS', 'FILE_NAME', 'copy_root_dir', 'get_clip_plot_root', 'process_images', 'preprocess_kwargs',
-           'copy_web_assets', 'filter_images', 'get_image_paths', 'get_metadata_list', 'write_metadata', 'get_manifest',
-           'get_atlas_data', 'save_atlas', 'parse', 'test_iiif', 'test_butterfly_duplicate', 'test_butterfly',
-           'test_butterfly_missing_meta', 'test_no_meta_dir', 'project_imgs']
+__all__ = ['DEFAULTS', 'PillLoadTruncated', 'copy_root_dir', 'get_clip_plot_root', 'process_images', 'preprocess_kwargs',
+           'copy_web_assets', 'filter_images', 'get_atlas_data', 'save_atlas', 'parse', 'test_iiif',
+           'test_butterfly_duplicate', 'test_butterfly', 'test_butterfly_missing_meta', 'test_no_meta_dir',
+           'project_imgs']
 
 # %% ../nbs/00_clip_plot.ipynb 4
 from fastcore.all import *
@@ -18,6 +18,7 @@ from .utils import clean_filename, timestamp
 
 from .utils import is_number, get_path, get_version, round_floats, write_json, read_json
 from .utils import date_to_seconds, round_date, datestring_to_date
+from .utils import FILE_NAME
 # from clip_plot.images import *
 from .images import PillLoadTruncated, save_image, write_images, Image, get_image_paths
 from .embeddings import get_inception_vectors
@@ -96,8 +97,6 @@ DEFAULTS = {
     "n_clusters": 12,
     "geojson": None,
 }
-
-FILE_NAME = "filename"  # Filename name key
 
 # handle truncated images in PIL (managed by Pillow)
 PillLoadTruncated  = True
@@ -186,7 +185,7 @@ def copy_web_assets(out_dir: str) -> None:
                 out.write(f)
 
 
-# %% ../nbs/00_clip_plot.ipynb 17
+# %% ../nbs/00_clip_plot.ipynb 16
 def filter_images(**kwargs):
     """Main method for filtering images given user metadata (if provided)
 
@@ -381,7 +380,7 @@ def save_atlas(atlas, out_dir, n):
     out_path = join(out_dir, "atlas-{}.jpg".format(n))
     save_image(out_path, atlas)
 
-# %% ../nbs/00_clip_plot.ipynb 24
+# %% ../nbs/00_clip_plot.ipynb 19
 def parse():
     """Read command line args and begin data processing"""
     description = "Create the data required to create a clipplot viewer"
@@ -533,7 +532,7 @@ def parse():
 
     return config
 
-# %% ../nbs/00_clip_plot.ipynb 26
+# %% ../nbs/00_clip_plot.ipynb 21
 def test_iiif(config):
     test_images = copy_root_dir/"tests/IIIF_examples/iif_example.txt"
     test_out_dir = copy_root_dir/"tests/smithsonian_butterflies_10/output_test_temp"
@@ -605,7 +604,7 @@ def test_no_meta_dir(config):
     return config
 
 
-# %% ../nbs/00_clip_plot.ipynb 27
+# %% ../nbs/00_clip_plot.ipynb 22
 @call_parse
 def project_imgs(images:Param(type=str,
                         help="path to a glob of images to process"
@@ -694,6 +693,6 @@ def project_imgs(images:Param(type=str,
 
                 process_images(**config)
 
-# %% ../nbs/00_clip_plot.ipynb 29
+# %% ../nbs/00_clip_plot.ipynb 24
 if __name__ == "__main__":
     project_imgs()
