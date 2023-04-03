@@ -20,6 +20,7 @@ from .utils import is_number, get_path, get_version, round_floats, write_json, r
 from .utils import date_to_seconds, round_date, datestring_to_date
 from .images import *
 from .embeddings import get_inception_vectors
+from .metadata import get_manifest, write_metadata, get_metadata_list
 
 from .layouts import *
 
