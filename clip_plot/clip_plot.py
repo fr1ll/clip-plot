@@ -5,66 +5,50 @@ from __future__ import division
 import warnings
 
 # %% auto 0
-__all__ = ['DEFAULTS', 'FILE_NAME', 'copy_root_dir', 'get_clip_plot_root', 'process_images', 'preprocess_kwargs',
-           'copy_web_assets', 'filter_images', 'get_image_paths', 'get_metadata_list', 'write_metadata', 'get_manifest',
-           'get_atlas_data', 'save_atlas', 'parse', 'test_iiif', 'test_butterfly_duplicate', 'test_butterfly',
-           'test_butterfly_missing_meta', 'test_no_meta_dir', 'project_imgs']
+__all__ = ['DEFAULTS', 'PILLoadTruncated', 'copy_root_dir', 'get_clip_plot_root', 'process_images', 'preprocess_kwargs',
+           'copy_web_assets', 'filter_images', 'get_atlas_data', 'save_atlas', 'parse', 'test_iiif',
+           'test_butterfly_duplicate', 'test_butterfly', 'test_butterfly_missing_meta', 'test_no_meta_dir',
+           'project_imgs']
 
 # %% ../nbs/00_clip_plot.ipynb 4
 from fastcore.all import *
 
 from . import utils
+from .layouts import get_layouts
 from .utils import clean_filename, timestamp
-
-from .utils import is_number, get_path, get_version, round_floats, write_json, read_json
-from .utils import date_to_seconds, round_date, datestring_to_date
-from .images import *
+from .utils import  get_version, FILE_NAME
 from .embeddings import get_inception_vectors
-
-from .layouts import *
+from .metadata import get_manifest, write_metadata, get_metadata_list
+from .images import PILLoadTruncated, save_image, write_images, Image, get_image_paths
 
 # %% ../nbs/00_clip_plot.ipynb 5
 warnings.filterwarnings("ignore")
 
 # %% ../nbs/00_clip_plot.ipynb 6
-from os.path import join, exists, dirname, realpath
 from shutil import rmtree
-from distutils.dir_util import copy_tree
 from pathlib import Path
-import pkg_resources
-import datetime
 import argparse
 from typing import Optional, List, Union, Tuple
-import glob2
 import uuid
 import sys
 import os
 
 # %% ../nbs/00_clip_plot.ipynb 8
-from sklearn.metrics import pairwise_distances_argmin_min
-from collections import defaultdict, namedtuple
-from scipy.spatial.distance import cdist
-from iiif_downloader import Manifest
-from PIL import ImageFile
-from tqdm.autonotebook import tqdm
-
 import numpy as np
 import random
 import copy
-import math
-import gzip
 import json
-import csv
 
 
 # Keras imports
 # from tensorflow.keras.preprocessing.image import save_img, img_to_array, array_to_img
-from tensorflow.keras.applications.inception_v3 import preprocess_input
-from tensorflow.keras.applications import InceptionV3, imagenet_utils # imagenet_utils not being used
+# from tensorflow.keras.applications.inception_v3 import preprocess_input
+# from tensorflow.keras.applications import InceptionV3, imagenet_utils # imagenet_utils not being used
 # from tensorflow.keras.preprocessing.image import load_img
-from tensorflow.keras.models import Model
+# from tensorflow.keras.models import Model
 from tensorflow import compat
-# surpress annoying info and warning logs from tensorflow
+
+# Suppress annoying info and warning logs from tensorflow
 import logging
 logging.getLogger("tensorflow").setLevel(logging.ERROR)
 
@@ -96,10 +80,8 @@ DEFAULTS = {
     "geojson": None,
 }
 
-FILE_NAME = "filename"  # Filename name key
-
 # handle truncated images in PIL (managed by Pillow)
-ImageFile.LOAD_TRUNCATED_IMAGES = True
+PILLoadTruncated  = True
 
 """
 NB: Keras Image class objects return image.size as w,h
@@ -130,7 +112,7 @@ def process_images(**kwargs):
     
     np.random.seed(kwargs["seed"])
     compat.v1.set_random_seed(kwargs["seed"])
-    kwargs["out_dir"] = join(kwargs["out_dir"], "data")
+    kwargs["out_dir"] = os.path.join(kwargs["out_dir"], "data")
     kwargs["image_paths"], kwargs["metadata"] = filter_images(**kwargs)
     write_metadata(**kwargs)
     
@@ -178,14 +160,14 @@ def copy_web_assets(out_dir: str) -> None:
 
     # write version numbers into output
     for i in ["index.html", os.path.join("assets", "js", "tsne.js")]:
-        path = join(dest, i)
+        path = os.path.join(dest, i)
         with open(path, "r") as f:
             f = f.read().replace("VERSION_NUMBER", get_version())
             with open(path, "w") as out:
                 out.write(f)
 
 
-# %% ../nbs/00_clip_plot.ipynb 17
+# %% ../nbs/00_clip_plot.ipynb 16
 def filter_images(**kwargs):
     """Main method for filtering images given user metadata (if provided)
 
@@ -293,303 +275,7 @@ def filter_images(**kwargs):
 
     return [images, metadata]
 
-# %% ../nbs/00_clip_plot.ipynb 18
-def get_image_paths(images:str, out_dir: str) -> List[str]:
-    """Called once to provide a list of image paths--handles IIIF manifest input.
-    
-    args:
-        images (str): directory location of images.
-        out_dir (str): output directory for downloaded IIIF files.
-
-    returns:
-        image_paths list(str): list of image paths.
-
-    Note:
-        Old/previous images are not deleted from IIIF directory.
-
-    Todo:
-        Consider separate function that handles IIIF images
-        from glob images.
-    """
-
-    image_paths = None
-
-    # Is images a iiif file or image directory?
-    if os.path.isfile(images):
-        # Handle list of IIIF image inputs
-        iiif_dir = os.path.join(out_dir,"iiif-downloads")
-
-        # Check if directory already contains anything
-        if os.path.exists(iiif_dir) and os.listdir(iiif_dir):
-            print("Warning: IIIF directory already contains content!")
-
-        with open(images) as f:
-            urls = [url.strip() for url in f.read().split("\n") if url.startswith("http")]
-            count = 0
-            for url in urls:
-                try:
-                    Manifest(url=url, out_dir=iiif_dir).save_images(limit=1)
-                    count += 1
-                except:
-                    print(timestamp(), "Could not download url " + url)
-
-            if count == 0:
-                raise Exception('No IIIF images were successfully downloaded!')
-
-            image_paths = glob2.glob(os.path.join(out_dir,"iiif-downloads", "images", "*"))
-   
-    # handle case where images flag points to a glob of images
-    if not image_paths:
-        image_paths = glob2.glob(images)
-
-    # handle case user provided no images
-    if not image_paths:
-        raise FileNotFoundError("Error: No input images were found. Please check your --images glob")
-
-    return image_paths
-
-
-# %% ../nbs/00_clip_plot.ipynb 19
-##
-# Metadata
-##
-
-
-def get_metadata_list(meta_dir: str) -> List[dict]:
-    """Return a list of objects with image metadata.
-
-    Will create 'tags' key if 'category' is in metadata
-    but not 'tags'.
-    
-    Args:
-        metadata (str, default = None): Metadata location
-
-    Returns:
-        l (List[dict]): List of metadata 
-
-    Notes:
-        No check for 'filename' is performed
-
-    Todo:
-        Think about separating .csv and json functionality.
-        Can we use pandas numpy to process csv?
-    """
-
-    # handle csv metadata
-    metaList = []
-    if meta_dir.endswith(".csv"):
-        with open(meta_dir) as f:
-            reader = csv.reader(f)
-            headers = [i.lower() for i in next(reader)]
-            for i in reader:
-                metaList.append(
-                    {
-                        headers[j]: i[j] if len(i) > j and i[j] else ""
-                        for j, _ in enumerate(headers)
-                    }
-                )
-    
-    # handle json metadata
-    else:
-        for i in glob2.glob(meta_dir):
-            with open(i) as f:
-                metaList.append(json.load(f))
-
-    # if the user provided a category but not a tag, use the category as the tag
-    for metaDict in metaList:
-        if "category" in metaDict and ("tags" in metaDict) is False:
-            metaDict.update({"tags": metaDict["category"]})
-    return metaList
-
-# %% ../nbs/00_clip_plot.ipynb 20
-def write_metadata(metadata, **kwargs):
-    """Write list `metadata` of objects to disk
-    
-    Args:
-        metadata (list[dict])
-        out_dir (str)
-
-        subfunctions:
-            write_json():
-                gzip (Optional[bool]):
-                encoding (Optional[str]): Required if gzip is provided
-                    default = 'utf8'
-
-    Returns:
-        None
-
-    Notes:
-        Improve variable naming
-    
-    """
-    if not metadata:
-        return
-
-    out_dir = join(kwargs["out_dir"], "metadata")
-    for i in ["filters", "options", "file"]:
-        out_path = join(out_dir, i)
-        if not exists(out_path):
-            os.makedirs(out_path)
-    
-    # create the lists of images with each tag
-    d = defaultdict(list)
-    for i in metadata:
-        filename = clean_filename(i[FILE_NAME])
-        i["tags"] = [j.strip() for j in i.get("tags", "").split("|")]
-        for j in i["tags"]:
-            d["__".join(j.split())].append(filename)
-        write_json(os.path.join(out_dir, "file", filename + ".json"), i, **kwargs)
-
-    write_json(
-        os.path.join(out_dir, "filters", "filters.json"),
-        [
-            {
-                "filter_name": "select",
-                "filter_values": list(d.keys()),
-            }
-        ],
-        **kwargs
-    )
-
-    # create the options for the category dropdown
-    for i in d:
-        write_json(os.path.join(out_dir, "options", i + ".json"), d[i], **kwargs)
-    # create the map from date to images with that date (if dates present)
-    date_d = defaultdict(list)
-    for i in metadata:
-        date = i.get("year", "")
-        if date:
-            date_d[date].append(clean_filename(i[FILE_NAME]))
-
-    # find the min and max dates to show on the date slider
-    dates = np.array([int(i.strip()) for i in date_d if is_number(i)])
-    domain = {"min": float("inf"), "max": -float("inf")}
-    mean = np.mean(dates)
-    std = np.std(dates)
-    for i in dates:
-        # update the date domain with all non-outlier dates
-        if abs(mean - i) < (std * 4):
-            domain["min"] = int(min(i, domain["min"]))
-            domain["max"] = int(max(i, domain["max"]))
-
-    # write the dates json
-    if len(date_d) > 1:
-        write_json(
-            os.path.join(out_dir, "dates.json"),
-            {
-                "domain": domain,
-                "dates": date_d,
-            },
-            **kwargs
-        )
-
-# %% ../nbs/00_clip_plot.ipynb 21
-##
-# Main
-##
-
-
-def get_manifest(**kwargs):
-    """Create and return the base object for the manifest output file
-    
-    Args:
-        atlas_dir (str)
-        image_paths (str)
-        plot_id (str, default = str(uuid.uuid1()))
-        out_dir (str)
-        metadata (list[dict]): Only checking if provided
-        gzip (bool, default = False)
-        atlas_size (int, default = 2048)
-        cell_size (int, default = 32)
-        lod_cell_height (int, default = 128)
-
-        Need to check subfunctions
-
-
-    Returns:
-        None
-
-    Notes:
-        Original description is inadequate
-        Function is to big (god function)
-    
-    """
-    # load the atlas data
-    atlas_data = json.load(open(join(kwargs["atlas_dir"], "atlas_positions.json")))
-    # store each cell's size and atlas position
-    atlas_ids = set([i["idx"] for i in atlas_data])
-    sizes = [[] for _ in atlas_ids]
-    pos = [[] for _ in atlas_ids]
-    for idx, i in enumerate(atlas_data):
-        sizes[i["idx"]].append([i["w"], i["h"]])
-        pos[i["idx"]].append([i["x"], i["y"]])
-    # obtain the paths to each layout's JSON positions
-    layouts = get_layouts(**kwargs)
-    # create a heightmap for the umap layout
-    if "umap" in layouts and layouts["umap"]:
-        get_heightmap(layouts["umap"]["variants"][0]["layout"], "umap", **kwargs)
-    # specify point size scalars
-    point_sizes = {}
-    point_sizes["min"] = 0
-    point_sizes["grid"] = 1 / math.ceil(len(kwargs["image_paths"]) ** (1 / 2))
-    point_sizes["max"] = point_sizes["grid"] * 1.2
-    point_sizes["scatter"] = point_sizes["grid"] * 0.2
-    point_sizes["initial"] = point_sizes["scatter"]
-    point_sizes["categorical"] = point_sizes["grid"] * 0.6
-    point_sizes["geographic"] = point_sizes["grid"] * 0.025
-    # fetch the date distribution data for point sizing
-    if "date" in layouts and layouts["date"]:
-        date_layout = read_json(layouts["date"]["labels"], **kwargs)
-        point_sizes["date"] = 1 / (
-            (date_layout["cols"] + 1) * len(date_layout["labels"])
-        )
-    # create manifest json
-    manifest = {
-        "version": get_version(),
-        "plot_id": kwargs["plot_id"],
-        "output_directory": os.path.split(kwargs["out_dir"])[0],
-        "layouts": layouts,
-        "initial_layout": "umap",
-        "point_sizes": point_sizes,
-        "imagelist": get_path("imagelists", "imagelist", **kwargs),
-        "atlas_dir": kwargs["atlas_dir"],
-        "metadata": True if kwargs["metadata"] else False,
-        "default_hotspots": get_hotspots(layouts=layouts, **kwargs),
-        "custom_hotspots": get_path(
-            "hotspots", "user_hotspots", add_hash=False, **kwargs
-        ),
-        "gzipped": kwargs["gzip"],
-        "config": {
-            "sizes": {
-                "atlas": kwargs["atlas_size"],
-                "cell": kwargs["cell_size"],
-                "lod": kwargs["lod_cell_height"],
-            },
-        },
-        "creation_date": datetime.datetime.today().strftime("%d-%B-%Y-%H:%M:%S"),
-    }
-    # write the manifest without gzipping
-    no_gzip_kwargs = {
-        "out_dir": kwargs["out_dir"],
-        "gzip": False,
-        "plot_id": kwargs["plot_id"],
-    }
-    path = get_path("manifests", "manifest", **no_gzip_kwargs)
-    write_json(path, manifest, **no_gzip_kwargs)
-    path = get_path(None, "manifest", add_hash=False, **no_gzip_kwargs)
-    write_json(path, manifest, **no_gzip_kwargs)
-    # create images json
-    imagelist = {
-        "cell_sizes": sizes,
-        "images": [clean_filename(i) for i in kwargs["image_paths"]],
-        "atlas": {
-            "count": len(atlas_ids),
-            "positions": pos,
-        },
-    }
-    write_json(manifest["imagelist"], imagelist, **kwargs)
-
-# %% ../nbs/00_clip_plot.ipynb 22
+# %% ../nbs/00_clip_plot.ipynb 17
 ##
 # Atlases
 ##
@@ -673,10 +359,10 @@ def get_atlas_data(**kwargs):
 
 def save_atlas(atlas, out_dir, n):
     """Save an atlas to disk"""
-    out_path = join(out_dir, "atlas-{}.jpg".format(n))
+    out_path = os.path.join(out_dir, "atlas-{}.jpg".format(n))
     save_image(out_path, atlas)
 
-# %% ../nbs/00_clip_plot.ipynb 24
+# %% ../nbs/00_clip_plot.ipynb 19
 def parse():
     """Read command line args and begin data processing"""
     description = "Create the data required to create a clipplot viewer"
@@ -828,7 +514,7 @@ def parse():
 
     return config
 
-# %% ../nbs/00_clip_plot.ipynb 26
+# %% ../nbs/00_clip_plot.ipynb 21
 def test_iiif(config):
     test_images = copy_root_dir/"tests/IIIF_examples/iif_example.txt"
     test_out_dir = copy_root_dir/"tests/smithsonian_butterflies_10/output_test_temp"
@@ -900,7 +586,7 @@ def test_no_meta_dir(config):
     return config
 
 
-# %% ../nbs/00_clip_plot.ipynb 27
+# %% ../nbs/00_clip_plot.ipynb 22
 @call_parse
 def project_imgs(images:Param(type=str,
                         help="path to a glob of images to process"
@@ -989,6 +675,6 @@ def project_imgs(images:Param(type=str,
 
                 process_images(**config)
 
-# %% ../nbs/00_clip_plot.ipynb 29
+# %% ../nbs/00_clip_plot.ipynb 24
 if __name__ == "__main__":
     project_imgs()
