@@ -119,7 +119,7 @@ def process_images(**kwargs):
     kwargs["atlas_dir"] = get_atlas_data(**kwargs)
     kwargs["vecs"] = get_inception_vectors(**kwargs)
     get_manifest(**kwargs)
-    write_images(**kwargs)
+    write_images(kwargs["image_paths"], kwargs["metadata"], kwargs["out_dir"], kwargs["lod_cell_height"])
     print(timestamp(), "Done!")
 
 
@@ -181,10 +181,15 @@ def filter_images(**kwargs):
 
     
     Args:
+        images (str): Directory location of images.
+        out_dir (str): Output directory.
+        shuffle (Optional[bool], default = False): Shuffle image order
+        seed (int): Seed for random generator
+        max_images (Union[bool,int]): Maximum number of images
         atlas_size (int, default = 2048)
         cell_size (int, default = 32)
         lod_cell_height (int, default = 128)
-        shuffle (Optional[bool], default = False) 
+        meta_dir (str): Directory of image metadata
 
     Returns:
         images (list[str])
@@ -213,7 +218,7 @@ def filter_images(**kwargs):
     else:
         image_paths = sorted(image_paths)
 
-    # optionally limit the number of images in image_paths
+    # Optionally limit the number of images in image_paths
     if kwargs.get("max_images", False):
         image_paths = image_paths[: kwargs["max_images"]]        
 
@@ -518,13 +523,13 @@ def parse():
 def test_iiif(config):
     test_images = copy_root_dir/"tests/IIIF_examples/iif_example.txt"
     test_out_dir = copy_root_dir/"tests/smithsonian_butterflies_10/output_test_temp"
-    # meta_dir = copy_root_dir/"tests/smithsonian_butterflies_10/meta_data/good_meta.csv"
+
     if Path(test_out_dir).exists():
         rmtree(test_out_dir)
 
     config["images"] = test_images.as_posix()
     config["out_dir"] = test_out_dir.as_posix()
-    # config["meta_dir"] = meta_dir.as_posix()
+    config["plot_id"] = "test_diff"
 
     return config
 
@@ -539,6 +544,7 @@ def test_butterfly_duplicate(config):
     config["images"] = test_images.as_posix()
     config["out_dir"] = test_out_dir.as_posix()
     config["meta_dir"] = meta_dir.as_posix()
+    config["plot_id"] = "test_diff"
 
     return config
 
@@ -570,6 +576,7 @@ def test_butterfly_missing_meta(config):
     config["images"] = test_images.as_posix()
     config["out_dir"] = test_out_dir.as_posix()
     config["meta_dir"] = meta_dir.as_posix()
+    config["plot_id"] = "test_diff"
 
     return config
 
@@ -582,6 +589,7 @@ def test_no_meta_dir(config):
 
     config["images"] = test_images.as_posix()
     config["out_dir"] = test_out_dir.as_posix()
+    config["plot_id"] = "test_diff"
 
     return config
 

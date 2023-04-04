@@ -117,25 +117,53 @@ def save_image(path: str, x: np.array) -> None:
     img.save(path,format=None)
 
 # %% ../nbs/03_images.ipynb 7
-def write_images(**kwargs):
-    """Write all originals and thumbs to the output dir"""
-    for i in Image.stream_images(image_paths=kwargs["image_paths"], metadata=kwargs["metadata"]):
+def write_images(image_paths: List[str], metadata: List[dict],
+                 out_dir: str, lod_cell_height: int) -> None:
+    """Write all originals and thumbnails images to the output dir.
+
+    Images are used by lightbox.
+    
+    Args:
+        image_paths (List[str]): List of path of images
+        metadata (List[dict]): List of dictionaries with image metadata
+        out_dir (str): Output Directory
+        lod_cell_height (int): Cell height for lod texture
+
+    Returns:
+        None
+
+    Notes:
+        - Will only output the original image to the out dir if 
+          there is no existing image with the exact same name.
+        - Thumbnails are always saved regardless if a file 
+          already exists.
+
+    TODO:
+        Should users get a warning that a photo already exists
+        in the destination folder?
+    """
+    for i in Image.stream_images(image_paths=image_paths, metadata=metadata):
         filename = clean_filename(i.path)
-        # copy original for lightbox
-        out_dir = os.path.join(kwargs["out_dir"], "originals")
-        if not os.path.exists(out_dir):
-            os.makedirs(out_dir)
-        out_path = os.path.join(out_dir, filename)
+        # Copy original for lightbox
+        org_out_dir = os.path.join(out_dir, "originals")
+        if not os.path.exists(org_out_dir):
+            # Create directory since it does not exists
+            os.makedirs(org_out_dir)
+        out_path = os.path.join(org_out_dir, filename)
+
+        # Does the image already exists?
         if not os.path.exists(out_path):
             resized = i.resize_to_height(600)
             resized = array_to_image(resized)
             save_image(out_path, resized)
+    
         # copy thumb for lod texture
-        out_dir = os.path.join(kwargs["out_dir"], "thumbs")
-        if not os.path.exists(out_dir):
-            os.makedirs(out_dir)
-        out_path = os.path.join(out_dir, filename)
-        img = array_to_image(i.resize_to_max(kwargs["lod_cell_height"]))
+        thu_out_dir = os.path.join(out_dir, "thumbs")
+        if not os.path.exists(thu_out_dir):
+            os.makedirs(thu_out_dir)
+            
+        out_path = os.path.join(thu_out_dir, filename)
+        img = array_to_image(i.resize_to_max(lod_cell_height))
         save_image(out_path, img)
 
 # %% ../nbs/03_images.ipynb 8
@@ -195,11 +223,11 @@ def get_image_paths(images:str, out_dir: str) -> List[str]:
 
 # %% ../nbs/03_images.ipynb 10
 class Image:
-    def __init__(self, *args, **kwargs):
-        self.path = args[0]
+    def __init__(self, img_path: str, metadata: Optional[dict] = None) -> 'Image':
+        self.path = img_path
         self.filename = clean_filename(self.path)
         self.original = load_image(self.path) 
-        self.metadata = kwargs["metadata"] if kwargs["metadata"] else {}
+        self.metadata = metadata if metadata else {}
 
     def resize_to_max(self, n: int) -> np.array:
         """Resize self.original so its longest side has n pixels (maintain proportion).
@@ -305,6 +333,6 @@ class Image:
                 meta = None
                 if metadata and metadata[idx]:
                     meta = metadata[idx]
-                yield Image(imgPath, metadata=meta)
+                yield Image(imgPath, meta)
             except Exception as exc:
                 print(timestamp(), "Image", imgPath, "could not be processed --", exc)
