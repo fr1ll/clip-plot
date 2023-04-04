@@ -6,9 +6,8 @@ import warnings
 
 # %% auto 0
 __all__ = ['DEFAULTS', 'PILLoadTruncated', 'copy_root_dir', 'get_clip_plot_root', 'process_images', 'preprocess_kwargs',
-           'copy_web_assets', 'filter_images', 'get_atlas_data', 'save_atlas', 'parse', 'test_iiif',
-           'test_butterfly_duplicate', 'test_butterfly', 'test_butterfly_missing_meta', 'test_no_meta_dir',
-           'project_imgs']
+           'copy_web_assets', 'filter_images', 'parse', 'test_iiif', 'test_butterfly_duplicate', 'test_butterfly',
+           'test_butterfly_missing_meta', 'test_no_meta_dir', 'project_imgs']
 
 # %% ../nbs/00_clip_plot.ipynb 4
 from fastcore.all import *
@@ -19,7 +18,7 @@ from .utils import clean_filename, timestamp
 from .utils import  get_version, FILE_NAME
 from .embeddings import get_inception_vectors
 from .metadata import get_manifest, write_metadata, get_metadata_list
-from .images import PILLoadTruncated, save_image, write_images, Image, get_image_paths
+from .images import PILLoadTruncated, save_image, write_images, Image, get_image_paths, get_atlas_data
 
 # %% ../nbs/00_clip_plot.ipynb 5
 warnings.filterwarnings("ignore")
@@ -280,94 +279,7 @@ def filter_images(**kwargs):
 
     return [images, metadata]
 
-# %% ../nbs/00_clip_plot.ipynb 17
-##
-# Atlases
-##
-
-
-def get_atlas_data(**kwargs):
-    """
-    Generate and save to disk all atlases to be used for this visualization
-    If square, center each cell in an nxn square, else use uniform height
-
-    Args:
-        out_dir (str)
-        plot_id (str, default = str(uuid.uuid1()))
-        use_cache (bool, default = False)
-        shuffle (Optional[bool], default = False)
-        atlas_size (int, default = 2048)
-        cell_size (int, default = 32)
-        lod_cell_height (int, default = 128)
-
-
-    Returns:
-        out_dir (str): Atlas location 
-
-    Notes:
-
-    """
-    # if the atlas files already exist, load from cache
-    out_dir = os.path.join(kwargs["out_dir"], "atlases", kwargs["plot_id"])
-    if (
-        os.path.exists(out_dir)
-        and kwargs["use_cache"]
-        and not kwargs.get("shuffle", False)
-    ):
-        print(timestamp(), "Loading saved atlas data")
-        return out_dir
-    if not os.path.exists(out_dir):
-        os.makedirs(out_dir)
-    # else create the atlas images and store the positions of cells in atlases
-    print(timestamp(), "Creating atlas files")
-    n = 0  # number of atlases
-    x = 0  # x pos in atlas
-    y = 0  # y pos in atlas
-    positions = []  # l[cell_idx] = atlas data
-    atlas = np.zeros((kwargs["atlas_size"], kwargs["atlas_size"], 3))
-    for idx, i in enumerate(Image.stream_images(image_paths=kwargs["image_paths"], metadata=kwargs["metadata"])):
-        cell_data = i.resize_to_height(kwargs["cell_size"])
-        _, v, _ = cell_data.shape
-        appendable = False
-        if (x + v) <= kwargs["atlas_size"]:
-            appendable = True
-        elif (y + (2 * kwargs["cell_size"])) <= kwargs["atlas_size"]:
-            y += kwargs["cell_size"]
-            x = 0
-            appendable = True
-        if not appendable:
-            save_atlas(atlas, out_dir, n)
-            n += 1
-            atlas = np.zeros((kwargs["atlas_size"], kwargs["atlas_size"], 3))
-            x = 0
-            y = 0
-        atlas[y : y + kwargs["cell_size"], x : x + v] = cell_data
-        # find the size of the cell in the lod canvas
-        lod_data = i.resize_to_max(kwargs["lod_cell_height"])
-        h, w, _ = lod_data.shape  # h,w,colors in lod-cell sized image `i`
-        positions.append(
-            {
-                "idx": n,  # atlas idx
-                "x": x,  # x offset of cell in atlas
-                "y": y,  # y offset of cell in atlas
-                "w": w,  # w of cell at lod size
-                "h": h,  # h of cell at lod size
-            }
-        )
-        x += v
-    save_atlas(atlas, out_dir, n)
-    out_path = os.path.join(out_dir, "atlas_positions.json")
-    with open(out_path, "w") as out:
-        json.dump(positions, out)
-    return out_dir
-
-
-def save_atlas(atlas, out_dir, n):
-    """Save an atlas to disk"""
-    out_path = os.path.join(out_dir, "atlas-{}.jpg".format(n))
-    save_image(out_path, atlas)
-
-# %% ../nbs/00_clip_plot.ipynb 19
+# %% ../nbs/00_clip_plot.ipynb 18
 def parse():
     """Read command line args and begin data processing"""
     description = "Create the data required to create a clipplot viewer"
@@ -519,7 +431,7 @@ def parse():
 
     return config
 
-# %% ../nbs/00_clip_plot.ipynb 21
+# %% ../nbs/00_clip_plot.ipynb 20
 def test_iiif(config):
     test_images = copy_root_dir/"tests/IIIF_examples/iif_example.txt"
     test_out_dir = copy_root_dir/"tests/smithsonian_butterflies_10/output_test_temp"
@@ -594,7 +506,7 @@ def test_no_meta_dir(config):
     return config
 
 
-# %% ../nbs/00_clip_plot.ipynb 22
+# %% ../nbs/00_clip_plot.ipynb 21
 @call_parse
 def project_imgs(images:Param(type=str,
                         help="path to a glob of images to process"
@@ -683,6 +595,6 @@ def project_imgs(images:Param(type=str,
 
                 process_images(**config)
 
-# %% ../nbs/00_clip_plot.ipynb 24
+# %% ../nbs/00_clip_plot.ipynb 23
 if __name__ == "__main__":
     project_imgs()

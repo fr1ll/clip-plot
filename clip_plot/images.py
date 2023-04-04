@@ -2,14 +2,13 @@
 
 # %% auto 0
 __all__ = ['PILLoadTruncated', 'FLOATX', 'load_image', 'image_to_array', 'array_to_image', 'save_image', 'write_images',
-           'get_image_paths', 'Image']
+           'get_image_paths', 'get_atlas_data', 'save_atlas', 'Image']
 
 # %% ../nbs/03_images.ipynb 3
 import io
 import os
+import json
 import glob2
-import random
-from copy import deepcopy
 from typing import Optional, List, Union
 
 import numpy as np
@@ -222,6 +221,93 @@ def get_image_paths(images:str, out_dir: str) -> List[str]:
     return image_paths
 
 # %% ../nbs/03_images.ipynb 10
+##
+# Atlases
+##
+
+
+def get_atlas_data(**kwargs):
+    """
+    Generate and save to disk all atlases to be used for this visualization
+    If square, center each cell in an nxn square, else use uniform height
+
+    Args:
+        out_dir (str)
+        plot_id (str, default = str(uuid.uuid1()))
+        use_cache (bool, default = False)
+        shuffle (Optional[bool], default = False)
+        atlas_size (int, default = 2048)
+        cell_size (int, default = 32)
+        lod_cell_height (int, default = 128)
+
+
+    Returns:
+        out_dir (str): Atlas location 
+
+    Notes:
+
+    """
+    # if the atlas files already exist, load from cache
+    out_dir = os.path.join(kwargs["out_dir"], "atlases", kwargs["plot_id"])
+    if (
+        os.path.exists(out_dir)
+        and kwargs["use_cache"]
+        and not kwargs.get("shuffle", False)
+    ):
+        print(timestamp(), "Loading saved atlas data")
+        return out_dir
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir)
+    # else create the atlas images and store the positions of cells in atlases
+    print(timestamp(), "Creating atlas files")
+    n = 0  # number of atlases
+    x = 0  # x pos in atlas
+    y = 0  # y pos in atlas
+    positions = []  # l[cell_idx] = atlas data
+    atlas = np.zeros((kwargs["atlas_size"], kwargs["atlas_size"], 3))
+    for idx, i in enumerate(Image.stream_images(image_paths=kwargs["image_paths"], metadata=kwargs["metadata"])):
+        cell_data = i.resize_to_height(kwargs["cell_size"])
+        _, v, _ = cell_data.shape
+        appendable = False
+        if (x + v) <= kwargs["atlas_size"]:
+            appendable = True
+        elif (y + (2 * kwargs["cell_size"])) <= kwargs["atlas_size"]:
+            y += kwargs["cell_size"]
+            x = 0
+            appendable = True
+        if not appendable:
+            save_atlas(atlas, out_dir, n)
+            n += 1
+            atlas = np.zeros((kwargs["atlas_size"], kwargs["atlas_size"], 3))
+            x = 0
+            y = 0
+        atlas[y : y + kwargs["cell_size"], x : x + v] = cell_data
+        # find the size of the cell in the lod canvas
+        lod_data = i.resize_to_max(kwargs["lod_cell_height"])
+        h, w, _ = lod_data.shape  # h,w,colors in lod-cell sized image `i`
+        positions.append(
+            {
+                "idx": n,  # atlas idx
+                "x": x,  # x offset of cell in atlas
+                "y": y,  # y offset of cell in atlas
+                "w": w,  # w of cell at lod size
+                "h": h,  # h of cell at lod size
+            }
+        )
+        x += v
+    save_atlas(atlas, out_dir, n)
+    out_path = os.path.join(out_dir, "atlas_positions.json")
+    with open(out_path, "w") as out:
+        json.dump(positions, out)
+    return out_dir
+
+
+def save_atlas(atlas, out_dir, n):
+    """Save an atlas to disk"""
+    out_path = os.path.join(out_dir, "atlas-{}.jpg".format(n))
+    save_image(out_path, atlas)
+
+# %% ../nbs/03_images.ipynb 12
 class Image:
     def __init__(self, img_path: str, metadata: Optional[dict] = None) -> 'Image':
         self.path = img_path
