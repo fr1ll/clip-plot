@@ -54,6 +54,7 @@ logging.getLogger("tensorflow").setLevel(logging.ERROR)
 # %% ../nbs/00_clip_plot.ipynb 10
 DEFAULTS = {
     "images": None,
+    "embeds": None,
     "meta_dir": None,
     "out_dir": "output",
     "max_images": None,
@@ -509,13 +510,16 @@ def test_no_meta_dir(config):
 # %% ../nbs/00_clip_plot.ipynb 21
 @call_parse
 def project_imgs(images:Param(type=str,
-                        help="path to a glob of images to process"
+                        help="path or glob of images to process"
                         )=DEFAULTS["images"],
+                embeds:Param(type=str,
+                        help="path or glob of embeddings to process (must match images folder/file structure)"
+                        )=DEFAULTS["embeds"],
                 metadata:Param(type=str,
                         help="path to a csv or glob of JSON files with image metadata (see readme for format)"
                         )=DEFAULTS["meta_dir"],
                 max_images:Param(type=int,
-                        help="maximum number of images to process from the input glob"
+                        help="maximum number of images to process"
                         )=DEFAULTS["max_images"],
                 use_cache:Param(type=bool,
                         help="given inputs identical to prior inputs, load outputs from cache"
