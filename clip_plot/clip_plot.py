@@ -444,7 +444,6 @@ def project_imgs(images:Param(type=str,
                 default_only = {k:DEFAULTS[k] for k in default_only_keys}
                 config.update(default_only)
 
-                print("config:\n",config)
                 copy_root_dir = get_clip_plot_root()
 
                 if in_ipython() and config["images"] == None:
