@@ -6,7 +6,7 @@ import warnings
 
 # %% auto 0
 __all__ = ['DEFAULTS', 'PILLoadTruncated', 'copy_root_dir', 'get_clip_plot_root', 'process_images', 'preprocess_kwargs',
-           'copy_web_assets', 'filter_images', 'parse', 'test_iiif', 'test_butterfly_duplicate', 'test_butterfly',
+           'copy_web_assets', 'filter_images', 'test_iiif', 'test_butterfly_duplicate', 'test_butterfly',
            'test_butterfly_missing_meta', 'test_no_meta_dir', 'project_imgs']
 
 # %% ../nbs/00_clip_plot.ipynb 4
@@ -54,6 +54,7 @@ logging.getLogger("tensorflow").setLevel(logging.ERROR)
 # %% ../nbs/00_clip_plot.ipynb 10
 DEFAULTS = {
     "images": None,
+    "embeds": None,
     "meta_dir": None,
     "out_dir": "output",
     "max_images": None,
@@ -280,158 +281,6 @@ def filter_images(**kwargs):
     return [images, metadata]
 
 # %% ../nbs/00_clip_plot.ipynb 18
-def parse():
-    """Read command line args and begin data processing"""
-    description = "Create the data required to create a clipplot viewer"
-    parser = argparse.ArgumentParser(
-        description=description, formatter_class=argparse.ArgumentDefaultsHelpFormatter
-    )
-    parser.add_argument(
-        "--images",
-        "-i",
-        type=str,
-        default=DEFAULTS["images"],
-        help="path to a glob of images to process",
-        required=False,
-    )
-    parser.add_argument(
-        "--metadata",
-        "-m",
-        type=str,
-        default=DEFAULTS["meta_dir"],
-        help="path to a csv or glob of JSON files with image metadata (see readme for format)",
-        required=False,
-    )
-    parser.add_argument(
-        "--max_images",
-        type=int,
-        default=DEFAULTS["max_images"],
-        help="maximum number of images to process from the input glob",
-        required=False,
-    )
-    parser.add_argument(
-        "--use_cache",
-        type=bool,
-        default=DEFAULTS["use_cache"],
-        help="given inputs identical to prior inputs, load outputs from cache",
-        required=False,
-    )
-    parser.add_argument(
-        "--encoding",
-        type=str,
-        default=DEFAULTS["encoding"],
-        help="the encoding of input metadata",
-        required=False,
-    )
-    parser.add_argument(
-        "--min_cluster_size",
-        type=int,
-        default=DEFAULTS["min_cluster_size"],
-        help="the minimum number of images in a cluster",
-        required=False,
-    )
-    parser.add_argument(
-        "--max_clusters",
-        type=int,
-        default=DEFAULTS["max_clusters"],
-        help="the maximum number of clusters to return",
-        required=False,
-    )
-    parser.add_argument(
-        "--out_dir",
-        type=str,
-        default=DEFAULTS["out_dir"],
-        help="the directory to which outputs will be saved",
-        required=False,
-    )
-    parser.add_argument(
-        "--cell_size",
-        type=int,
-        default=DEFAULTS["cell_size"],
-        help="the size of atlas cells in px",
-        required=False,
-    )
-    parser.add_argument(
-        "--n_neighbors",
-        nargs="+",
-        type=int,
-        default=DEFAULTS["n_neighbors"],
-        help="the n_neighbors arguments for UMAP",
-    )
-    parser.add_argument(
-        "--min_dist",
-        nargs="+",
-        type=float,
-        default=DEFAULTS["min_dist"],
-        help="the min_dist arguments for UMAP",
-    )
-    parser.add_argument(
-        "--n_components",
-        type=int,
-        default=DEFAULTS["n_components"],
-        help="the n_components argument for UMAP",
-    )
-    parser.add_argument(
-        "--metric",
-        type=str,
-        default=DEFAULTS["metric"],
-        help="the metric argument for umap",
-    )
-    parser.add_argument(
-        "--pointgrid_fill",
-        type=float,
-        default=DEFAULTS["pointgrid_fill"],
-        help="float 0:1 that determines sparsity of jittered distributions (lower means more sparse)",
-    )
-    parser.add_argument(
-        "--copy_web_only",
-        action="store_true",
-        help="update ./output/assets without reprocessing data",
-    )
-    parser.add_argument(
-        "--min_size",
-        type=float,
-        default=DEFAULTS["min_size"],
-        help="min size of cropped images",
-    )
-    parser.add_argument(
-        "--gzip", action="store_true", help="save outputs with gzip compression"
-    )
-    parser.add_argument(
-        "--shuffle",
-        action="store_true",
-        help="shuffle the input images before data processing begins",
-    )
-    parser.add_argument(
-        "--plot_id",
-        type=str,
-        default=DEFAULTS["plot_id"],
-        help="unique id for a plot; useful for resuming processing on a started plot",
-    )
-    parser.add_argument(
-        "--seed", type=int, default=DEFAULTS["seed"], help="seed for random processes"
-    )
-    parser.add_argument(
-        "--n_clusters",
-        type=int,
-        default=DEFAULTS["n_clusters"],
-        help="number of clusters to use when clustering with kmeans",
-    )
-    parser.add_argument(
-        "--geojson",
-        type=str,
-        default=DEFAULTS["geojson"],
-        help="path to a GeoJSON file with shapes to be rendered on a map",
-    )
-    config = DEFAULTS.copy()
-    if in_ipython():
-        config.update(vars(parser.parse_args({})))
-    else:
-        config.update(vars(parser.parse_args()))
-
-    return config
-
-# %% ../nbs/00_clip_plot.ipynb 20
 def test_iiif(config):
     test_images = copy_root_dir/"tests/IIIF_examples/iif_example.txt"
     test_out_dir = copy_root_dir/"tests/smithsonian_butterflies_10/output_test_temp"
@@ -506,16 +355,19 @@ def test_no_meta_dir(config):
     return config
 
 
-# %% ../nbs/00_clip_plot.ipynb 21
+# %% ../nbs/00_clip_plot.ipynb 20
 @call_parse
 def project_imgs(images:Param(type=str,
-                        help="path to a glob of images to process"
+                        help="path or glob of images to process"
                         )=DEFAULTS["images"],
+                embeds:Param(type=str,
+                        help="path or glob of embeddings to process (must match images folder/file structure)"
+                        )=DEFAULTS["embeds"],
                 metadata:Param(type=str,
                         help="path to a csv or glob of JSON files with image metadata (see readme for format)"
                         )=DEFAULTS["meta_dir"],
                 max_images:Param(type=int,
-                        help="maximum number of images to process from the input glob"
+                        help="maximum number of images to process"
                         )=DEFAULTS["max_images"],
                 use_cache:Param(type=bool,
                         help="given inputs identical to prior inputs, load outputs from cache"
@@ -584,7 +436,14 @@ def project_imgs(images:Param(type=str,
                 ):
                 "Convert a folder of images into a clip-plot visualization"
 
-                config = parse()
+                # grab local variables as configuration dict
+                config = locals()
+
+                # some parameters exist in DEFAULTS but not in the function signature
+                default_only_keys = set(set(DEFAULTS.keys() - config.keys()))
+                default_only = {k:DEFAULTS[k] for k in default_only_keys}
+                config.update(default_only)
+
                 copy_root_dir = get_clip_plot_root()
 
                 if in_ipython() and config["images"] == None:
@@ -595,6 +454,6 @@ def project_imgs(images:Param(type=str,
 
                 process_images(**config)
 
-# %% ../nbs/00_clip_plot.ipynb 23
+# %% ../nbs/00_clip_plot.ipynb 21
 if __name__ == "__main__":
     project_imgs()
