@@ -223,16 +223,17 @@ def filter_images(**kwargs):
     if kwargs.get("max_images", False):
         image_paths = image_paths[: kwargs["max_images"]]
 
-    image_dict = {path:{'filename': clean_filename(path)} for path in image_paths}
-
     # process and filter the images
     filtered_image_paths = {}
+    image_dict = {}
     oblong_ratio = kwargs["atlas_size"] / kwargs["cell_size"]
     for img in Image.stream_images(image_paths=image_paths):
         valid, msg = img.valid(lod_cell_height=kwargs["lod_cell_height"], oblong_ratio=oblong_ratio)
-        image_dict[img.path]['valid'] = valid
-        image_dict[img.path]['name_path'] = img.path.replace(common_dir,"")
-        image_dict[img.path]['copy_name'] = image_dict[img.path]['name_path'].replace("/","_")
+        image_dict[img.path] = {
+            'filename': img.filename, 'valid': valid,
+            'relative_path': img.path.replace(common_dir,""),
+            'copy_name': img.path.replace(common_dir,"").replace("/","_"),
+            'metadata': None}
         if valid is True:
             filtered_image_paths[img.path] = img.filename
         else:
@@ -251,7 +252,7 @@ def filter_images(**kwargs):
     # metaDict = {clean_filename(i.get(FILE_NAME, "")): i for i in metaList}
     metaDict = {i.get(FILE_NAME, ""): i for i in metaList}
     meta_bn = set(metaDict.keys())
-    img_bn = set([v['name_path'] for v in image_dict.values()])
+    img_bn = set([v['relative_path'] for v in image_dict.values()])
 
     # identify images with metadata and those without metadata
     meta_present = img_bn.intersection(meta_bn)
@@ -280,9 +281,9 @@ def filter_images(**kwargs):
     # get the sorted lists of images and metadata
     images = []
     metadata = []
-    for path, fileName in filtered_image_paths.items():
-        if image_dict[path]["name_path"] in meta_present:
-            image_dict[path]['metadata'] = copy.deepcopy(metaDict[image_dict[path]["name_path"]])
+    for path in filtered_image_paths:
+        if image_dict[path]["relative_path"] in meta_present:
+            image_dict[path]['metadata'] = copy.deepcopy(metaDict[image_dict[path]["relative_path"]])
             images.append(path)
             metadata.append(image_dict[path]['metadata'])
 
