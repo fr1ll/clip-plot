@@ -112,13 +112,13 @@ def process_images(**kwargs):
     np.random.seed(kwargs["seed"])
     compat.v1.set_random_seed(kwargs["seed"])
     kwargs["out_dir"] = os.path.join(kwargs["out_dir"], "data")
-    kwargs["image_paths"], kwargs["metadata"] = filter_images(**kwargs)
+    kwargs["image_paths"], kwargs["metadata"], kwargs["image_dict"] = filter_images(**kwargs)
     write_metadata(**kwargs)
     
     kwargs["atlas_dir"] = get_atlas_data(**kwargs)
     kwargs["vecs"] = get_inception_vectors(**kwargs)
     get_manifest(**kwargs)
-    write_images(kwargs["image_paths"], kwargs["metadata"], kwargs["out_dir"], kwargs["lod_cell_height"])
+    write_images(kwargs["image_paths"], kwargs["metadata"], kwargs["out_dir"], kwargs["image_dict"], kwargs["lod_cell_height"])
     print(timestamp(), "Done!")
 
 
@@ -202,13 +202,15 @@ def filter_images(**kwargs):
     """
     # validate that input image names are unique
     image_paths = get_image_paths(images=kwargs["images"], out_dir=kwargs["out_dir"])
-    image_names = list(map(clean_filename,image_paths))
-    duplicates = set([x for x in image_names if image_names.count(x) > 1])
+    common_dir = os.path.commonprefix(image_paths)
 
-    if duplicates:
-        raise Exception(
-            """Image filenames should be unique, but the following 
-            filenames are duplicated\n{}""".format("\n".join(duplicates)))
+    # image_names = list(map(clean_filename,image_paths))
+    # duplicates = set([x for x in image_names if image_names.count(x) > 1])
+
+    # if duplicates:
+    #     raise Exception(
+    #         """Image filenames should be unique, but the following 
+    #         filenames are duplicated\n{}""".format("\n".join(duplicates)))
     
     # optionally shuffle the image_paths
     if kwargs.get("shuffle", False):
@@ -219,13 +221,18 @@ def filter_images(**kwargs):
 
     # Optionally limit the number of images in image_paths
     if kwargs.get("max_images", False):
-        image_paths = image_paths[: kwargs["max_images"]]        
+        image_paths = image_paths[: kwargs["max_images"]]
+
+    image_dict = {path:{'filename': clean_filename(path)} for path in image_paths}
 
     # process and filter the images
     filtered_image_paths = {}
     oblong_ratio = kwargs["atlas_size"] / kwargs["cell_size"]
     for img in Image.stream_images(image_paths=image_paths):
-        valid, msg = img.valid(lod_cell_height=kwargs["lod_cell_height"], oblong_ratio=oblong_ratio) 
+        valid, msg = img.valid(lod_cell_height=kwargs["lod_cell_height"], oblong_ratio=oblong_ratio)
+        image_dict[img.path]['valid'] = valid
+        image_dict[img.path]['name_path'] = img.path.replace(common_dir,"")
+        image_dict[img.path]['copy_name'] = image_dict[img.path]['name_path'].replace("/","_")
         if valid is True:
             filtered_image_paths[img.path] = img.filename
         else:
@@ -241,9 +248,10 @@ def filter_images(**kwargs):
 
     # handle user metadata: retain only records with image and metadata
     metaList = get_metadata_list(meta_dir=kwargs['meta_dir'])
-    metaDict = {clean_filename(i.get(FILE_NAME, "")): i for i in metaList}
+    # metaDict = {clean_filename(i.get(FILE_NAME, "")): i for i in metaList}
+    metaDict = {i.get(FILE_NAME, ""): i for i in metaList}
     meta_bn = set(metaDict.keys())
-    img_bn = set(filtered_image_paths.values())
+    img_bn = set([v['name_path'] for v in image_dict.values()])
 
     # identify images with metadata and those without metadata
     meta_present = img_bn.intersection(meta_bn)
@@ -273,11 +281,12 @@ def filter_images(**kwargs):
     images = []
     metadata = []
     for path, fileName in filtered_image_paths.items():
-        if fileName in meta_present:
+        if image_dict[path]["name_path"] in meta_present:
+            image_dict[path]['metadata'] = copy.deepcopy(metaDict[image_dict[path]["name_path"]])
             images.append(path)
-            metadata.append(copy.deepcopy(metaDict[fileName]))
+            metadata.append(image_dict[path]['metadata'])
 
-    return [images, metadata]
+    return [images, metadata, image_dict]
 
 # %% ../nbs/00_clip_plot.ipynb 18
 def parse():
@@ -449,7 +458,7 @@ def test_iiif(config):
 def test_butterfly_duplicate(config):
     test_images = copy_root_dir/"tests/smithsonian_butterflies_10/jpgs_duplicates/**/*.jpg"
     test_out_dir = copy_root_dir/"tests/smithsonian_butterflies_10/output_test_temp"
-    meta_dir = copy_root_dir/"tests/smithsonian_butterflies_10/meta_data/good_meta.csv"
+    meta_dir = copy_root_dir/"tests/smithsonian_butterflies_10/meta_data/duplicate_filenames.csv"
     if Path(test_out_dir).exists():
         rmtree(test_out_dir)
 
@@ -591,7 +600,7 @@ def project_imgs(images:Param(type=str,
                         print("we're in ipython")
                         # at least for now, this means we're in testing mode.
                         # TODO: pass explicit "test_mode" flag
-                        config = test_butterfly(config)
+                        config = test_butterfly_duplicate(config)
 
                 process_images(**config)
 

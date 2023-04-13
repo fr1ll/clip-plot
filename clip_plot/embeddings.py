@@ -35,7 +35,8 @@ def get_inception_vectors(**kwargs):
     vecs = []
     with tqdm(total=len(kwargs["image_paths"])) as progress_bar:
         for idx, i in enumerate(Image.stream_images(image_paths=kwargs["image_paths"], metadata=kwargs["metadata"])):
-            vector_path = os.path.join(vector_dir, clean_filename(i.path) + ".npy")
+            filename = kwargs['image_dict'][i.path]['copy_name']
+            vector_path = os.path.join(vector_dir, filename + ".npy")
             if os.path.exists(vector_path) and kwargs["use_cache"]:
                 vec = np.load(vector_path)
             else:

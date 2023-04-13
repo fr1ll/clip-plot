@@ -117,7 +117,7 @@ def save_image(path: str, x: np.array) -> None:
 
 # %% ../nbs/03_images.ipynb 7
 def write_images(image_paths: List[str], metadata: List[dict],
-                 out_dir: str, lod_cell_height: int) -> None:
+                 out_dir: str, image_dict, lod_cell_height: int) -> None:
     """Write all originals and thumbnails images to the output dir.
 
     Images are used by lightbox.
@@ -142,7 +142,8 @@ def write_images(image_paths: List[str], metadata: List[dict],
         in the destination folder?
     """
     for i in Image.stream_images(image_paths=image_paths, metadata=metadata):
-        filename = clean_filename(i.path)
+        filename = image_dict[i.path]['copy_name']
+        # filename = clean_filename(i.path)
         # Copy original for lightbox
         org_out_dir = os.path.join(out_dir, "originals")
         if not os.path.exists(org_out_dir):

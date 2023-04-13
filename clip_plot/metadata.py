@@ -98,8 +98,9 @@ def write_metadata(metadata, **kwargs):
     
     # create the lists of images with each tag
     d = defaultdict(list)
-    for i in metadata:
-        filename = clean_filename(i[FILE_NAME])
+    for dictObj in kwargs['image_dict'].values():
+        i = dictObj['metadata']        
+        filename = dictObj['copy_name']
         i["tags"] = [j.strip() for j in i.get("tags", "").split("|")]
         for j in i["tags"]:
             d["__".join(j.split())].append(filename)
@@ -119,12 +120,14 @@ def write_metadata(metadata, **kwargs):
     # create the options for the category dropdown
     for i in d:
         write_json(os.path.join(out_dir, "options", i + ".json"), d[i], **kwargs)
+
     # create the map from date to images with that date (if dates present)
     date_d = defaultdict(list)
-    for i in metadata:
+    for dictObj in kwargs['image_dict'].values():
+        i = dictObj['metadata']  
         date = i.get("year", "")
         if date:
-            date_d[date].append(clean_filename(i[FILE_NAME]))
+            date_d[date].append(dictObj['copy_name'])
 
     # find the min and max dates to show on the date slider
     dates = np.array([int(i.strip()) for i in date_d if is_number(i)])
@@ -246,7 +249,7 @@ def get_manifest(**kwargs):
     # create images json
     imagelist = {
         "cell_sizes": sizes,
-        "images": [clean_filename(i) for i in kwargs["image_paths"]],
+        "images": [i['copy_name'] for i in kwargs["image_dict"].values()],
         "atlas": {
             "count": len(atlas_ids),
             "positions": pos,
