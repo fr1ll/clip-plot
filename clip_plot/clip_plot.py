@@ -114,7 +114,7 @@ def process_images(**kwargs):
     compat.v1.set_random_seed(kwargs["seed"])
     kwargs["out_dir"] = os.path.join(kwargs["out_dir"], "data")
     kwargs["image_paths"], kwargs["metadata"] = filter_images(**kwargs)
-    write_metadata(**kwargs)
+    write_metadata(kwargs["metadata"], kwargs["out_dir"], kwargs["gzip"], kwargs["encoding"])
     
     kwargs["atlas_dir"] = get_atlas_data(**kwargs)
     kwargs["vecs"] = get_inception_vectors(**kwargs)

@@ -67,7 +67,7 @@ def get_metadata_list(meta_dir: str) -> List[dict]:
     return metaList
 
 # %% ../nbs/07_metadata.ipynb 6
-def write_metadata(metadata, **kwargs):
+def write_metadata(metadata: List[dict], out_dir: str, gzip: Optional[bool] = False, encoding:  Optional[str] = 'utf8'):
     """Write list `metadata` of objects to disk
     
     Args:
@@ -89,21 +89,24 @@ def write_metadata(metadata, **kwargs):
     """
     if not metadata:
         return
+    
+    # Create kwargs replacement for write_json function
+    writeJasonDict = {'encoding': encoding, 'gzip': gzip}
 
-    out_dir = os.path.join(kwargs["out_dir"], "metadata")
+    out_dir = os.path.join(out_dir, "metadata")
     for i in ["filters", "options", "file"]:
         out_path = os.path.join(out_dir, i)
         if not os.path.exists(out_path):
             os.makedirs(out_path)
     
-    # create the lists of images with each tag
+    # Create the lists of images with each tag
     d = defaultdict(list)
     for i in metadata:
         filename = clean_filename(i[FILE_NAME])
         i["tags"] = [j.strip() for j in i.get("tags", "").split("|")]
         for j in i["tags"]:
             d["__".join(j.split())].append(filename)
-        write_json(os.path.join(out_dir, "file", filename + ".json"), i, **kwargs)
+        write_json(os.path.join(out_dir, "file", filename + ".json"), i, **writeJasonDict)
 
     write_json(
         os.path.join(out_dir, "filters", "filters.json"),
@@ -113,12 +116,13 @@ def write_metadata(metadata, **kwargs):
                 "filter_values": list(d.keys()),
             }
         ],
-        **kwargs
+        **writeJasonDict
     )
 
     # create the options for the category dropdown
     for i in d:
-        write_json(os.path.join(out_dir, "options", i + ".json"), d[i], **kwargs)
+        write_json(os.path.join(out_dir, "options", i + ".json"), d[i], **writeJasonDict)
+    
     # create the map from date to images with that date (if dates present)
     date_d = defaultdict(list)
     for i in metadata:
@@ -145,7 +149,7 @@ def write_metadata(metadata, **kwargs):
                 "domain": domain,
                 "dates": date_d,
             },
-            **kwargs
+            **writeJasonDict
         )
 
 # %% ../nbs/07_metadata.ipynb 7
@@ -188,11 +192,13 @@ def get_manifest(**kwargs):
     for idx, i in enumerate(atlas_data):
         sizes[i["idx"]].append([i["w"], i["h"]])
         pos[i["idx"]].append([i["x"], i["y"]])
+
     # obtain the paths to each layout's JSON positions
     layouts = get_layouts(**kwargs)
     # create a heightmap for the umap layout
     if "umap" in layouts and layouts["umap"]:
         get_heightmap(layouts["umap"]["variants"][0]["layout"], "umap", **kwargs)
+    
     # specify point size scalars
     point_sizes = {}
     point_sizes["min"] = 0
@@ -202,12 +208,14 @@ def get_manifest(**kwargs):
     point_sizes["initial"] = point_sizes["scatter"]
     point_sizes["categorical"] = point_sizes["grid"] * 0.6
     point_sizes["geographic"] = point_sizes["grid"] * 0.025
+
     # fetch the date distribution data for point sizing
     if "date" in layouts and layouts["date"]:
         date_layout = read_json(layouts["date"]["labels"], **kwargs)
         point_sizes["date"] = 1 / (
             (date_layout["cols"] + 1) * len(date_layout["labels"])
         )
+
     # create manifest json
     manifest = {
         "version": get_version(),
@@ -233,6 +241,7 @@ def get_manifest(**kwargs):
         },
         "creation_date": datetime.today().strftime("%d-%B-%Y-%H:%M:%S"),
     }
+
     # write the manifest without gzipping
     no_gzip_kwargs = {
         "out_dir": kwargs["out_dir"],
@@ -243,6 +252,7 @@ def get_manifest(**kwargs):
     write_json(path, manifest, **no_gzip_kwargs)
     path = get_path(None, "manifest", add_hash=False, **no_gzip_kwargs)
     write_json(path, manifest, **no_gzip_kwargs)
+
     # create images json
     imagelist = {
         "cell_sizes": sizes,
