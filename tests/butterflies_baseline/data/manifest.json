@@ -27,8 +27,12 @@
             "layout": "/home/carlo/source/clip-plot/tests/smithsonian_butterflies_10/output_test_temp/data/layouts/timeline-test_diff.json",
             "labels": "/home/carlo/source/clip-plot/tests/smithsonian_butterflies_10/output_test_temp/data/layouts/timeline-labels-test_diff.json"
         },
-        "geographic": null,
-        "custom": null
+        "geographic": {
+            "layout": "/home/carlo/source/clip-plot/tests/smithsonian_butterflies_10/output_test_temp/data/layouts/geographic-test_diff.json"
+        },
+        "custom": {
+            "layout": "/home/carlo/source/clip-plot/tests/smithsonian_butterflies_10/output_test_temp/data/layouts/custom-test_diff.json"
+        }
     },
     "initial_layout": "umap",
     "point_sizes": {
@@ -54,5 +58,5 @@
             "lod": 128
         }
     },
-    "creation_date": "15-March-2023-14:44:31"
+    "creation_date": "19-April-2023-13:58:47"
 }

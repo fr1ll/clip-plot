@@ -1,8 +1,12 @@
 {
     "filename": "3fee89f9b-ba5c-4f2e-8532-6e390e2cf0c9.jpg",
     "category": "Gray|Moth",
-    "label": "Gray Moth",
+    "label": "Gray Moth ND",
     "year": "2012",
+    "x": "0.333333333",
+    "y": "0.666666667",
+    "lat": "46.813648",
+    "lng": "-100.742568",
     "tags": [
         "Gray",
         "Moth"

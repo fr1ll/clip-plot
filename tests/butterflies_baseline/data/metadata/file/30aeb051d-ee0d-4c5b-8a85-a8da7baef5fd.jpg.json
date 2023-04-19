@@ -1,8 +1,12 @@
 {
     "filename": "30aeb051d-ee0d-4c5b-8a85-a8da7baef5fd.jpg",
     "category": "Broken|Tiny",
-    "label": "Tiny broken butterfly",
+    "label": "Tiny broken butterfly San Diego",
     "year": "2002",
+    "x": "0.5",
+    "y": "0.5",
+    "lat": "32.754489",
+    "lng": "-117.063514",
     "tags": [
         "Broken",
         "Tiny"
