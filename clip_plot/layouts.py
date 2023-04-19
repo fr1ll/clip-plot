@@ -9,7 +9,7 @@ __all__ = ['cuml_ready', 'cluster_method', 'write_layout', 'get_pointgrid_layout
 
 # %% ../nbs/05_layouts.ipynb 3
 from .images import Image
-from .utils import timestamp, get_path, write_json, read_json, round_floats
+from .utils import timestamp, get_path, write_json, read_json, round_floats, FILE_NAME
 from .utils import datestring_to_date, round_date, date_to_seconds, clean_filename
 
 
