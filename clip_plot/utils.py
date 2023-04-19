@@ -108,7 +108,16 @@ def datestring_to_date(datestring):
 
 # %% ../nbs/01_utils.ipynb 13
 def get_path(*args, **kwargs):
-    """Return the path to a JSON file with conditional gz extension"""
+    """Return the path to a JSON file with conditional gz extension
+    
+    Args:
+        sub_dir (str)
+        filename (str)
+        out_dir (str)
+        add_hash (Optional[bool])
+        plot_id (Optional[str]): Required if add_hash is True
+    
+    """
     sub_dir, filename = args
     out_dir = os.path.join(kwargs["out_dir"], sub_dir) if sub_dir else kwargs["out_dir"]
     if kwargs.get("add_hash", True):
@@ -118,7 +127,14 @@ def get_path(*args, **kwargs):
 
 # %% ../nbs/01_utils.ipynb 14
 def write_json(path, obj, **kwargs):
-    """Write json object `obj` to disk and return the path to that file"""
+    """Write json object `obj` to disk and return the path to that file
+    
+    Args:
+        path (str)
+        obj (json serializable)
+        gzip (Optional[bool]): Default = False
+        encoding (str): Required if gzip = True
+    """
     out_dir, filename = os.path.split(path)
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
@@ -133,7 +149,14 @@ def write_json(path, obj, **kwargs):
 
 
 def read_json(path, **kwargs):
-    """Read and return the json object written by the current process at `path`"""
+    """Read and return the json object written by the current process at `path`
+    
+    Args:
+        path (str)
+        gzip (Optional[bool]): Default = False
+        encoding (str): Required if gzip = True
+
+    """
     if kwargs.get("gzip", False):
         with gzip.GzipFile(path, "r") as f:
             return json.loads(f.read().decode(kwargs["encoding"]))

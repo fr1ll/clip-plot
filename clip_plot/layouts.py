@@ -54,7 +54,22 @@ cluster_method = "hdbscan"
 
 # %% ../nbs/05_layouts.ipynb 7
 def write_layout(path, obj, **kwargs):
-    """Write layout json `obj` to disk and return the path to the saved file"""
+    """Write layout json `obj` to disk and return the path to the saved file
+    
+    Args:
+        path (str)
+        obj (array object) (e.g. np.ndarray)
+        **scale (Optional)
+        **round (Optional)
+
+        Subfunctions
+            write_json()
+                path (str)
+                obj (json serializable)
+                **gzip (Optional[bool]): Default = False
+                **encoding (str): Required if gzip = True
+
+    """
     if kwargs.get("scale", True) != False:
         obj = (minmax_scale(obj) - 0.5) * 2  # scale -1:1
     if kwargs.get("round", True) != False:
@@ -66,7 +81,39 @@ def write_layout(path, obj, **kwargs):
 
 # %% ../nbs/05_layouts.ipynb 8
 def get_pointgrid_layout(path, label, **kwargs):
-    """Gridify the positions in `path` and return the path to this new layout"""
+    """Gridify the positions in `path` and return the path to this new layout
+    
+    Args:
+        path (str)
+        label (str)
+        use_cache (Optional[bool])
+
+        subfunctions
+            get_path()
+                *sub_dir (str) (hardcoded)
+                *filename (str) (hardcoded)
+                **out_dir (str)
+                **add_hash (Optional[bool])
+                **plot_id (Optional[str]): Required if add_hash is True
+                
+            read_json()
+                path (str)
+                **gzip (Optional[bool]): Default = False
+                **encoding (str): Required if gzip = True
+
+            write_layout()
+                path (str)
+                obj (array object) (e.g. np.ndarray)
+                **scale (Optional)
+                **round (Optional)
+
+                Subfunctions
+                    write_json()
+                        path (str)
+                        obj (json serializable)
+                        **gzip (Optional[bool]): Default = False
+                        **encoding (str): Required if gzip = True
+    """
     print(timestamp(), "Creating {} pointgrid".format(label))
     out_path = get_path("layouts", label + "-jittered", **kwargs)
     if os.path.exists(out_path) and kwargs["use_cache"]:
@@ -81,7 +128,98 @@ def get_pointgrid_layout(path, label, **kwargs):
 
 # %% ../nbs/05_layouts.ipynb 9
 def get_umap_layout(**kwargs):
-    """Get the x,y positions of images passed through a umap projection"""
+    """Get the x,y positions of images passed through a umap projection
+    
+    Args:
+        vecs
+        n_neighbors
+        min_dist
+
+        subfunctions
+            process_single_layout_umap()
+                v (array like object)
+                **use_cache
+                **metadata (Optional)
+                **n_neighbors
+                **min_dist
+
+                Subfunctions
+                    get_umap_model()
+                        **n_neighbors
+                        **min_dist
+                        **n_components
+                        **seed
+                        **metric
+
+                    get_path()
+                        *sub_dir (str)
+                        *filename (str)
+                        **out_dir (str)
+                        **add_hash (Optional[bool])
+                        **plot_id (Optional[str]): Required if add_hash is True
+
+                    write_layout()
+                        path (str)
+                        obj (array object) (e.g. np.ndarray)
+                        **scale (Optional)
+                        **round (Optional)
+
+                    write_json()
+                        path (str)
+                        obj (json serializable)
+                        **gzip (Optional[bool]): Default = False
+                        **encoding (str): Required if gzip = True
+
+                    get_pointgrid_layout()
+                        path (str)
+                        label (str)
+                        **use_cache (Optional[bool])
+
+                        subfunctions
+                            read_json()
+                                path (str)
+                                **gzip (Optional[bool]): Default = False
+                                **encoding (str): Required if gzip = True
+
+            process_multi_layout_umap()
+                v (array like object)
+                **n_neighbors
+                **min_dist
+                **images
+                **out_dir
+
+                Subfunctions
+                    get_path()
+                        *sub_dir (str)
+                        *filename (str)
+                        **out_dir (str)
+                        **add_hash (Optional[bool])
+                        **plot_id (Optional[str]): Required if add_hash is True
+
+                    write_layout()
+                        path (str)
+                        obj (array object) (e.g. np.ndarray)
+                        **scale (Optional)
+                        **round (Optional)
+
+                    write_json()
+                        path (str)
+                        obj (json serializable)
+                        **gzip (Optional[bool]): Default = False
+                        **encoding (str): Required if gzip = True
+
+                    get_pointgrid_layout()
+                        path (str)
+                        label (str)
+                        **use_cache (Optional[bool])
+
+                        subfunctions
+                            read_json()
+                                path (str)
+                                **gzip (Optional[bool]): Default = False
+                                **encoding (str): Required if gzip = True
+
+    """
     vecs = kwargs["vecs"]
     w = PCA(n_components=min(100, len(vecs))).fit_transform(vecs)
     # single model umap
@@ -92,7 +230,54 @@ def get_umap_layout(**kwargs):
 
 
 def process_single_layout_umap(v, **kwargs):
-    """Create a single layout UMAP projection"""
+    """Create a single layout UMAP projection
+    
+    Args:
+        v (array like object)
+        use_cache
+        metadata (Optional)
+        n_neighbors
+        min_dist
+
+        Subfunctions
+            get_umap_model()
+                **n_neighbors
+                **min_dist
+                **n_components
+                **seed
+                **metric
+
+            get_path()
+                *sub_dir (str)
+                *filename (str)
+                **out_dir (str)
+                **add_hash (Optional[bool])
+                **plot_id (Optional[str]): Required if add_hash is True
+
+            write_layout()
+                path (str)
+                obj (array object) (e.g. np.ndarray)
+                **scale (Optional)
+                **round (Optional)
+
+            write_json()
+                path (str)
+                obj (json serializable)
+                **gzip (Optional[bool]): Default = False
+                **encoding (str): Required if gzip = True
+
+            get_pointgrid_layout()
+                path (str)
+                label (str)
+                **use_cache (Optional[bool])
+
+                subfunctions
+                    read_json()
+                        path (str)
+                        **gzip (Optional[bool]): Default = False
+                        **encoding (str): Required if gzip = True
+        
+    """
     print(timestamp(), "Creating single umap layout")
     model = get_umap_model(**kwargs)
     out_path = get_path("layouts", "umap", **kwargs)
@@ -128,7 +313,47 @@ def process_single_layout_umap(v, **kwargs):
 
 
 def process_multi_layout_umap(v, **kwargs):
-    """Create a multi-layout UMAP projection"""
+    """Create a multi-layout UMAP projection
+    
+    Args:
+        v (array like object)
+        n_neighbors
+        min_dist
+        images
+        out_dir
+
+        Subfunctions
+            get_path()
+                *sub_dir (str)
+                *filename (str)
+                **out_dir (str)
+                **add_hash (Optional[bool])
+                **plot_id (Optional[str]): Required if add_hash is True
+
+            write_layout()
+                path (str)
+                obj (array object) (e.g. np.ndarray)
+                scale (Optional)
+                round (Optional)
+
+            write_json()
+                path (str)
+                obj (json serializable)
+                **gzip (Optional[bool]): Default = False
+                **encoding (str): Required if gzip = True
+
+            get_pointgrid_layout()
+                path (str)
+                label (str)
+                **use_cache (Optional[bool])
+
+                subfunctions
+                    read_json()
+                        path (str)
+                        **gzip (Optional[bool]): Default = False
+                        **encoding (str): Required if gzip = True
+    
+    """
     print(timestamp(), "Creating multi-umap layout")
     params = []
     for n_neighbors, min_dist in itertools.product(
@@ -154,6 +379,7 @@ def process_multi_layout_umap(v, **kwargs):
     out_dir = os.path.join(kwargs["out_dir"], "models")
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
+
     # load or create the model
     if os.path.exists(model_path):
         model = load_model(model_path)
@@ -194,7 +420,13 @@ def process_multi_layout_umap(v, **kwargs):
     }
 
 
-def save_model(model, path):
+def save_model(model: AlignedUMAP, path: str) -> None:
+    """Save AlignedUMAP model as a pickle
+
+    Args:
+        model (AlignedUMAP)
+        path (str)
+    """
     try:
         params = model.get_params()
         attributes_names = [
@@ -213,7 +445,12 @@ def save_model(model, path):
         print(timestamp(), "Could not save model")
 
 
-def load_model(path):
+def load_model(path: str) -> AlignedUMAP:
+    """Load AlignedUMAP from pickle
+    
+    Args:
+        path (str): Location of pickled AlignedUMAP model
+    """
     params = pickle.load(open(path, "rb"))
     model = AlignedUMAP()
     model.set_params(**params.get("umap_params"))
@@ -223,8 +460,19 @@ def load_model(path):
         "embeddings_", List(params.get("umap_attributes").get("embeddings_"))
     )
 
+    return model
+
 
 def get_umap_model(**kwargs):
+    """
+    
+    Args:
+        n_neighbors
+        min_dist
+        n_components
+        seed
+        metric    
+    """
     if cuml_ready:
         return UMAP(
             n_neighbors=kwargs["n_neighbors"][0],
@@ -245,7 +493,26 @@ def get_umap_model(**kwargs):
 
 # %% ../nbs/05_layouts.ipynb 10
 def get_rasterfairy_layout(**kwargs):
-    """Get the x, y position of images passed through a rasterfairy projection"""
+    """Get the x, y position of images passed through a rasterfairy projection
+    
+    Args:
+        use_cache
+        umap
+
+        subfunctions
+            get_path()
+                *sub_dir (str)
+                *filename (str)
+                **out_dir (str)
+                **add_hash (Optional[bool])
+                **plot_id (Optional[str]): Required if add_hash is True
+            read_json()
+                path (str)
+                **gzip (Optional[bool]): Default = False
+                **encoding (str): Required if gzip = True
+            write_layout()
+    
+    """
     print(timestamp(), "Creating rasterfairy layout")
     out_path = get_path("layouts", "rasterfairy", **kwargs)
     if os.path.exists(out_path) and kwargs["use_cache"]:
@@ -269,7 +536,36 @@ def get_rasterfairy_layout(**kwargs):
 
 
 def get_alphabetic_layout(**kwargs):
-    """Get the x,y positions of images in a grid projection"""
+    """Get the x,y positions of images in a grid projection
+    
+    Args:
+        use_cache
+        image_paths
+
+        subfunction
+            get_path()
+                *sub_dir (str)
+                *filename (str)
+                **out_dir (str)
+                **add_hash (Optional[bool])
+                **plot_id (Optional[str]): Required if add_hash is True
+
+
+            write_layout()
+                path (str)
+                obj (array object) (e.g. np.ndarray)
+                scale (Optional)
+                round (Optional)
+
+                Subfunctions
+                    write_json()
+                        path (str)
+                        obj (json serializable)
+                        **gzip (Optional[bool]): Default = False
+                        **encoding (str): Required if gzip = True
+
+    
+    """
     print(timestamp(), "Creating grid layout")
     out_path = get_path("layouts", "grid", **kwargs)
     if os.path.exists(out_path) and kwargs["use_cache"]:
@@ -286,6 +582,36 @@ def get_alphabetic_layout(**kwargs):
 
 
 def get_custom_layout(**kwargs):
+    """
+    
+    Args:
+        use_cache
+        metadata (Optional[List[dict]])
+        image_paths
+
+        subfunction
+            get_path()
+                *sub_dir (str)
+                *filename (str)
+                **out_dir (str)
+                **add_hash (Optional[bool])
+                **plot_id (Optional[str]): Required if add_hash is True
+
+
+            write_layout()
+                path (str)
+                obj (array object) (e.g. np.ndarray)
+                scale (Optional)
+                round (Optional)
+
+                Subfunctions
+                    write_json()
+                        path (str)
+                        obj (json serializable)
+                        **gzip (Optional[bool]): Default = False
+                        **encoding (str): Required if gzip = True
+    
+    """
     out_path = get_path("layouts", "custom", **kwargs)
     if os.path.exists(out_path) and kwargs["use_cache"]:
         return out_path
@@ -322,6 +648,28 @@ def get_date_layout(cols=3, bin_units="years", **kwargs):
     Get the x,y positions of input images based on their dates
     @param int cols: the number of columns to plot for each bar
     @param str bin_units: the temporal units to use when creating bins
+
+
+    Args:
+        cols (Optional[int]=3)
+        bin_units (Optional[str]='years')
+        metadata
+        use_cache
+        image_paths
+
+        subfunction
+            get_path()
+                *sub_dir (str)
+                *filename (str)
+                **out_dir (str)
+                **add_hash (Optional[bool])
+                **plot_id (Optional[str]): Required if add_hash is True
+
+                write_json()
+                    path (str)
+                    obj (json serializable)
+                    **gzip (Optional[bool]): Default = False
+                    **encoding (str): Required if gzip = True
     """
     date_vals = [
         kwargs["metadata"][i].get("year", False) for i in range(len(kwargs["metadata"]))
@@ -404,7 +752,28 @@ def get_categorical_layout(null_category="Other", margin=2, **kwargs):
     Return a numpy array with shape (n_points, 2) with the point
     positions of observations in box regions determined by
     each point's category metadata attribute (if applicable)
+
+    Args:
+        null_category (Optional[str]='Other')
+        margin (Optional[int]=2)
+        metadata
+        image_paths
+
+        subfunction
+            get_path()
+                *sub_dir (str)
+                *filename (str)
+                **out_dir (str)
+                **add_hash (Optional[bool])
+                **plot_id (Optional[str]): Required if add_hash is True
+
+                write_json()
+                    path (str)
+                    obj (json serializable)
+                    **gzip (Optional[bool]): Default = False
+                    **encoding (str): Required if gzip = True
     """
+
     if not kwargs.get("metadata", False):
         return False
     # determine the out path and return from cache if possible
@@ -536,7 +905,38 @@ class Box:
 
 # %% ../nbs/05_layouts.ipynb 16
 def get_geographic_layout(**kwargs):
-    """Return a 2D array of image positions corresponding to lat, lng coordinates"""
+    """Return a 2D array of image positions corresponding to lat, lng coordinates
+    
+    Args:
+        metadata
+        image_paths
+        geojson (Union[None,str]): Location of geojson
+
+        subfunction
+            get_path()
+                *sub_dir (str)
+                *filename (str)
+                **out_dir (str)
+                **add_hash (Optional[bool])
+                **plot_id (Optional[str]): Required if add_hash is True
+
+                write_json()
+                    path (str)
+                    obj (json serializable)
+                    **gzip (Optional[bool]): Default = False
+                    **encoding (str): Required if gzip = True
+
+            write_layout()
+                path (str)
+                obj (array object) (e.g. np.ndarray)
+                **scale (Optional)
+                **round (Optional)
+
+                Subfunctions
+                    write_json()
+
+
+    """
     out_path = get_path("layouts", "geographic", **kwargs)
     l = []
     coords = False
@@ -579,7 +979,22 @@ def process_geojson(geojson_path):
 
 # %% ../nbs/05_layouts.ipynb 18
 def get_hotspots(layouts={}, use_high_dimensional_vectors=True, **kwargs):
-    """Return the stable clusters from the condensed tree of connected components from the density graph"""
+    """Return the stable clusters from the condensed tree of connected components from the density graph
+    
+    Args:
+        layouts (Optional[dict] = {}) 
+        use_high_dimensional_vectors (Optional[bool] = True) 
+        vecs
+        umap = Used if use_high_dimensional_vectors is False
+        image_paths
+        max_clusters
+
+        subfunction
+            read_json()
+            get_cluster_model()
+            write_json()
+            get_path()
+    """
     print(timestamp(), "Clustering data with {}".format(cluster_method))
     if use_high_dimensional_vectors:
         vecs = kwargs["vecs"]
@@ -617,7 +1032,12 @@ def get_hotspots(layouts={}, use_high_dimensional_vectors=True, **kwargs):
 
 
 def get_cluster_model(**kwargs):
-    """Return a model with .fit() method that can be used to cluster input vectors"""
+    """Return a model with .fit() method that can be used to cluster input vectors
+    
+    Args:
+        min_cluster_size
+
+    """
     config = {
         "core_dist_n_jobs": multiprocessing.cpu_count(),
         "min_cluster_size": kwargs["min_cluster_size"],
@@ -629,7 +1049,16 @@ def get_cluster_model(**kwargs):
 
 
 def get_heightmap(path, label, **kwargs):
-    """Create a heightmap using the distribution of points stored at `path`"""
+    """Create a heightmap using the distribution of points stored at `path`
+    
+    Args:
+        path
+        label
+        out_dir
+
+        subfunction
+            read_json()
+    """
 
     X = read_json(path, **kwargs)
     if "positions" in X:
