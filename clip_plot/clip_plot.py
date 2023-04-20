@@ -82,7 +82,6 @@ def get_clip_plot_root() -> Path:
     if in_ipython():
         return Path(utils.__file__).parents[1]
     else:
-        print(__file__)
         return Path(__file__).parents[1]
 
 # %% ../nbs/00_clip_plot.ipynb 13
