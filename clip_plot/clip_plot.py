@@ -15,9 +15,8 @@ from tqdm.auto import tqdm
 
 from . import utils
 from .layouts import get_layouts
-from .utils import clean_filename, timestamp
-from .utils import  get_version, FILE_NAME
-from .embeddings import get_inception_vectors
+from .utils import clean_filename, timestamp, get_version, FILE_NAME
+# from clip_plot.embeddings import get_inception_vectors
 from .metadata import get_manifest, write_metadata, get_metadata_list
 from .images import PILLoadTruncated, save_image, write_images, Image, get_image_paths, create_atlas_files
 
@@ -85,9 +84,6 @@ def get_clip_plot_root() -> Path:
         return Path(__file__).parents[1]
 
 # %% ../nbs/00_clip_plot.ipynb 13
-copy_root_dir = get_clip_plot_root()
-
-# %% ../nbs/00_clip_plot.ipynb 14
 def process_images(**kwargs):
     """Main method for processing user images and metadata"""
     kwargs = preprocess_kwargs(**kwargs)
@@ -103,6 +99,10 @@ def process_images(**kwargs):
     write_metadata(kwargs["metadata"], kwargs["out_dir"], kwargs["gzip"], kwargs["encoding"])
     
     kwargs["atlas_dir"] = create_atlas_files(**kwargs)
+
+    # waiting to do the import until just before use
+    # this is atypical for several reasons, but it's to avoid TF import at startup
+    from clip_plot.embeddings import get_inception_vectors
     kwargs["vecs"] = get_inception_vectors(**kwargs)
     get_manifest(**kwargs)
     write_images(kwargs["image_paths"], kwargs["metadata"], kwargs["out_dir"], kwargs["lod_cell_height"])
@@ -126,7 +126,7 @@ def preprocess_kwargs(**kwargs):
             kwargs[i] = [kwargs[i]]
     return kwargs
 
-# %% ../nbs/00_clip_plot.ipynb 15
+# %% ../nbs/00_clip_plot.ipynb 14
 def copy_web_assets(out_dir: str) -> None:
     """Copy the /web directory from the clipplot source to the users cwd.
     Copies version number into assets.
@@ -153,7 +153,7 @@ def copy_web_assets(out_dir: str) -> None:
                 out.write(f)
 
 
-# %% ../nbs/00_clip_plot.ipynb 16
+# %% ../nbs/00_clip_plot.ipynb 15
 def filter_images(**kwargs):
     """Main method for filtering images given user metadata (if provided)
 
@@ -268,7 +268,9 @@ def filter_images(**kwargs):
 
     return [images, metadata]
 
-# %% ../nbs/00_clip_plot.ipynb 18
+# %% ../nbs/00_clip_plot.ipynb 17
+copy_root_dir = get_clip_plot_root()
+
 def test_iiif(config):
     test_images = copy_root_dir/"tests/IIIF_examples/iif_example.txt"
     test_out_dir = copy_root_dir/"tests/smithsonian_butterflies_10/output_test_temp"
@@ -343,7 +345,7 @@ def test_no_meta_dir(config):
     return config
 
 
-# %% ../nbs/00_clip_plot.ipynb 20
+# %% ../nbs/00_clip_plot.ipynb 19
 @call_parse
 def project_imgs(images:Param(type=str,
                         help="path or glob of images to process"
@@ -357,7 +359,7 @@ def project_imgs(images:Param(type=str,
                 max_images:Param(type=int,
                         help="maximum number of images to process"
                         )=DEFAULTS["max_images"],
-                use_cache:Param(type=bool,
+                use_cache:Param(type=bool_arg,
                         help="given inputs identical to prior inputs, load outputs from cache"
                         )=DEFAULTS["use_cache"],
                 encoding:Param(type=str,
@@ -396,17 +398,17 @@ def project_imgs(images:Param(type=str,
                 pointgrid_fill:Param(type=float,
                         help="float 0:1 that determines sparsity of jittered distributions (lower means more sparse)"
                         )=DEFAULTS["pointgrid_fill"],
-                copy_web_only:Param(type=bool,
+                copy_web_only:Param(type=bool_arg,
                         action="store_true",
                         help="update ./output/assets without reprocessing data"
                         )=False,
                 min_size:Param(type=float,
                         help="min size of cropped images"
                         )=DEFAULTS["min_size"],
-                gzip:Param(type=bool,
+                gzip:Param(type=bool_arg,
                         action="store_true", help="save outputs with gzip compression"
                         )=False,
-                shuffle:Param(type=bool,
+                shuffle:Param(type=bool_arg,
                         action="store_true",
                         help="shuffle the input images before data processing begins"
                         )=False,
@@ -432,16 +434,14 @@ def project_imgs(images:Param(type=str,
                 default_only = {k:DEFAULTS[k] for k in default_only_keys}
                 config.update(default_only)
 
-                copy_root_dir = get_clip_plot_root()
-
                 if in_ipython() and config["images"] == None:
-                        print("we're in ipython")
+                        print("Clip-plot is being run from ipython")
                         # at least for now, this means we're in testing mode.
                         # TODO: pass explicit "test_mode" flag
                         config = test_butterfly(config)
 
                 process_images(**config)
 
-# %% ../nbs/00_clip_plot.ipynb 21
+# %% ../nbs/00_clip_plot.ipynb 20
 if __name__ == "__main__":
     project_imgs()
