@@ -101,7 +101,7 @@ def process_images(imageEngine, **kwargs):
     np.random.seed(kwargs["seed"])
     kwargs["out_dir"] = os.path.join(kwargs["out_dir"], "data")
     # kwargs["image_paths"], kwargs["metadata"] = filter_images(**kwargs)
-    write_metadata(imageEngine, kwargs["out_dir"], kwargs["gzip"], kwargs["encoding"])
+    write_metadata(imageEngine, kwargs["gzip"], kwargs["encoding"])
     
     kwargs["atlas_dir"] = create_atlas_files(imageEngine, **kwargs)
     kwargs["vecs"] = get_inception_vectors(imageEngine, **kwargs)
