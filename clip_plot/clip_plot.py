@@ -4,28 +4,34 @@
 from __future__ import division
 import warnings
 
+warnings.filterwarnings("ignore")
+
 # %% auto 0
 __all__ = ['DEFAULTS', 'PILLoadTruncated', 'copy_root_dir', 'get_clip_plot_root', 'process_images', 'preprocess_kwargs',
            'copy_web_assets', 'filter_images', 'test_iiif', 'test_butterfly_duplicate', 'test_butterfly',
            'test_butterfly_missing_meta', 'test_no_meta_dir', 'project_imgs']
 
 # %% ../nbs/00_clip_plot.ipynb 4
+# print separately that we're loading dependencies, as this can take a while
+# and we want to give immediate feedback the program is starting
+from .utils import timestamp
+print(timestamp(), "Beginning to load dependencies")
+
+
+# %% ../nbs/00_clip_plot.ipynb 5
 from fastcore.all import *
 from tqdm.auto import tqdm
 
 from . import utils
-from .utils import clean_filename, timestamp, get_version, FILE_NAME
-# from clip_plot.embeddings import get_inception_vectors
+from .utils import clean_filename, get_version, FILE_NAME
+from .embeddings import get_inception_vectors
 from .metadata import get_manifest, write_metadata, get_metadata_list
-from .images import PILLoadTruncated, save_image, write_images, Image, get_image_paths, create_atlas_files
 
-# %% ../nbs/00_clip_plot.ipynb 5
-warnings.filterwarnings("ignore")
+from .images import save_image, write_images, Image, get_image_paths, create_atlas_files
 
 # %% ../nbs/00_clip_plot.ipynb 6
 from shutil import rmtree
 from pathlib import Path
-import argparse
 from typing import Optional, List, Union, Tuple
 import uuid
 import sys
@@ -98,10 +104,7 @@ def process_images(**kwargs):
     write_metadata(kwargs["metadata"], kwargs["out_dir"], kwargs["gzip"], kwargs["encoding"])
     
     kwargs["atlas_dir"] = create_atlas_files(**kwargs)
-
-    # waiting to do the import until just before use
-    # this is atypical for several reasons, but it's to avoid TF import at startup
-    from clip_plot.embeddings import get_inception_vectors
+    
     kwargs["vecs"] = get_inception_vectors(**kwargs)
     get_manifest(**kwargs)
     write_images(kwargs["image_paths"], kwargs["metadata"], kwargs["out_dir"], kwargs["lod_cell_height"])
@@ -436,7 +439,7 @@ def project_imgs(images:Param(type=str,
                         # at least for now, this means we're in testing mode.
                         # TODO: pass explicit "test_mode" flag
                         config = test_butterfly(config)
-
+                
                 process_images(**config)
 
 # %% ../nbs/00_clip_plot.ipynb 20

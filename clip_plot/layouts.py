@@ -12,7 +12,6 @@ from .images import Image
 from .utils import timestamp, get_path, write_json, read_json, round_floats, FILE_NAME
 from .utils import datestring_to_date, round_date, date_to_seconds, clean_filename
 
-
 import os
 import json
 import math
@@ -29,7 +28,11 @@ import multiprocessing
 # TODO: Change math references to numpy
 
 from hdbscan import HDBSCAN
+# surprise, surprise -- UMAP imports tensorflow if its available
+# this will print ugly warnings unless you set a high log level
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 from umap import UMAP, AlignedUMAP
+
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import minmax_scale
 from scipy.stats import kde

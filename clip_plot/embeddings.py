@@ -9,14 +9,10 @@ from .images import image_to_array, Image
 
 from pathlib import Path
 
-### Graveyard of attempts to silence tensorflow
+### Silence tensorflow
 import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-import logging
-logging.getLogger('tensorflow').setLevel(logging.ERROR)
-
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import tensorflow as tf
-tf.compat.v1.logging.set_verbosity(40) # ERROR
 
 from tensorflow.keras.applications import InceptionV3
 from tensorflow.keras.models import Model
