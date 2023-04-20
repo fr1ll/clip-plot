@@ -11,6 +11,7 @@ __all__ = ['DEFAULTS', 'PILLoadTruncated', 'copy_root_dir', 'get_clip_plot_root'
 
 # %% ../nbs/00_clip_plot.ipynb 4
 from fastcore.all import *
+from tqdm.auto import tqdm
 
 from . import utils
 from .layouts import get_layouts
@@ -18,7 +19,7 @@ from .utils import clean_filename, timestamp
 from .utils import  get_version, FILE_NAME
 from .embeddings import get_inception_vectors
 from .metadata import get_manifest, write_metadata, get_metadata_list
-from .images import PILLoadTruncated, save_image, write_images, Image, get_image_paths, get_atlas_data
+from .images import PILLoadTruncated, save_image, write_images, Image, get_image_paths, create_atlas_files
 
 # %% ../nbs/00_clip_plot.ipynb 5
 warnings.filterwarnings("ignore")
@@ -37,19 +38,6 @@ import numpy as np
 import random
 import copy
 import json
-
-
-# Keras imports
-# from tensorflow.keras.preprocessing.image import save_img, img_to_array, array_to_img
-# from tensorflow.keras.applications.inception_v3 import preprocess_input
-# from tensorflow.keras.applications import InceptionV3, imagenet_utils # imagenet_utils not being used
-# from tensorflow.keras.preprocessing.image import load_img
-# from tensorflow.keras.models import Model
-from tensorflow import compat
-
-# Suppress annoying info and warning logs from tensorflow
-import logging
-logging.getLogger("tensorflow").setLevel(logging.ERROR)
 
 # %% ../nbs/00_clip_plot.ipynb 10
 DEFAULTS = {
@@ -111,12 +99,11 @@ def process_images(**kwargs):
         sys.exit()
     
     np.random.seed(kwargs["seed"])
-    compat.v1.set_random_seed(kwargs["seed"])
     kwargs["out_dir"] = os.path.join(kwargs["out_dir"], "data")
     kwargs["image_paths"], kwargs["metadata"] = filter_images(**kwargs)
     write_metadata(kwargs["metadata"], kwargs["out_dir"], kwargs["gzip"], kwargs["encoding"])
     
-    kwargs["atlas_dir"] = get_atlas_data(**kwargs)
+    kwargs["atlas_dir"] = create_atlas_files(**kwargs)
     kwargs["vecs"] = get_inception_vectors(**kwargs)
     get_manifest(**kwargs)
     write_images(kwargs["image_paths"], kwargs["metadata"], kwargs["out_dir"], kwargs["lod_cell_height"])
@@ -225,7 +212,9 @@ def filter_images(**kwargs):
     # process and filter the images
     filtered_image_paths = {}
     oblong_ratio = kwargs["atlas_size"] / kwargs["cell_size"]
-    for img in Image.stream_images(image_paths=image_paths):
+
+    print(timestamp(), "Validating input images")
+    for img in tqdm(Image.stream_images(image_paths=image_paths), total=len(image_paths)):
         valid, msg = img.valid(lod_cell_height=kwargs["lod_cell_height"], oblong_ratio=oblong_ratio) 
         if valid is True:
             filtered_image_paths[img.path] = img.filename

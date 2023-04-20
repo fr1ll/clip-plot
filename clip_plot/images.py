@@ -2,7 +2,7 @@
 
 # %% auto 0
 __all__ = ['PILLoadTruncated', 'FLOATX', 'load_image', 'image_to_array', 'array_to_image', 'save_image', 'write_images',
-           'get_image_paths', 'get_atlas_data', 'save_atlas', 'Image']
+           'get_image_paths', 'create_atlas_files', 'save_atlas', 'Image']
 
 # %% ../nbs/03_images.ipynb 3
 import io
@@ -14,6 +14,7 @@ from typing import Optional, List, Union
 import numpy as np
 from iiif_downloader import Manifest
 from PIL import Image as pil_image, ImageFile
+from tqdm.auto import tqdm
 
 from .utils import clean_filename, timestamp, FILE_NAME
 
@@ -141,8 +142,8 @@ def write_images(image_paths: List[str], metadata: List[dict],
         Should users get a warning that a photo already exists
         in the destination folder?
     """
-    for i in Image.stream_images(image_paths=image_paths, metadata=metadata):
-        filename = clean_filename(i.path)
+    for img in Image.stream_images(image_paths=image_paths, metadata=metadata):
+        filename = clean_filename(img.path)
         # Copy original for lightbox
         org_out_dir = os.path.join(out_dir, "originals")
         if not os.path.exists(org_out_dir):
@@ -150,9 +151,9 @@ def write_images(image_paths: List[str], metadata: List[dict],
             os.makedirs(org_out_dir)
         out_path = os.path.join(org_out_dir, filename)
 
-        # Does the image already exists?
+        # Does the image already exist?
         if not os.path.exists(out_path):
-            resized = i.resize_to_height(600)
+            resized = img.resize_to_height(600)
             resized = array_to_image(resized)
             save_image(out_path, resized)
     
@@ -162,8 +163,8 @@ def write_images(image_paths: List[str], metadata: List[dict],
             os.makedirs(thu_out_dir)
             
         out_path = os.path.join(thu_out_dir, filename)
-        img = array_to_image(i.resize_to_max(lod_cell_height))
-        save_image(out_path, img)
+        resized_max = array_to_image(img.resize_to_max(lod_cell_height))
+        save_image(out_path, resized_max)
 
 # %% ../nbs/03_images.ipynb 8
 def get_image_paths(images:str, out_dir: str) -> List[str]:
@@ -226,7 +227,7 @@ def get_image_paths(images:str, out_dir: str) -> List[str]:
 ##
 
 
-def get_atlas_data(**kwargs):
+def create_atlas_files(**kwargs):
     """
     Generate and save to disk all atlases to be used for this visualization
     If square, center each cell in an nxn square, else use uniform height
@@ -265,8 +266,11 @@ def get_atlas_data(**kwargs):
     y = 0  # y pos in atlas
     positions = []  # l[cell_idx] = atlas data
     atlas = np.zeros((kwargs["atlas_size"], kwargs["atlas_size"], 3))
-    for idx, i in enumerate(Image.stream_images(image_paths=kwargs["image_paths"], metadata=kwargs["metadata"])):
-        cell_data = i.resize_to_height(kwargs["cell_size"])
+
+    for img in tqdm(Image.stream_images(image_paths=kwargs["image_paths"],
+                                        metadata=kwargs["metadata"]),
+                    total=len(kwargs["image_paths"])):
+        cell_data = img.resize_to_height(kwargs["cell_size"])
         _, v, _ = cell_data.shape
         appendable = False
         if (x + v) <= kwargs["atlas_size"]:
@@ -283,7 +287,7 @@ def get_atlas_data(**kwargs):
             y = 0
         atlas[y : y + kwargs["cell_size"], x : x + v] = cell_data
         # find the size of the cell in the lod canvas
-        lod_data = i.resize_to_max(kwargs["lod_cell_height"])
+        lod_data = img.resize_to_max(kwargs["lod_cell_height"])
         h, w, _ = lod_data.shape  # h,w,colors in lod-cell sized image `i`
         positions.append(
             {

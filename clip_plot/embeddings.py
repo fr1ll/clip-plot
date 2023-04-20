@@ -8,40 +8,50 @@ from .utils import timestamp, clean_filename
 from .images import image_to_array, Image
 
 import os
+from pathlib import Path
+import logging
+logging.getLogger('tensorflow').setLevel(logging.ERROR)
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+# os.environ['TF_CPP_MIN_VLOG_LEVEL'] = '0'
+os.environ["KMP_AFFINITY"] = "noverbose"
+
+import tensorflow as tf
+tf.get_logger().setLevel('ERROR')
+tf.autograph.set_verbosity(3)
+
 from tensorflow.keras.applications import InceptionV3
 from tensorflow.keras.models import Model
 from tensorflow.keras.applications.inception_v3 import preprocess_input
+from tensorflow import compat
 
-from tqdm.autonotebook import tqdm
+from tqdm.auto import tqdm
 import numpy as np
-
 
 # %% ../nbs/04_embeddings.ipynb 5
 def get_inception_vectors(**kwargs):
     """Create and return Inception vector representation of Image() instances"""
-    print(
-        timestamp(),
-        "Creating Inception vectors for {} images".format(len(kwargs["image_paths"])),
-    )
-    vector_dir = os.path.join(kwargs["out_dir"], "image-vectors", "inception")
-    if not os.path.exists(vector_dir):
-        os.makedirs(vector_dir)
+
+    vector_dir = Path(kwargs["out_dir"]) / "image-vectors" / "inception"
+    vector_dir.mkdir(exist_ok=True, parents=True)
     base = InceptionV3(
         include_top=True,
         weights="imagenet",
     )
     model = Model(inputs=base.input, outputs=base.get_layer("avg_pool").output)
-    print(timestamp(), "Creating image array")
-    vecs = []
-    with tqdm(total=len(kwargs["image_paths"])) as progress_bar:
-        for idx, i in enumerate(Image.stream_images(image_paths=kwargs["image_paths"], metadata=kwargs["metadata"])):
-            vector_path = os.path.join(vector_dir, clean_filename(i.path) + ".npy")
-            if os.path.exists(vector_path) and kwargs["use_cache"]:
-                vec = np.load(vector_path)
-            else:
-                im = preprocess_input(image_to_array(i.original.resize((299, 299))))
-                vec = model.predict(np.expand_dims(im, 0)).squeeze()
-                np.save(vector_path, vec)
-            vecs.append(vec)
-            progress_bar.update(1)
+    compat.v1.set_random_seed(kwargs["seed"])
+
+    print(timestamp(), "Creating Inception vectors")
+    vecs = []   
+
+    for img in tqdm(Image.stream_images(image_paths=kwargs["image_paths"],
+                                        metadata=kwargs["metadata"], ),
+                    total=len(kwargs["image_paths"])):
+        vector_path = vector_dir / (clean_filename(img.path) + ".npy")
+        if vector_path.exists() and kwargs["use_cache"]:
+            vec = np.load(vector_path)
+        else:
+            img_processed = preprocess_input(image_to_array(img.original.resize((299, 299))))
+            vec = model.predict(np.expand_dims(img_processed, 0)).squeeze()
+            np.save(vector_path, vec)
+        vecs.append(vec)
     return np.array(vecs)
