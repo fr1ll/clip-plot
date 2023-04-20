@@ -12,7 +12,7 @@ from pathlib import Path
 import logging
 logging.getLogger('tensorflow').setLevel(logging.ERROR)
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-# os.environ['TF_CPP_MIN_VLOG_LEVEL'] = '0'
+os.environ['TF_CPP_MAX_VLOG_LEVEL'] = '0'
 os.environ["KMP_AFFINITY"] = "noverbose"
 
 import tensorflow as tf
@@ -44,14 +44,14 @@ def get_inception_vectors(**kwargs):
     vecs = []   
 
     for img in tqdm(Image.stream_images(image_paths=kwargs["image_paths"],
-                                        metadata=kwargs["metadata"], ),
+                                        metadata=kwargs["metadata"]),
                     total=len(kwargs["image_paths"])):
         vector_path = vector_dir / (clean_filename(img.path) + ".npy")
         if vector_path.exists() and kwargs["use_cache"]:
             vec = np.load(vector_path)
         else:
             img_processed = preprocess_input(image_to_array(img.original.resize((299, 299))))
-            vec = model.predict(np.expand_dims(img_processed, 0)).squeeze()
+            vec = model.predict(np.expand_dims(img_processed, 0), verbose = 0).squeeze()
             np.save(vector_path, vec)
         vecs.append(vec)
     return np.array(vecs)
