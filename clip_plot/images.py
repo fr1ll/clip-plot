@@ -257,9 +257,11 @@ def create_atlas_files(**kwargs):
     ):
         print(timestamp(), "Loading saved atlas data")
         return out_dir
+    
+    # Else create the atlas images and store the positions of cells in atlases
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
-    # else create the atlas images and store the positions of cells in atlases
+    
     print(timestamp(), "Creating atlas files")
     n = 0  # number of atlases
     x = 0  # x pos in atlas
@@ -270,6 +272,7 @@ def create_atlas_files(**kwargs):
     for img in tqdm(Image.stream_images(image_paths=kwargs["image_paths"],
                                         metadata=kwargs["metadata"]),
                     total=len(kwargs["image_paths"])):
+        
         cell_data = img.resize_to_height(kwargs["cell_size"])
         _, v, _ = cell_data.shape
         appendable = False
@@ -306,8 +309,14 @@ def create_atlas_files(**kwargs):
     return out_dir
 
 
-def save_atlas(atlas, out_dir, n):
-    """Save an atlas to disk"""
+def save_atlas(atlas: np.array, out_dir: str, n: int) -> None:
+    """Save an atlas to disk
+    
+    Args:
+        atlas (np.array): Atlas
+        out_dir (str): Atlas output directory
+        n (int): Atlas subindex
+    """
     out_path = os.path.join(out_dir, "atlas-{}.jpg".format(n))
     save_image(out_path, atlas)
 
