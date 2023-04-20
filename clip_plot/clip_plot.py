@@ -238,7 +238,7 @@ def filter_images(**kwargs):
 
     # handle the case user provided no metadata
     if not kwargs.get("meta_dir", False):
-        return [filtered_image_paths.keys(), []]
+        return [list(filtered_image_paths.keys()), []]
 
     # handle user metadata: retain only records with image and metadata
     metaList = get_metadata_list(meta_dir=kwargs['meta_dir'])
