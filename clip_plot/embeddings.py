@@ -7,22 +7,20 @@ __all__ = ['get_inception_vectors']
 from .utils import timestamp, clean_filename
 from .images import image_to_array, Image
 
-import os
 from pathlib import Path
+
+### Graveyard of attempts to silence tensorflow
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import logging
 logging.getLogger('tensorflow').setLevel(logging.ERROR)
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-os.environ['TF_CPP_MAX_VLOG_LEVEL'] = '0'
-os.environ["KMP_AFFINITY"] = "noverbose"
 
 import tensorflow as tf
-tf.get_logger().setLevel('ERROR')
-tf.autograph.set_verbosity(3)
+tf.compat.v1.logging.set_verbosity(40) # ERROR
 
 from tensorflow.keras.applications import InceptionV3
 from tensorflow.keras.models import Model
 from tensorflow.keras.applications.inception_v3 import preprocess_input
-from tensorflow import compat
 
 from tqdm.auto import tqdm
 import numpy as np
@@ -38,7 +36,7 @@ def get_inception_vectors(**kwargs):
         weights="imagenet",
     )
     model = Model(inputs=base.input, outputs=base.get_layer("avg_pool").output)
-    compat.v1.set_random_seed(kwargs["seed"])
+    tf.random.set_seed(kwargs["seed"])
 
     print(timestamp(), "Creating Inception vectors")
     vecs = []   
