@@ -26,7 +26,7 @@ from tqdm.auto import tqdm
 import numpy as np
 
 # %% ../nbs/04_embeddings.ipynb 5
-def get_inception_vectors(**kwargs):
+def get_inception_vectors(imageEngine,**kwargs):
     """Create and return Inception vector representation of Image() instances"""
 
     vector_dir = Path(kwargs["out_dir"]) / "image-vectors" / "inception"
@@ -41,10 +41,8 @@ def get_inception_vectors(**kwargs):
     print(timestamp(), "Creating Inception vectors")
     vecs = []   
 
-    for img in tqdm(Image.stream_images(image_paths=kwargs["image_paths"],
-                                        metadata=kwargs["metadata"]),
-                    total=len(kwargs["image_paths"])):
-        vector_path = vector_dir / (clean_filename(img.path) + ".npy")
+    for img in tqdm(imageEngine, total=len(imageEngine.image_paths)):
+        vector_path = vector_dir / (img.filename + ".npy")
         if vector_path.exists() and kwargs["use_cache"]:
             vec = np.load(vector_path)
         else:

@@ -8,7 +8,7 @@ __all__ = ['cuml_ready', 'cluster_method', 'write_layout', 'get_pointgrid_layout
            'process_geojson', 'get_hotspots', 'get_cluster_model', 'get_heightmap', 'get_layouts']
 
 # %% ../nbs/05_layouts.ipynb 3
-from .images import Image
+# from clip_plot.images import Image
 from .utils import timestamp, get_path, write_json, read_json, round_floats, FILE_NAME
 from .utils import datestring_to_date, round_date, date_to_seconds, clean_filename
 
@@ -127,7 +127,7 @@ def get_pointgrid_layout(path, label, **kwargs):
 
 
 # %% ../nbs/05_layouts.ipynb 9
-def get_umap_layout(**kwargs):
+def get_umap_layout(imageEngine, **kwargs):
     """Get the x,y positions of images passed through a umap projection
     
     Args:
@@ -224,12 +224,12 @@ def get_umap_layout(**kwargs):
     w = PCA(n_components=min(100, len(vecs))).fit_transform(vecs)
     # single model umap
     if len(kwargs["n_neighbors"]) == 1 and len(kwargs["min_dist"]) == 1:
-        return process_single_layout_umap(w, **kwargs)
+        return process_single_layout_umap(imageEngine, w, **kwargs)
     else:
-        return process_multi_layout_umap(w, **kwargs)
+        return process_multi_layout_umap(imageEngine, w, **kwargs)
 
 
-def process_single_layout_umap(v, **kwargs):
+def process_single_layout_umap(imageEngine, v, **kwargs):
     """Create a single layout UMAP projection
     
     Args:
@@ -287,8 +287,8 @@ def process_single_layout_umap(v, **kwargs):
         if os.path.exists(out_path) and kwargs["use_cache"]:
             return out_path
         y = []
-        if kwargs.get("metadata", False):
-            labels = [i.get("label", None) for i in kwargs["metadata"]]
+        if imageEngine.metadata:
+            labels = [i.get("label", None) for i in imageEngine.metadata]
             # if the user provided labels, integerize them
             if any([i for i in labels]):
                 d = defaultdict(lambda: len(d))
@@ -312,7 +312,7 @@ def process_single_layout_umap(v, **kwargs):
     }
 
 
-def process_multi_layout_umap(v, **kwargs):
+def process_multi_layout_umap(imageEngine, v, **kwargs):
     """Create a multi-layout UMAP projection
     
     Args:
@@ -492,7 +492,7 @@ def get_umap_model(**kwargs):
         )
 
 # %% ../nbs/05_layouts.ipynb 10
-def get_rasterfairy_layout(**kwargs):
+def get_rasterfairy_layout(imageEngine, **kwargs):
     """Get the x, y position of images passed through a rasterfairy projection
     
     Args:
@@ -535,7 +535,7 @@ def get_rasterfairy_layout(**kwargs):
     return write_layout(out_path, pos, **kwargs)
 
 
-def get_alphabetic_layout(**kwargs):
+def get_alphabetic_layout(imageEngine, **kwargs):
     """Get the x,y positions of images in a grid projection
     
     Args:
@@ -570,7 +570,7 @@ def get_alphabetic_layout(**kwargs):
     out_path = get_path("layouts", "grid", **kwargs)
     if os.path.exists(out_path) and kwargs["use_cache"]:
         return out_path
-    paths = kwargs["image_paths"]
+    paths = imageEngine.image_paths
     n = math.ceil(len(paths) ** (1 / 2))
     l = []  # positions
     for i, _ in enumerate(paths):
@@ -581,7 +581,7 @@ def get_alphabetic_layout(**kwargs):
     return write_layout(out_path, z, **kwargs)
 
 
-def get_custom_layout(**kwargs):
+def get_custom_layout(imageEngine, **kwargs):
     """
     
     Args:
@@ -615,11 +615,11 @@ def get_custom_layout(**kwargs):
     out_path = get_path("layouts", "custom", **kwargs)
     if os.path.exists(out_path) and kwargs["use_cache"]:
         return out_path
-    if not kwargs.get("metadata"):
+    if not imageEngine.metadata:
         return
     found_coords = False
     coords = []
-    for i in Image.stream_images(image_paths=kwargs["image_paths"], metadata=kwargs["metadata"]):
+    for i in imageEngine:
         x = i.metadata.get("x")
         y = i.metadata.get("y")
         if x and y:
@@ -643,7 +643,7 @@ def get_custom_layout(**kwargs):
     }
 
 # %% ../nbs/05_layouts.ipynb 12
-def get_date_layout(cols=3, bin_units="years", **kwargs):
+def get_date_layout(imageEngine, cols=3, bin_units="years", **kwargs):
     """
     Get the x,y positions of input images based on their dates
     @param int cols: the number of columns to plot for each bar
@@ -672,9 +672,9 @@ def get_date_layout(cols=3, bin_units="years", **kwargs):
                     **encoding (str): Required if gzip = True
     """
     date_vals = [
-        kwargs["metadata"][i].get("year", False) for i in range(len(kwargs["metadata"]))
+        meta.get("year", False) for meta in imageEngine.metadata
     ]
-    if not kwargs["metadata"] or not any(date_vals):
+    if not imageEngine.metadata or not any(date_vals):
         return False
     # if the data layouts have been cached, return them
     positions_out_path = get_path("layouts", "timeline", **kwargs)
@@ -690,7 +690,7 @@ def get_date_layout(cols=3, bin_units="years", **kwargs):
         }
     # date layout is not cached, so fetch dates and process
     print(timestamp(), "Creating date layout with {} columns".format(cols))
-    datestrings = [i.metadata.get("year", "no_date") for i in Image.stream_images(image_paths=kwargs["image_paths"], metadata=kwargs["metadata"])]
+    datestrings = [i.metadata.get("year", "no_date") for i in imageEngine]
     dates = [datestring_to_date(i) for i in datestrings]
     rounded_dates = [round_date(i, bin_units) for i in dates]
     # create d[formatted_date] = [indices into datestrings of dates that round to formatted_date]
@@ -701,7 +701,7 @@ def get_date_layout(cols=3, bin_units="years", **kwargs):
     n_coords_x = (cols + 1) * len(d)
     n_coords_y = 1 + max([len(d[i]) for i in d]) // cols
     if n_coords_y > n_coords_x:
-        return get_date_layout(cols=int(cols * 2), **kwargs)
+        return get_date_layout(imageEngine, cols=int(cols * 2), **kwargs)
     # create a mesh of grid positions in clip space -1:1 given the time distribution
     grid_x = (np.arange(0, n_coords_x) / (n_coords_x - 1)) * 2
     grid_y = (np.arange(0, n_coords_y) / (n_coords_x - 1)) * 2
@@ -747,7 +747,7 @@ def get_date_layout(cols=3, bin_units="years", **kwargs):
 
 
 # %% ../nbs/05_layouts.ipynb 14
-def get_categorical_layout(null_category="Other", margin=2, **kwargs):
+def get_categorical_layout(imageEngine, null_category="Other", margin=2, **kwargs):
     """
     Return a numpy array with shape (n_points, 2) with the point
     positions of observations in box regions determined by
@@ -774,13 +774,13 @@ def get_categorical_layout(null_category="Other", margin=2, **kwargs):
                     **encoding (str): Required if gzip = True
     """
 
-    if not kwargs.get("metadata", False):
+    if not imageEngine.metadata:
         return False
     # determine the out path and return from cache if possible
     out_path = get_path("layouts", "categorical", **kwargs)
     labels_out_path = get_path("layouts", "categorical-labels", **kwargs)
     # accumulate d[category] = [indices of points with category]
-    categories = [i.get("category", None) for i in kwargs["metadata"]]
+    categories = [i.get("category", None) for i in imageEngine.metadata]
     if not any(categories) or len(set(categories) - set([None])) == 1:
         return False
     d = defaultdict(list)
@@ -798,7 +798,7 @@ def get_categorical_layout(null_category="Other", margin=2, **kwargs):
     for idx, i in enumerate(keys_and_counts):
         offsets[i["key"]] += sum([j["count"] for j in keys_and_counts[:idx]])
     sorted_points = []
-    for idx, i in enumerate(Image.stream_images(image_paths=kwargs["image_paths"], metadata=kwargs["metadata"])):
+    for idx, i in enumerate(imageEngine):
         category = i.metadata.get("category", null_category)
         sorted_points.append(points[offsets[category] + counts[category]])
         counts[category] += 1
@@ -904,7 +904,7 @@ class Box:
         self.y = None if len(args) < 5 else args[4]
 
 # %% ../nbs/05_layouts.ipynb 16
-def get_geographic_layout(**kwargs):
+def get_geographic_layout(imageEngine, **kwargs):
     """Return a 2D array of image positions corresponding to lat, lng coordinates
     
     Args:
@@ -940,7 +940,7 @@ def get_geographic_layout(**kwargs):
     out_path = get_path("layouts", "geographic", **kwargs)
     l = []
     coords = False
-    for idx, i in enumerate(Image.stream_images(image_paths=kwargs["image_paths"], metadata=kwargs["metadata"])):
+    for idx, i in enumerate(imageEngine):
         lat = float(i.metadata.get("lat", 0)) / 180
         lng = (
             float(i.metadata.get("lng", 0)) / 180
@@ -978,7 +978,7 @@ def process_geojson(geojson_path):
 
 
 # %% ../nbs/05_layouts.ipynb 18
-def get_hotspots(layouts={}, use_high_dimensional_vectors=True, **kwargs):
+def get_hotspots(imageEngine, layouts={}, use_high_dimensional_vectors=True, **kwargs):
     """Return the stable clusters from the condensed tree of connected components from the density graph
     
     Args:
@@ -1007,7 +1007,7 @@ def get_hotspots(layouts={}, use_high_dimensional_vectors=True, **kwargs):
     for idx, i in enumerate(z.labels_):
         if i != -1:
             d[i]["images"].append(idx)
-            d[i]["img"] = clean_filename(kwargs["image_paths"][idx])
+            d[i]["img"] = imageEngine.filenames[idx]
             d[i]["layout"] = "inception_vectors"
     # remove massive clusters
     deletable = []
@@ -1091,20 +1091,20 @@ def get_heightmap(path, label, **kwargs):
 ##
 
 
-def get_layouts(**kwargs):
+def get_layouts(imageEngine, **kwargs):
     """Get the image positions in each projection"""
-    umap = get_umap_layout(**kwargs)
+    umap = get_umap_layout(imageEngine, **kwargs)
     layouts = {
         "umap": umap,
         "alphabetic": {
-            "layout": get_alphabetic_layout(**kwargs),
+            "layout": get_alphabetic_layout(imageEngine, **kwargs),
         },
         "grid": {
-            "layout": get_rasterfairy_layout(umap=umap, **kwargs),
+            "layout": get_rasterfairy_layout(imageEngine, umap=umap, **kwargs),
         },
-        "categorical": get_categorical_layout(**kwargs),
-        "date": get_date_layout(**kwargs),
-        "geographic": get_geographic_layout(**kwargs),
-        "custom": get_custom_layout(**kwargs),
+        "categorical": get_categorical_layout(imageEngine, **kwargs),
+        "date": get_date_layout(imageEngine, **kwargs),
+        "geographic": get_geographic_layout(imageEngine, **kwargs),
+        "custom": get_custom_layout(imageEngine, **kwargs),
     }
     return layouts

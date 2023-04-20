@@ -20,6 +20,7 @@ from .utils import  get_version, FILE_NAME
 from .embeddings import get_inception_vectors
 from .metadata import get_manifest, write_metadata, get_metadata_list
 from .images import PILLoadTruncated, save_image, write_images, Image, get_image_paths, create_atlas_files
+from .images import ImageFactory
 
 # %% ../nbs/00_clip_plot.ipynb 5
 warnings.filterwarnings("ignore")
@@ -88,7 +89,7 @@ def get_clip_plot_root() -> Path:
 copy_root_dir = get_clip_plot_root()
 
 # %% ../nbs/00_clip_plot.ipynb 14
-def process_images(**kwargs):
+def process_images(imageEngine, **kwargs):
     """Main method for processing user images and metadata"""
     kwargs = preprocess_kwargs(**kwargs)
 
@@ -99,13 +100,13 @@ def process_images(**kwargs):
     
     np.random.seed(kwargs["seed"])
     kwargs["out_dir"] = os.path.join(kwargs["out_dir"], "data")
-    kwargs["image_paths"], kwargs["metadata"] = filter_images(**kwargs)
-    write_metadata(kwargs["metadata"], kwargs["out_dir"], kwargs["gzip"], kwargs["encoding"])
+    # kwargs["image_paths"], kwargs["metadata"] = filter_images(**kwargs)
+    write_metadata(imageEngine, kwargs["out_dir"], kwargs["gzip"], kwargs["encoding"])
     
-    kwargs["atlas_dir"] = create_atlas_files(**kwargs)
-    kwargs["vecs"] = get_inception_vectors(**kwargs)
-    get_manifest(**kwargs)
-    write_images(kwargs["image_paths"], kwargs["metadata"], kwargs["out_dir"], kwargs["lod_cell_height"])
+    kwargs["atlas_dir"] = create_atlas_files(imageEngine, **kwargs)
+    kwargs["vecs"] = get_inception_vectors(imageEngine, **kwargs)
+    get_manifest(imageEngine, **kwargs)
+    imageEngine.write_images()
     print(timestamp(), "Done!")
 
 
@@ -440,7 +441,18 @@ def project_imgs(images:Param(type=str,
                         # TODO: pass explicit "test_mode" flag
                         config = test_butterfly(config)
 
-                process_images(**config)
+                options = {
+                        'shuffle': False, 
+                        'seed': config['seed'], 
+                        'max_images': False, 
+                        'atlas_size': 2048, 
+                        'cell_size': 32, 
+                        'lod_cell_height': 128, 
+                        'validate': True, 
+                }
+                imageEngine = ImageFactory(config['images'], config['out_dir'], config['meta_dir'], options)
+
+                process_images(imageEngine, **config)
 
 # %% ../nbs/00_clip_plot.ipynb 21
 if __name__ == "__main__":
