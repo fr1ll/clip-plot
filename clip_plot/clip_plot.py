@@ -14,7 +14,6 @@ from fastcore.all import *
 from tqdm.auto import tqdm
 
 from . import utils
-from .layouts import get_layouts
 from .utils import clean_filename, timestamp, get_version, FILE_NAME
 # from clip_plot.embeddings import get_inception_vectors
 from .metadata import get_manifest, write_metadata, get_metadata_list
@@ -359,7 +358,7 @@ def project_imgs(images:Param(type=str,
                 max_images:Param(type=int,
                         help="maximum number of images to process"
                         )=DEFAULTS["max_images"],
-                use_cache:Param(type=bool_arg,
+                use_cache:Param(type=store_true,
                         help="given inputs identical to prior inputs, load outputs from cache"
                         )=DEFAULTS["use_cache"],
                 encoding:Param(type=str,
@@ -398,18 +397,16 @@ def project_imgs(images:Param(type=str,
                 pointgrid_fill:Param(type=float,
                         help="float 0:1 that determines sparsity of jittered distributions (lower means more sparse)"
                         )=DEFAULTS["pointgrid_fill"],
-                copy_web_only:Param(type=bool_arg,
-                        action="store_true",
+                copy_web_only:Param(type=store_true,
                         help="update ./output/assets without reprocessing data"
                         )=False,
                 min_size:Param(type=float,
                         help="min size of cropped images"
                         )=DEFAULTS["min_size"],
-                gzip:Param(type=bool_arg,
-                        action="store_true", help="save outputs with gzip compression"
+                gzip:Param(type=store_true,
+                        help="save outputs with gzip compression"
                         )=False,
-                shuffle:Param(type=bool_arg,
-                        action="store_true",
+                shuffle:Param(type=store_true,
                         help="shuffle the input images before data processing begins"
                         )=False,
                 plot_id:Param(type=str,
