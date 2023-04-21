@@ -190,6 +190,8 @@ def filter_images(**kwargs):
         Need to split function
     """
     # validate that input image names are unique
+        
+    print(timestamp(), "Validating input images")
     image_paths = get_image_paths(images=kwargs["images"], out_dir=kwargs["out_dir"])
     image_names = list(map(clean_filename,image_paths))
     duplicates = set([x for x in image_names if image_names.count(x) > 1])
@@ -214,7 +216,6 @@ def filter_images(**kwargs):
     filtered_image_paths = {}
     oblong_ratio = kwargs["atlas_size"] / kwargs["cell_size"]
 
-    print(timestamp(), "Validating input images")
     for img in tqdm(Image.stream_images(image_paths=image_paths), total=len(image_paths)):
         valid, msg = img.valid(lod_cell_height=kwargs["lod_cell_height"], oblong_ratio=oblong_ratio) 
         if valid is True:

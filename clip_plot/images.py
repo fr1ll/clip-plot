@@ -142,7 +142,8 @@ def write_images(image_paths: List[str], metadata: List[dict],
         Should users get a warning that a photo already exists
         in the destination folder?
     """
-    for img in Image.stream_images(image_paths=image_paths, metadata=metadata):
+    print(timestamp(), "Copying images to output directory")
+    for img in tqdm(Image.stream_images(image_paths=image_paths, metadata=metadata), total=len(image_paths)):
         filename = clean_filename(img.path)
         # Copy original for lightbox
         org_out_dir = os.path.join(out_dir, "originals")
