@@ -627,6 +627,7 @@ def get_custom_layout(**kwargs):
         y = i.metadata.get("y")
         if x and y:
             found_coords = True
+            print(timestamp(), "Creating custom layout based on xy coordinates in metadata")
             coords.append([x, y])
         else:
             if found_coords:
@@ -679,6 +680,8 @@ def get_date_layout(cols=3, bin_units="years", **kwargs):
     ]
     if not kwargs["metadata"] or not any(date_vals):
         return False
+    
+    print(timestamp(), "Creating date layout")
     # if the data layouts have been cached, return them
     positions_out_path = get_path("layouts", "timeline", **kwargs)
     labels_out_path = get_path("layouts", "timeline-labels", **kwargs)
@@ -779,6 +782,8 @@ def get_categorical_layout(null_category="Other", margin=2, **kwargs):
 
     if not kwargs.get("metadata", False):
         return False
+    
+    print(timestamp(), "Creating categorical layout")
     # determine the out path and return from cache if possible
     out_path = get_path("layouts", "categorical", **kwargs)
     labels_out_path = get_path("layouts", "categorical-labels", **kwargs)
@@ -937,9 +942,13 @@ def get_geographic_layout(**kwargs):
 
                 Subfunctions
                     write_json()
-
+    
+    Notes:
+        Unlike other layouts, does not check first if metadata exists
 
     """
+    print(timestamp(), "Attempt to create geographic layout")
+
     out_path = get_path("layouts", "geographic", **kwargs)
     l = []
     coords = False
