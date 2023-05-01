@@ -60,6 +60,7 @@ DEFAULTS = {
     "lod_cell_height": 128, # Why is not in parser?
     "n_neighbors": [15],
     "min_dist": [0.01],
+    "umap_on_full_dims": False,
     "n_components": 2,
     "metric": "correlation",
     "pointgrid_fill": 0.05,
@@ -397,6 +398,9 @@ def project_imgs(images:Param(type=str,
                         nargs="+",
                         help="the min_dist arguments for UMAP"
                         )=DEFAULTS["min_dist"],
+                umap_on_full_dims:Param(type=store_true,
+                        help="perform PCA prior to main dimensionality reduction"
+                        )=DEFAULTS["umap_on_full_dims"],
                 n_components:Param(type=int,
                         help="the n_components argument for UMAP"
                         )=DEFAULTS["n_components"],

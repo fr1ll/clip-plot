@@ -134,6 +134,7 @@ def get_umap_layout(**kwargs):
     """Get the x,y positions of images passed through a umap projection
     
     Args:
+        umap_on_full_dims (bool)
         vecs
         n_neighbors
         min_dist
@@ -224,7 +225,8 @@ def get_umap_layout(**kwargs):
 
     """
     vecs = kwargs["vecs"]
-    w = PCA(n_components=min(100, len(vecs))).fit_transform(vecs)
+    if kwargs["umap_on_full_dims"]: w = vecs
+    else: w = PCA(n_components=min(100, len(vecs))).fit_transform(vecs)
     # single model umap
     if len(kwargs["n_neighbors"]) == 1 and len(kwargs["min_dist"]) == 1:
         return process_single_layout_umap(w, **kwargs)
