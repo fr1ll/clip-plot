@@ -227,7 +227,9 @@ def get_manifest(**kwargs):
         "imagelist": get_path("imagelists", "imagelist", **kwargs),
         "atlas_dir": kwargs["atlas_dir"],
         "metadata": True if kwargs["metadata"] else False,
-        "default_hotspots": get_hotspots(layouts=layouts, **kwargs),
+        "default_hotspots": get_hotspots(layouts=layouts,
+                                         n_preproc_dims=kwargs["cluster_preproc_dims"],
+                                         **kwargs),
         "custom_hotspots": get_path(
             "hotspots", "user_hotspots", add_hash=False, **kwargs
         ),

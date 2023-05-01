@@ -993,12 +993,14 @@ def process_geojson(geojson_path):
 
 
 # %% ../nbs/05_layouts.ipynb 18
-def get_hotspots(layouts={}, use_high_dimensional_vectors=True, n_preproc_dims=-1, **kwargs):
+def get_hotspots(layouts={}, use_high_dimensional_vectors=True, n_preproc_dims=-1,
+                 **kwargs):
     """Return the stable clusters from the condensed tree of connected components from the density graph
     
     Args:
         layouts (Optional[dict] = {}) 
         use_high_dimensional_vectors (Optional[bool] = True) 
+        n_preproc_dims
         vecs
         umap = Used if use_high_dimensional_vectors is False
         image_paths
@@ -1017,8 +1019,12 @@ def get_hotspots(layouts={}, use_high_dimensional_vectors=True, n_preproc_dims=-
         vecs = read_json(layouts["umap"]["variants"][0]["layout"], **kwargs)
     model = get_cluster_model(**kwargs)
     if n_preproc_dims != -1:
+        print(timestamp(), f"Reducing dimensions to {n_preproc_dims} for input to HDBSCAN")
         # hdbscan runs much faster if you first reduce dimensions
         # suggest to try reducing to 50 dimensions
+        if len(vecs) <= n_preproc_dims:
+            init = 'random' # cannot use spectral initilization if too few samples
+        else: init = 'spectral'
         umap = UMAP(
                         n_neighbors=kwargs["n_neighbors"][0],
                         min_dist=kwargs["min_dist"][0],
@@ -1026,6 +1032,7 @@ def get_hotspots(layouts={}, use_high_dimensional_vectors=True, n_preproc_dims=-
                         metric=kwargs["metric"],
                         random_state=kwargs["seed"],
                         transform_seed=kwargs["seed"],
+                        init='random'
                     )
         w = umap.fit(vecs).embedding_
         z = model.fit(w)
