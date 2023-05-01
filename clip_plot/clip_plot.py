@@ -52,6 +52,7 @@ DEFAULTS = {
     "max_images": None,
     "use_cache": True,
     "encoding": "utf8",
+    "cluster_preproc_dims": -1,
     "min_cluster_size": 20,
     "max_clusters": 10,
     "atlas_size": 2048,
@@ -368,6 +369,10 @@ def project_imgs(images:Param(type=str,
                 encoding:Param(type=str,
                         help="the encoding of input metadata"
                         )=DEFAULTS["encoding"],
+                cluster_preproc_dims:Param(type=int,
+                        help="number of dims to reduce to prior to clustering. -1 means don't reduce",
+                        required=False
+                        )=DEFAULTS["cluster_preproc_dims"],
                 min_cluster_size:Param(type=int,
                         help="the minimum number of images in a cluster",
                         required=False

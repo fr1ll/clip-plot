@@ -234,6 +234,9 @@ def get_umap_layout(**kwargs):
 
 def process_single_layout_umap(v, **kwargs):
     """Create a single layout UMAP projection
+
+    Notes:
+    - This also returns rasterfairy 
     
     Args:
         v (array like object)
@@ -990,7 +993,7 @@ def process_geojson(geojson_path):
 
 
 # %% ../nbs/05_layouts.ipynb 18
-def get_hotspots(layouts={}, use_high_dimensional_vectors=True, **kwargs):
+def get_hotspots(layouts={}, use_high_dimensional_vectors=True, n_preproc_dims=-1, **kwargs):
     """Return the stable clusters from the condensed tree of connected components from the density graph
     
     Args:
@@ -1013,7 +1016,20 @@ def get_hotspots(layouts={}, use_high_dimensional_vectors=True, **kwargs):
     else:
         vecs = read_json(layouts["umap"]["variants"][0]["layout"], **kwargs)
     model = get_cluster_model(**kwargs)
-    z = model.fit(vecs)
+    if n_preproc_dims != -1:
+        # hdbscan runs much faster if you first reduce dimensions
+        # suggest to try reducing to 50 dimensions
+        umap = UMAP(
+                        n_neighbors=kwargs["n_neighbors"][0],
+                        min_dist=kwargs["min_dist"][0],
+                        n_components=n_preproc_dims,
+                        metric=kwargs["metric"],
+                        random_state=kwargs["seed"],
+                        transform_seed=kwargs["seed"],
+                    )
+        w = umap.fit(vecs).embedding_
+        z = model.fit(w)
+    else: z = model.fit(vecs)
     # create a map from cluster label to image indices in cluster
     d = defaultdict(lambda: defaultdict(list))
     for idx, i in enumerate(z.labels_):
