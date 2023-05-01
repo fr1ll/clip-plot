@@ -634,7 +634,8 @@ class ImageFactory():
         if not os.path.exists(thu_out_dir):
             os.makedirs(thu_out_dir)
 
-        for img in self:
+        print(timestamp(), "Writing Originals and thumbnail images")
+        for img in tqdm(self, total=self.count):
             filename = img.filename
             # Copy original for lightbox
             out_path = os.path.join(org_out_dir, filename)
