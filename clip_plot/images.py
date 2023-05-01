@@ -556,6 +556,7 @@ class ImageFactory():
             self.metadata = []
             self.count = len(self.image_paths)
             self.filenames = list(filtered_image_paths.values())
+            return
 
         # handle user metadata: retain only records with image and metadata
         metaList = get_metadata_list(meta_dir=self.meta_dir)
