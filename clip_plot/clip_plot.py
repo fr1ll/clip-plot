@@ -8,8 +8,8 @@ warnings.filterwarnings("ignore")
 
 # %% auto 0
 __all__ = ['DEFAULTS', 'PILLoadTruncated', 'copy_root_dir', 'get_clip_plot_root', 'process_images', 'preprocess_kwargs',
-           'copy_web_assets', 'filter_images', 'test_iiif', 'test_butterfly_duplicate', 'test_butterfly',
-           'test_butterfly_missing_meta', 'test_no_meta_dir', 'project_imgs']
+           'copy_web_assets', 'test_iiif', 'test_butterfly_duplicate', 'test_butterfly', 'test_butterfly_missing_meta',
+           'test_no_meta_dir', 'project_imgs']
 
 # %% ../nbs/00_clip_plot.ipynb 4
 # print separately that we're loading dependencies, as this can take a while
@@ -23,11 +23,11 @@ from fastcore.all import *
 from tqdm.auto import tqdm
 
 from . import utils
-from .utils import clean_filename, get_version, FILE_NAME
+from .utils import get_version, FILE_NAME
 from .embeddings import get_inception_vectors
-from .metadata import get_manifest, write_metadata, get_metadata_list
+from .metadata import get_manifest, write_metadata
 
-from .images import save_image, write_images, Image, get_image_paths, create_atlas_files
+from .images import write_images, create_atlas_files, ImageFactory
 
 # %% ../nbs/00_clip_plot.ipynb 6
 from shutil import rmtree
@@ -91,7 +91,7 @@ def get_clip_plot_root() -> Path:
         return Path(__file__).parents[1]
 
 # %% ../nbs/00_clip_plot.ipynb 13
-def process_images(**kwargs):
+def process_images(imageEngine, **kwargs):
     """Main method for processing user images and metadata"""
     kwargs = preprocess_kwargs(**kwargs)
 
@@ -102,14 +102,13 @@ def process_images(**kwargs):
     
     np.random.seed(kwargs["seed"])
     kwargs["out_dir"] = os.path.join(kwargs["out_dir"], "data")
-    kwargs["image_paths"], kwargs["metadata"] = filter_images(**kwargs)
-    write_metadata(kwargs["metadata"], kwargs["out_dir"], kwargs["gzip"], kwargs["encoding"])
+    write_metadata(imageEngine, kwargs["gzip"], kwargs["encoding"])
     
-    kwargs["atlas_dir"] = create_atlas_files(**kwargs)
+    kwargs["atlas_dir"] = create_atlas_files(imageEngine, kwargs["plot_id"], kwargs["use_cache"])
     
-    kwargs["vecs"] = get_inception_vectors(**kwargs)
-    get_manifest(**kwargs)
-    write_images(kwargs["image_paths"], kwargs["metadata"], kwargs["out_dir"], kwargs["lod_cell_height"])
+    kwargs["vecs"] = get_inception_vectors(imageEngine, **kwargs)
+    get_manifest(imageEngine, **kwargs)
+    write_images(imageEngine)
     print(timestamp(), "Done!")
 
 
@@ -157,123 +156,7 @@ def copy_web_assets(out_dir: str) -> None:
                 out.write(f)
 
 
-# %% ../nbs/00_clip_plot.ipynb 15
-def filter_images(**kwargs):
-    """Main method for filtering images given user metadata (if provided)
-
-    -Validate image:
-        Loading (done by stream_images and Images)
-        Size
-        resizing
-        oblong
-
-    -Compare against metadata
-
-    
-    Args:
-        images (str): Directory location of images.
-        out_dir (str): Output directory.
-        shuffle (Optional[bool], default = False): Shuffle image order
-        seed (int): Seed for random generator
-        max_images (Union[bool,int]): Maximum number of images
-        atlas_size (int, default = 2048)
-        cell_size (int, default = 32)
-        lod_cell_height (int, default = 128)
-        meta_dir (str): Directory of image metadata
-
-    Returns:
-        images (list[str])
-        metadata (list[dict])
-
-    Notes:
-        Assumes 'filename' is provided in metadata
-        Convoluted compiling of metadata
-        Should All Validation should belong to Image class?
-        Need to split function
-    """
-    # validate that input image names are unique
-        
-    print(timestamp(), "Validating input images")
-    image_paths = get_image_paths(images=kwargs["images"], out_dir=kwargs["out_dir"])
-    image_names = list(map(clean_filename,image_paths))
-    duplicates = set([x for x in image_names if image_names.count(x) > 1])
-
-    if duplicates:
-        raise Exception(
-            """Image filenames should be unique, but the following 
-            filenames are duplicated\n{}""".format("\n".join(duplicates)))
-    
-    # optionally shuffle the image_paths
-    if kwargs.get("shuffle", False):
-        print(timestamp(), "Shuffling input images")
-        random.Random(kwargs["seed"]).shuffle(image_paths)
-    else:
-        image_paths = sorted(image_paths)
-
-    # Optionally limit the number of images in image_paths
-    if kwargs.get("max_images", False):
-        image_paths = image_paths[: kwargs["max_images"]]        
-
-    # process and filter the images
-    filtered_image_paths = {}
-    oblong_ratio = kwargs["atlas_size"] / kwargs["cell_size"]
-
-    for img in tqdm(Image.stream_images(image_paths=image_paths), total=len(image_paths)):
-        valid, msg = img.valid(lod_cell_height=kwargs["lod_cell_height"], oblong_ratio=oblong_ratio) 
-        if valid is True:
-            filtered_image_paths[img.path] = img.filename
-        else:
-            print(timestamp(), msg)
-
-    # if there are no remaining images, throw an error
-    if len(filtered_image_paths) == 0:
-        raise Exception("No images were found! Please check your input image glob.")
-
-    # handle the case user provided no metadata
-    if not kwargs.get("meta_dir", False):
-        return [list(filtered_image_paths.keys()), []]
-
-    # handle user metadata: retain only records with image and metadata
-    metaList = get_metadata_list(meta_dir=kwargs['meta_dir'])
-    metaDict = {clean_filename(i.get(FILE_NAME, "")): i for i in metaList}
-    meta_bn = set(metaDict.keys())
-    img_bn = set(filtered_image_paths.values())
-
-    # identify images with metadata and those without metadata
-    meta_present = img_bn.intersection(meta_bn)
-    meta_missing = list(img_bn - meta_bn)
-
-    # notify the user of images that are missing metadata
-    if meta_missing:
-        print(
-            timestamp(),
-            " ! Some images are missing metadata:\n  -",
-            "\n  - ".join(meta_missing[:10]),
-        )
-        if len(meta_missing) > 10:
-            print(timestamp(), " ...", len(meta_missing) - 10, "more")
-
-        if os.path.exists(kwargs['out_dir']) is False:
-            os.makedirs(kwargs['out_dir'])
-            
-        missing_dir = os.path.join(kwargs['out_dir'],"missing-metadata.txt")
-        with open(missing_dir, "w") as out:
-            out.write("\n".join(meta_missing))
-
-    if not meta_present:
-        raise Exception( f"""No image has matching metadata. Check if '{FILE_NAME}' key was provided in metadata files""")
-
-    # get the sorted lists of images and metadata
-    images = []
-    metadata = []
-    for path, fileName in filtered_image_paths.items():
-        if fileName in meta_present:
-            images.append(path)
-            metadata.append(copy.deepcopy(metaDict[fileName]))
-
-    return [images, metadata]
-
-# %% ../nbs/00_clip_plot.ipynb 17
+# %% ../nbs/00_clip_plot.ipynb 16
 copy_root_dir = get_clip_plot_root()
 
 def test_iiif(config):
@@ -325,7 +208,7 @@ def test_butterfly(config):
 def test_butterfly_missing_meta(config):
     test_images = copy_root_dir/"tests/smithsonian_butterflies_10/jpgs/*.jpg"
     test_out_dir = copy_root_dir/"tests/smithsonian_butterflies_10/output_test_temp"
-    meta_dir = copy_root_dir/"tests/smithsonian_butterflies_10/meta_data/meta_missing_filename.csv"
+    meta_dir = copy_root_dir/"tests/smithsonian_butterflies_10/meta_data/meta_missing_entry.csv"
     if Path(test_out_dir).exists():
         rmtree(test_out_dir)
 
@@ -350,7 +233,7 @@ def test_no_meta_dir(config):
     return config
 
 
-# %% ../nbs/00_clip_plot.ipynb 19
+# %% ../nbs/00_clip_plot.ipynb 18
 @call_parse
 def project_imgs(images:Param(type=str,
                         help="path or glob of images to process"
@@ -444,14 +327,28 @@ def project_imgs(images:Param(type=str,
                 default_only = {k:DEFAULTS[k] for k in default_only_keys}
                 config.update(default_only)
 
+
                 if in_ipython() and config["images"] == None:
                         print("Clip-plot is being run from ipython")
                         # at least for now, this means we're in testing mode.
                         # TODO: pass explicit "test_mode" flag
                         config = test_butterfly(config)
-                
-                process_images(**config)
 
-# %% ../nbs/00_clip_plot.ipynb 20
+                options = {
+                        'shuffle': config['shuffle'], 
+                        'seed': config['seed'], 
+                        'max_images': config['max_images'], 
+                        'atlas_size': config['atlas_size'], 
+                        'cell_size': config['cell_size'], 
+                        'lod_cell_height': config['lod_cell_height'], 
+                        'validate': True, 
+                }
+
+                out_dir = os.path.join(config["out_dir"], "data")
+                imageEngine = ImageFactory(config['images'], out_dir, config['meta_dir'], options)
+                
+                process_images(imageEngine, **config)
+
+# %% ../nbs/00_clip_plot.ipynb 19
 if __name__ == "__main__":
     project_imgs()

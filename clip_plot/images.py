@@ -2,21 +2,24 @@
 
 # %% auto 0
 __all__ = ['PILLoadTruncated', 'FLOATX', 'load_image', 'image_to_array', 'array_to_image', 'save_image', 'write_images',
-           'get_image_paths', 'create_atlas_files', 'save_atlas', 'Image']
+           'get_image_paths', 'create_atlas_files', 'save_atlas', 'Image', 'ImageFactoryBase', 'ImageFactory']
 
 # %% ../nbs/03_images.ipynb 3
 import io
 import os
 import json
+import copy
 import glob2
+import random
 from typing import Optional, List, Union
 
 import numpy as np
+from tqdm.auto import tqdm
 from iiif_downloader import Manifest
 from PIL import Image as pil_image, ImageFile
-from tqdm.auto import tqdm
 
 from .utils import clean_filename, timestamp, FILE_NAME
+from .metadata import get_metadata_list
 
 
 # handle truncated images in PIL (managed by Pillow)
@@ -117,17 +120,13 @@ def save_image(path: str, x: np.array) -> None:
     img.save(path,format=None)
 
 # %% ../nbs/03_images.ipynb 7
-def write_images(image_paths: List[str], metadata: List[dict],
-                 out_dir: str, lod_cell_height: int) -> None:
+def write_images(imageEngine: 'ImageFactory') -> None:
     """Write all originals and thumbnails images to the output dir.
 
     Images are used by lightbox.
     
     Args:
-        image_paths (List[str]): List of path of images
-        metadata (List[dict]): List of dictionaries with image metadata
-        out_dir (str): Output Directory
-        lod_cell_height (int): Cell height for lod texture
+        imageEngine (ImageFactory instance)
 
     Returns:
         None
@@ -143,10 +142,10 @@ def write_images(image_paths: List[str], metadata: List[dict],
         in the destination folder?
     """
     print(timestamp(), "Copying images to output directory")
-    for img in tqdm(Image.stream_images(image_paths=image_paths, metadata=metadata), total=len(image_paths)):
-        filename = clean_filename(img.path)
+    for img in tqdm(imageEngine, total=imageEngine.count):
+        filename = img.save_as_name
         # Copy original for lightbox
-        org_out_dir = os.path.join(out_dir, "originals")
+        org_out_dir = os.path.join(imageEngine.out_dir, "originals")
         if not os.path.exists(org_out_dir):
             # Create directory since it does not exists
             os.makedirs(org_out_dir)
@@ -159,12 +158,12 @@ def write_images(image_paths: List[str], metadata: List[dict],
             save_image(out_path, resized)
     
         # copy thumb for lod texture
-        thu_out_dir = os.path.join(out_dir, "thumbs")
+        thu_out_dir = os.path.join(imageEngine.out_dir, "thumbs")
         if not os.path.exists(thu_out_dir):
             os.makedirs(thu_out_dir)
             
         out_path = os.path.join(thu_out_dir, filename)
-        resized_max = array_to_image(img.resize_to_max(lod_cell_height))
+        resized_max = array_to_image(img.resize_to_max(imageEngine.lod_cell_height))
         save_image(out_path, resized_max)
 
 # %% ../nbs/03_images.ipynb 8
@@ -228,19 +227,15 @@ def get_image_paths(images:str, out_dir: str) -> List[str]:
 ##
 
 
-def create_atlas_files(**kwargs):
+def create_atlas_files(imageEngine: 'ImageFactory', plot_id: str, use_cache: bool) -> str:
     """
     Generate and save to disk all atlases to be used for this visualization
     If square, center each cell in an nxn square, else use uniform height
 
     Args:
-        out_dir (str)
-        plot_id (str, default = str(uuid.uuid1()))
-        use_cache (bool, default = False)
-        shuffle (Optional[bool], default = False)
-        atlas_size (int, default = 2048)
-        cell_size (int, default = 32)
-        lod_cell_height (int, default = 128)
+        imageEngine (ImageFactory instance)
+        plot_id (str): unique id for run
+        use_cache (bool)
 
 
     Returns:
@@ -250,11 +245,11 @@ def create_atlas_files(**kwargs):
 
     """
     # if the atlas files already exist, load from cache
-    out_dir = os.path.join(kwargs["out_dir"], "atlases", kwargs["plot_id"])
+    out_dir = os.path.join(imageEngine.out_dir, "atlases", plot_id)
     if (
         os.path.exists(out_dir)
-        and kwargs["use_cache"]
-        and not kwargs.get("shuffle", False)
+        and use_cache
+        and not imageEngine.shuffle
     ):
         print(timestamp(), "Loading saved atlas data")
         return out_dir
@@ -268,30 +263,28 @@ def create_atlas_files(**kwargs):
     x = 0  # x pos in atlas
     y = 0  # y pos in atlas
     positions = []  # l[cell_idx] = atlas data
-    atlas = np.zeros((kwargs["atlas_size"], kwargs["atlas_size"], 3))
+    atlas = np.zeros((imageEngine.atlas_size, imageEngine.atlas_size, 3))
 
-    for img in tqdm(Image.stream_images(image_paths=kwargs["image_paths"],
-                                        metadata=kwargs["metadata"]),
-                    total=len(kwargs["image_paths"])):
+    for img in tqdm(imageEngine, total=imageEngine.count):
         
-        cell_data = img.resize_to_height(kwargs["cell_size"])
+        cell_data = img.resize_to_height(imageEngine.cell_size)
         _, v, _ = cell_data.shape
         appendable = False
-        if (x + v) <= kwargs["atlas_size"]:
+        if (x + v) <= imageEngine.atlas_size:
             appendable = True
-        elif (y + (2 * kwargs["cell_size"])) <= kwargs["atlas_size"]:
-            y += kwargs["cell_size"]
+        elif (y + (2 * imageEngine.cell_siz)) <= imageEngine.atlas_size:
+            y += imageEngine.cell_size
             x = 0
             appendable = True
         if not appendable:
             save_atlas(atlas, out_dir, n)
             n += 1
-            atlas = np.zeros((kwargs["atlas_size"], kwargs["atlas_size"], 3))
+            atlas = np.zeros((imageEngine.atlas_size, imageEngine.atlas_size, 3))
             x = 0
             y = 0
-        atlas[y : y + kwargs["cell_size"], x : x + v] = cell_data
+        atlas[y : y + imageEngine.cell_size, x : x + v] = cell_data
         # find the size of the cell in the lod canvas
-        lod_data = img.resize_to_max(kwargs["lod_cell_height"])
+        lod_data = img.resize_to_max(imageEngine.lod_cell_height)
         h, w, _ = lod_data.shape  # h,w,colors in lod-cell sized image `i`
         positions.append(
             {
@@ -325,9 +318,28 @@ def save_atlas(atlas: np.array, out_dir: str, n: int) -> None:
 class Image:
     def __init__(self, img_path: str, metadata: Optional[dict] = None) -> 'Image':
         self.path = img_path
-        self.filename = clean_filename(self.path)
-        self.original = load_image(self.path) 
+        self._original = None
+        self._filename = None
+        self._save_as = None
         self.metadata = metadata if metadata else {}
+
+    @property
+    def original(self):
+        if self._original is None:
+            self._original = load_image(self.path)
+        return self._original
+    
+    @property
+    def filename(self):
+        if self._filename is None:
+            self._filename = clean_filename(self.path)
+        return self._filename
+    
+    @property
+    def save_as_name(self):
+        if self._save_as is None:
+            self._save_as = self.filename
+        return self._save_as
 
     def resize_to_max(self, n: int) -> np.array:
         """Resize self.original so its longest side has n pixels (maintain proportion).
@@ -436,3 +448,198 @@ class Image:
                 yield Image(imgPath, meta)
             except Exception as exc:
                 print(timestamp(), "Image", imgPath, "could not be processed --", exc)
+
+
+
+
+# %% ../nbs/03_images.ipynb 13
+class ImageFactoryBase():
+    """Class encapsulates functionality required to access images,
+    including compiling metadata and ho
+
+    Factory is responsible :
+        - Compiling image files and their metadata
+        - Filtering and validating images
+        - Naming image output names
+
+    Image factory needs to be able to provide an Image instance
+        - The image instance needs to be have it's metadata (if applicable)
+    """
+
+    def __init__(self) -> None:
+        self.count = 0  # Total number of images
+        self.meta_headers = []
+        self.metadata = []
+
+    def __iter__(self):
+        # Yield an Image instance
+        raise NotImplementedError()
+    
+    def __getitem__(self, index):
+        # Return index's Image instance
+        raise NotImplementedError()    
+
+
+class ImageFactory(ImageFactoryBase):
+    _OPTIONS = {
+        'shuffle': False, # (Optional[bool], default = False): Shuffle image order
+        'seed': "", # (int): Seed for random generator
+        'max_images': False, # (Union[False,int]): Maximum number of images
+        'atlas_size': 2048, # (int, default = 2048)
+        'cell_size': 32, # (int, default = 32)
+        'lod_cell_height': 128, # (int, default = 128)
+        'validate': True, # Validate Images
+    }
+    
+    def __init__(self, img_path, out_dir, meta_dir, options={}) -> None:
+        super().__init__()
+        self.img_path = img_path
+        self.meta_dir = meta_dir
+        self.out_dir = out_dir
+        self.filenames = []
+        self.image_paths = []
+        
+        # Load options
+        for option, default in self._OPTIONS.items():
+            setattr(self, option, options.get(option, default))
+
+        self.filter_images()
+
+    def __iter__(self):
+        for img in Image.stream_images(image_paths=self.image_paths, metadata=self.metadata):
+            yield img
+
+    def __getitem__(self, index):
+        if index < len(self.image_paths):
+            if self.metadata:
+                meta = self.metadata[index]
+            else:
+                meta = None
+    
+            return Image(self.image_paths[index], meta)
+        
+
+    def filter_images(self):
+        """Main method for filtering images given user metadata (if provided)
+
+        -Validate image:
+            Loading (done by stream_images and Images)
+            Size
+            resizing
+            oblong
+
+        -Compare against metadata
+
+        
+        Args:
+            images (str): Directory location of images.
+            out_dir (str): Output directory.
+            shuffle (Optional[bool], default = False): Shuffle image order
+            seed (int): Seed for random generator
+            max_images (Union[bool,int]): Maximum number of images
+            atlas_size (int, default = 2048)
+            cell_size (int, default = 32)
+            lod_cell_height (int, default = 128)
+            meta_dir (str): Directory of image metadata
+
+        Returns:
+            images (list[str])
+            metadata (list[dict])
+
+        Notes:
+            Assumes 'filename' is provided in metadata
+            Convoluted compiling of metadata
+            Should All Validation should belong to Image class?
+            Need to split function
+        """
+        # validate that input image names are unique
+        image_paths = get_image_paths(images=self.img_path, out_dir=self.out_dir)
+        image_names = list(map(clean_filename,image_paths))
+        duplicates = set([x for x in image_names if image_names.count(x) > 1])
+
+        if duplicates:
+            raise Exception(
+                """Image filenames should be unique, but the following 
+                filenames are duplicated\n{}""".format("\n".join(duplicates)))
+        
+        # optionally shuffle the image_paths
+        if self.shuffle:
+            print(timestamp(), "Shuffling input images")
+            random.Random(self.seed).shuffle(image_paths)
+        else:
+            image_paths = sorted(image_paths)
+
+        # Optionally limit the number of images in image_paths
+        if self.max_images:
+            image_paths = image_paths[: self.max_images]        
+
+        # process and filter the images
+        filtered_image_paths = {}
+        oblong_ratio = self.atlas_size/ self.cell_size
+
+        print(timestamp(), "Validating input images")
+        for img in tqdm(Image.stream_images(image_paths=image_paths), total=len(image_paths)):
+            if self.validate is True:
+                valid, msg = img.valid(lod_cell_height=self.lod_cell_height, oblong_ratio=oblong_ratio) 
+                if valid is True:
+                    filtered_image_paths[img.path] = img.filename
+                else:
+                    print(timestamp(), msg)
+            else:
+                filtered_image_paths[img.path] = img.filename
+                
+
+        # if there are no remaining images, throw an error
+        if len(filtered_image_paths) == 0:
+            raise Exception("No images were found! Please check your input image glob.")
+
+        # handle the case user provided no metadata
+        if not self.meta_dir:
+            print(timestamp(), "No metadata directory was provided.")
+            self.image_paths = list(filtered_image_paths.keys())
+            self.count = len(self.image_paths)
+            self.filenames = list(filtered_image_paths.values())
+            return
+
+        # handle user metadata: retain only records with image and metadata
+        metaList, self.meta_headers = get_metadata_list(meta_dir=self.meta_dir)
+        metaDict = {clean_filename(i.get(FILE_NAME, "")): i for i in metaList}
+        meta_bn = set(metaDict.keys())
+        img_bn = set(filtered_image_paths.values())
+
+        # identify images with metadata and those without metadata
+        meta_present = img_bn.intersection(meta_bn)
+        meta_missing = list(img_bn - meta_bn)
+
+        # notify the user of images that are missing metadata
+        if meta_missing:
+            print(
+                timestamp(),
+                " ! Some images are missing metadata:\n  -",
+                "\n  - ".join(meta_missing[:10]),
+            )
+            if len(meta_missing) > 10:
+                print(timestamp(), " ...", len(meta_missing) - 10, "more")
+
+            if os.path.exists(self.out_dir) is False:
+                os.makedirs(self.out_dir)
+                
+            missing_dir = os.path.join(self.out_dir,"missing-metadata.txt")
+            with open(missing_dir, "w") as out:
+                out.write("\n".join(meta_missing))
+
+        if not meta_present:
+            raise Exception( f"""No image has matching metadata. Check if '{FILE_NAME}' key was provided in metadata files""")
+
+        # get the sorted lists of images and metadata
+        images = []
+        metadata = []
+        for path, fileName in filtered_image_paths.items():
+            if fileName in meta_present:
+                images.append(path)
+                metadata.append(copy.deepcopy(metaDict[fileName]))
+                self.filenames.append(fileName)
+
+        self.image_paths = images
+        self.metadata = metadata
+        self.count = len(self.image_paths)

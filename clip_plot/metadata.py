@@ -20,7 +20,7 @@ from .layouts import get_layouts, get_heightmap, get_hotspots
 from .utils import is_number, get_path, get_version, write_json, read_json
 
 # %% ../nbs/07_metadata.ipynb 5
-def get_metadata_list(meta_dir: str) -> List[dict]:
+def get_metadata_list(meta_dir: str) -> Union[List[dict], List[str]]:
     """Return a list of objects with image metadata.
 
     Will create 'tags' key if 'category' is in metadata
@@ -64,10 +64,10 @@ def get_metadata_list(meta_dir: str) -> List[dict]:
     for metaDict in metaList:
         if "category" in metaDict and ("tags" in metaDict) is False:
             metaDict.update({"tags": metaDict["category"]})
-    return metaList
+    return metaList, headers
 
 # %% ../nbs/07_metadata.ipynb 6
-def write_metadata(metadata: List[dict], out_dir: str, gzip: Optional[bool] = False, encoding:  Optional[str] = 'utf8'):
+def write_metadata(imageEngine, gzip: Optional[bool] = False, encoding:  Optional[str] = 'utf8'):
     """Write list `metadata` of objects to disk
     
     Args:
@@ -87,6 +87,9 @@ def write_metadata(metadata: List[dict], out_dir: str, gzip: Optional[bool] = Fa
         Improve variable naming
     
     """
+    metadata = imageEngine.metadata
+    out_dir = imageEngine.out_dir
+
     if not metadata:
         return
     
@@ -101,8 +104,9 @@ def write_metadata(metadata: List[dict], out_dir: str, gzip: Optional[bool] = Fa
     
     # Create the lists of images with each tag
     d = defaultdict(list)
-    for i in metadata:
-        filename = clean_filename(i[FILE_NAME])
+    for img in imageEngine:
+        i = img.metadata
+        filename = img.filename
         i["tags"] = [j.strip() for j in i.get("tags", "").split("|")]
         for j in i["tags"]:
             d["__".join(j.split())].append(filename)
@@ -158,7 +162,7 @@ def write_metadata(metadata: List[dict], out_dir: str, gzip: Optional[bool] = Fa
 ##
 
 
-def get_manifest(**kwargs):
+def get_manifest(imageEngine, **kwargs):
     """Create and return the base object for the manifest output file
     
     Args:
@@ -194,7 +198,7 @@ def get_manifest(**kwargs):
         pos[i["idx"]].append([i["x"], i["y"]])
 
     # obtain the paths to each layout's JSON positions
-    layouts = get_layouts(**kwargs)
+    layouts = get_layouts(imageEngine, **kwargs)
     # create a heightmap for the umap layout
     if "umap" in layouts and layouts["umap"]:
         get_heightmap(layouts["umap"]["variants"][0]["layout"], "umap", **kwargs)
@@ -202,7 +206,7 @@ def get_manifest(**kwargs):
     # specify point size scalars
     point_sizes = {}
     point_sizes["min"] = 0
-    point_sizes["grid"] = 1 / ceil(len(kwargs["image_paths"]) ** (1 / 2))
+    point_sizes["grid"] = 1 / ceil(imageEngine.count ** (1 / 2))
     point_sizes["max"] = point_sizes["grid"] * 1.2
     point_sizes["scatter"] = point_sizes["grid"] * 0.2
     point_sizes["initial"] = point_sizes["scatter"]
@@ -226,8 +230,8 @@ def get_manifest(**kwargs):
         "point_sizes": point_sizes,
         "imagelist": get_path("imagelists", "imagelist", **kwargs),
         "atlas_dir": kwargs["atlas_dir"],
-        "metadata": True if kwargs["metadata"] else False,
-        "default_hotspots": get_hotspots(layouts=layouts,
+        "metadata": True if imageEngine.metadata else False,
+        "default_hotspots": get_hotspots(imageEngine, layouts=layouts,
                                          n_preproc_dims=kwargs["cluster_preproc_dims"],
                                          **kwargs),
         "custom_hotspots": get_path(
@@ -236,9 +240,9 @@ def get_manifest(**kwargs):
         "gzipped": kwargs["gzip"],
         "config": {
             "sizes": {
-                "atlas": kwargs["atlas_size"],
-                "cell": kwargs["cell_size"],
-                "lod": kwargs["lod_cell_height"],
+                "atlas": imageEngine.atlas_size,
+                "cell": imageEngine.cell_size,
+                "lod": imageEngine.lod_cell_height,
             },
         },
         "creation_date": datetime.today().strftime("%d-%B-%Y-%H:%M:%S"),
@@ -258,7 +262,7 @@ def get_manifest(**kwargs):
     # create images json
     imagelist = {
         "cell_sizes": sizes,
-        "images": [clean_filename(i) for i in kwargs["image_paths"]],
+        "images": [img.filename for img in imageEngine],
         "atlas": {
             "count": len(atlas_ids),
             "positions": pos,
