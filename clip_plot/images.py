@@ -425,51 +425,34 @@ class Image:
 
         return True, ""
 
-    @staticmethod
-    def stream_images(image_paths: List[str], metadata: Optional[List[dict]] = None) -> 'Image':
-        """Read in all images from args[0], a list of image paths
-        
-        Args:
-            image_paths (list[str]): list of image locations
-            metadata (Optional[list[dist]]): metadata for each image
-        
-        Returns:
-            yields Image instance
-
-        Notes:
-            image is matched to metadata by index location
-                Matching by key would be better
-        """
-        for idx, imgPath in enumerate(image_paths):
-            try:
-                meta = None
-                if metadata and metadata[idx]:
-                    meta = metadata[idx]
-                yield Image(imgPath, meta)
-            except Exception as exc:
-                print(timestamp(), "Image", imgPath, "could not be processed --", exc)
-
-
-
-
 # %% ../nbs/03_images.ipynb 13
 class ImageFactoryBase():
     """Class encapsulates functionality required to access images,
-    including compiling metadata and ho
+    including compiling metadata.
 
     Factory is responsible :
         - Compiling image files and their metadata
         - Filtering and validating images
         - Naming image output names
+        - Providing property values
 
     Image factory needs to be able to provide an Image instance
         - The image instance needs to be have it's metadata (if applicable)
     """
 
+    # Required property values
+    DEFAULT_OPTIONS = {
+        'shuffle': False, # (Optional[bool], default = False): Shuffle image order
+        'atlas_size': 2048, # (int, default = 2048)
+        'cell_size': 32, # (int, default = 32)
+        'lod_cell_height': 128, # (int, default = 128)
+    }
+
     def __init__(self) -> None:
+        # Required initialized properties
         self.count = 0  # Total number of images
-        self.meta_headers = []
-        self.metadata = []
+        self.meta_headers = [] # Headers in metadata
+        self.metadata = [] # List of metadata
 
     def __iter__(self):
         # Yield an Image instance
@@ -477,19 +460,18 @@ class ImageFactoryBase():
     
     def __getitem__(self, index):
         # Return index's Image instance
-        raise NotImplementedError()    
+        raise NotImplementedError()
+    
 
 
 class ImageFactory(ImageFactoryBase):
-    _OPTIONS = {
-        'shuffle': False, # (Optional[bool], default = False): Shuffle image order
+    # Default internal values
+    DEFAULT_OPTIONS = ImageFactoryBase.DEFAULT_OPTIONS.copy()
+    DEFAULT_OPTIONS.update({
         'seed': "", # (int): Seed for random generator
         'max_images': False, # (Union[False,int]): Maximum number of images
-        'atlas_size': 2048, # (int, default = 2048)
-        'cell_size': 32, # (int, default = 32)
-        'lod_cell_height': 128, # (int, default = 128)
         'validate': True, # Validate Images
-    }
+    })
     
     def __init__(self, img_path, out_dir, meta_dir, options={}) -> None:
         super().__init__()
@@ -500,13 +482,13 @@ class ImageFactory(ImageFactoryBase):
         self.image_paths = []
         
         # Load options
-        for option, default in self._OPTIONS.items():
+        for option, default in self.DEFAULT_OPTIONS.items():
             setattr(self, option, options.get(option, default))
 
         self.filter_images()
 
     def __iter__(self):
-        for img in Image.stream_images(image_paths=self.image_paths, metadata=self.metadata):
+        for img in self.stream_images(self.image_paths, self.metadata):
             yield img
 
     def __getitem__(self, index):
@@ -517,7 +499,6 @@ class ImageFactory(ImageFactoryBase):
                 meta = None
     
             return Image(self.image_paths[index], meta)
-        
 
     def filter_images(self):
         """Main method for filtering images given user metadata (if provided)
@@ -529,7 +510,6 @@ class ImageFactory(ImageFactoryBase):
             oblong
 
         -Compare against metadata
-
         
         Args:
             images (str): Directory location of images.
@@ -578,7 +558,7 @@ class ImageFactory(ImageFactoryBase):
         oblong_ratio = self.atlas_size/ self.cell_size
 
         print(timestamp(), "Validating input images")
-        for img in tqdm(Image.stream_images(image_paths=image_paths), total=len(image_paths)):
+        for img in tqdm(self.stream_images(image_paths, []), total=len(image_paths)):
             if self.validate is True:
                 valid, msg = img.valid(lod_cell_height=self.lod_cell_height, oblong_ratio=oblong_ratio) 
                 if valid is True:
@@ -643,3 +623,28 @@ class ImageFactory(ImageFactoryBase):
         self.image_paths = images
         self.metadata = metadata
         self.count = len(self.image_paths)
+
+
+    @staticmethod
+    def stream_images(image_paths: List[str], metadata: Optional[List[dict]] = None) -> 'Image':
+        """Read in all images from args[0], a list of image paths
+        
+        Args:
+            image_paths (list[str]): list of image locations
+            metadata (Optional[list[dist]]): metadata for each image
+        
+        Returns:
+            yields Image instance
+
+        Notes:
+            image is matched to metadata by index location
+                Matching by key would be better
+        """
+        for idx, imgPath in enumerate(image_paths):
+            try:
+                meta = None
+                if metadata and metadata[idx]:
+                    meta = metadata[idx]
+                yield Image(imgPath, meta)
+            except Exception as exc:
+                print(timestamp(), "Image", imgPath, "could not be processed --", exc)

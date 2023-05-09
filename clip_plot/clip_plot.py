@@ -320,7 +320,7 @@ def project_imgs(images:Param(type=str,
                 "Convert a folder of images into a clip-plot visualization"
 
                 # grab local variables as configuration dict
-                config = locals()
+                config = dict(locals())
 
                 # some parameters exist in DEFAULTS but not in the function signature
                 default_only_keys = set(set(DEFAULTS.keys() - config.keys()))
