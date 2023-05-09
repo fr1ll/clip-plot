@@ -1,15 +1,15 @@
 {
     "filename": "36829498c-0eda-4c84-b89d-c893c75cfa68.jpg",
-    "category": "Moth|Colorful|Beautiful",
+    "category": "Moth",
+    "tags": [
+        "Moth",
+        "Colorful",
+        "Beautiful"
+    ],
     "label": "Yellow Beautiful moth Montana",
     "year": "1994",
     "x": "0.75",
     "y": "0.25",
     "lat": "46.62159",
-    "lng": "-111.991405",
-    "tags": [
-        "Moth",
-        "Colorful",
-        "Beautiful"
-    ]
+    "lng": "-111.991405"
 }

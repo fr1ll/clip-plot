@@ -1,15 +1,15 @@
 {
     "filename": "329a4c094-8536-4396-be70-3d9b5d0744d9.jpg",
-    "category": "Colorful|Spots|Beautiful",
+    "category": "Butterfly",
+    "tags": [
+        "Colorful",
+        "Spots",
+        "Beautiful"
+    ],
     "label": "Orange butterfly D.C.",
     "year": "2001",
     "x": "0.166666667",
     "y": "0.833333333",
     "lat": "38.945818",
-    "lng": "-77.075055",
-    "tags": [
-        "Colorful",
-        "Spots",
-        "Beautiful"
-    ]
+    "lng": "-77.075055"
 }

@@ -2984,7 +2984,7 @@ function Filter(obj) {
   this.desktopSelect.className = 'filter';
   var label = document.createElement('div');
   label.className = 'settings-label filter-label';
-  label.textContent = 'Category';
+  label.textContent = 'Tags';
   this.desktopSelect.appendChild(label);
   // create the mobile filter's select
   this.mobileSelect = document.createElement('select');
@@ -3562,7 +3562,7 @@ function Tooltip() {
     },
     {
       elem: document.querySelector('#layout-categorical'),
-      text: 'Arrange images into metadata groups',
+      text: 'Arrange images into category groups',
     },
     {
       elem: document.querySelector('#layout-geographic'),

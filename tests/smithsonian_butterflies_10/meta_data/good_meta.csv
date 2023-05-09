@@ -1,14 +1,14 @@
-filename,category,label,year,x,y,lat,lng
-354747d21-638c-4e23-a655-c0bb4de18941.jpg,Gray|Ugly,Gray ugly butterfly San Juan,2000,0,1,18.406389,-66.063889
-376dd3835-ea28-48ab-b7e8-c7c929a77a01.jpg,Tiny|Ugly|Gray, Tiny ugly gray butterfly Miami,1999,0.083333333,0.916666667,25.769311,-80.222953
-329a4c094-8536-4396-be70-3d9b5d0744d9.jpg,Colorful|Spots|Beautiful,Orange butterfly D.C.,2001,0.166666667,0.833333333,38.945818,-77.075055
-31fd87d81-7ff5-4e50-b718-0d4a259d47c1.jpg,Colorful|Broken,Blue broken butterfly Maine,1975,0.25,0.75,44.823189,-68.805547
-3fee89f9b-ba5c-4f2e-8532-6e390e2cf0c9.jpg,Gray|Moth,Gray Moth ND,2012,0.333333333,0.666666667,46.813648,-100.742568
-329c2b4d5-8137-414b-b98e-ff04907e8ea6.jpg,Spots|Moth,Moth with big Spots Houston,2003,0.416666667,0.583333333,29.752568,-95.363149
-30aeb051d-ee0d-4c5b-8a85-a8da7baef5fd.jpg,Broken|Tiny,Tiny broken butterfly San Diego,2002,0.5,0.5,32.754489,-117.063514
-386168016-7276-4b02-b713-5f36ac2ef452.jpg,Spots|Beautiful|Colorful,Beautiful brown butterfly Sacramento,2010,0.583333333,0.416666667,38.570713,-121.491914
-3c3407493-e0d9-43fe-a2a2-7c43395c90c5.jpg,Moth|Broken|Ugly,Broken ugly moth Seattle,1995,0.666666667,0.333333333,47.59104,-122.329087
-36829498c-0eda-4c84-b89d-c893c75cfa68.jpg,Moth|Colorful|Beautiful,Yellow Beautiful moth Montana,1994,0.75,0.25,46.62159,-111.991405
-0dae7d86-9c14-11ed-a00f-a37ce258aeb3.jpg,Colorful|Beautiful,Beautiful blue butterfly Chicago,1999,0.833333333,0.166666667,41.862054,-87.640223
-9fea3150-a3d4-11ed-aeea-e36f1256f233.jpg,Colorful|Beautiful,Beautiful Monarch butterfly Albuquerque,1990,0.916666667,0.083333333,35.055715,-106.607794
-b5b22412-a658-11ed-aed9-73c79f7a111d.jpg,Colorful|Beautiful,Beautiful Purple butterfly Kansas,1985,1,0,38.73207,-98.388615
+filename,category,tags,label,year,x,y,lat,lng
+354747d21-638c-4e23-a655-c0bb4de18941.jpg,Butterfly,Gray|Ugly,Gray ugly butterfly San Juan,2000,0,1,18.406389,-66.063889
+376dd3835-ea28-48ab-b7e8-c7c929a77a01.jpg,Butterfly,Tiny|Ugly|Gray, Tiny ugly gray butterfly Miami,1999,0.083333333,0.916666667,25.769311,-80.222953
+329a4c094-8536-4396-be70-3d9b5d0744d9.jpg,Butterfly,Colorful|Spots|Beautiful,Orange butterfly D.C.,2001,0.166666667,0.833333333,38.945818,-77.075055
+31fd87d81-7ff5-4e50-b718-0d4a259d47c1.jpg,butterfly,Colorful|Broken,Blue broken butterfly Maine,1975,0.25,0.75,44.823189,-68.805547
+3fee89f9b-ba5c-4f2e-8532-6e390e2cf0c9.jpg,Moth,Gray|Moth,Gray Moth ND,2012,0.333333333,0.666666667,46.813648,-100.742568
+329c2b4d5-8137-414b-b98e-ff04907e8ea6.jpg,Moth,Spots|Moth,Moth with big Spots Houston,2003,0.416666667,0.583333333,29.752568,-95.363149
+30aeb051d-ee0d-4c5b-8a85-a8da7baef5fd.jpg,butterfly,Broken|Tiny,Tiny broken butterfly San Diego,2002,0.5,0.5,32.754489,-117.063514
+386168016-7276-4b02-b713-5f36ac2ef452.jpg,butterfly,Spots|Beautiful|Colorful,Beautiful brown butterfly Sacramento,2010,0.583333333,0.416666667,38.570713,-121.491914
+3c3407493-e0d9-43fe-a2a2-7c43395c90c5.jpg,Moth,Moth|Broken|Ugly,Broken ugly moth Seattle,1995,0.666666667,0.333333333,47.59104,-122.329087
+36829498c-0eda-4c84-b89d-c893c75cfa68.jpg,Moth,Moth|Colorful|Beautiful,Yellow Beautiful moth Montana,1994,0.75,0.25,46.62159,-111.991405
+0dae7d86-9c14-11ed-a00f-a37ce258aeb3.jpg,butterfly,Colorful|Beautiful,Beautiful blue butterfly Chicago,1999,0.833333333,0.166666667,41.862054,-87.640223
+9fea3150-a3d4-11ed-aeea-e36f1256f233.jpg,butterfly,Colorful|Beautiful,Beautiful Monarch butterfly Albuquerque,1990,0.916666667,0.083333333,35.055715,-106.607794
+b5b22412-a658-11ed-aed9-73c79f7a111d.jpg,butterfly,Colorful|Beautiful,Beautiful Purple butterfly Kansas,1985,1,0,38.73207,-98.388615

@@ -1,14 +1,14 @@
 {
     "filename": "0dae7d86-9c14-11ed-a00f-a37ce258aeb3.jpg",
-    "category": "Colorful|Beautiful",
+    "category": "butterfly",
+    "tags": [
+        "Colorful",
+        "Beautiful"
+    ],
     "label": "Beautiful blue butterfly Chicago",
     "year": "1999",
     "x": "0.833333333",
     "y": "0.166666667",
     "lat": "41.862054",
-    "lng": "-87.640223",
-    "tags": [
-        "Colorful",
-        "Beautiful"
-    ]
+    "lng": "-87.640223"
 }

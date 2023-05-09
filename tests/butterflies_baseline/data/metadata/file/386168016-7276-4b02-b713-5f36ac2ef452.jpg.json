@@ -1,15 +1,15 @@
 {
     "filename": "386168016-7276-4b02-b713-5f36ac2ef452.jpg",
-    "category": "Spots|Beautiful|Colorful",
+    "category": "butterfly",
+    "tags": [
+        "Spots",
+        "Beautiful",
+        "Colorful"
+    ],
     "label": "Beautiful brown butterfly Sacramento",
     "year": "2010",
     "x": "0.583333333",
     "y": "0.416666667",
     "lat": "38.570713",
-    "lng": "-121.491914",
-    "tags": [
-        "Spots",
-        "Beautiful",
-        "Colorful"
-    ]
+    "lng": "-121.491914"
 }
