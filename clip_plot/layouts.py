@@ -120,10 +120,12 @@ def get_pointgrid_layout(path, label, **kwargs):
     out_path = get_path("layouts", label + "-jittered", **kwargs)
     if os.path.exists(out_path) and kwargs["use_cache"]:
         return out_path
+    
     arr = np.array(read_json(path, **kwargs))
     if arr.shape[-1] != 2:
         print(timestamp(), "Could not create pointgrid layout because data is not 2D")
         return None
+    
     z = align_points_to_grid(arr, fill=0.01)
     return write_layout(out_path, z, **kwargs)
 
@@ -223,10 +225,14 @@ def get_umap_layout(imageEngine, **kwargs):
                                 **encoding (str): Required if gzip = True
 
     """
+
     vecs = kwargs["vecs"]
-    if kwargs["umap_on_full_dims"]: w = vecs
-    else: w = PCA(n_components=min(100, len(vecs))).fit_transform(vecs)
-    # single model umap
+    if kwargs["umap_on_full_dims"]: 
+        w = vecs
+    else: 
+        w = PCA(n_components=min(100, len(vecs))).fit_transform(vecs)
+
+    # Single model umap?
     if len(kwargs["n_neighbors"]) == 1 and len(kwargs["min_dist"]) == 1:
         return process_single_layout_umap(w, imageEngine, **kwargs)
     else:
@@ -378,8 +384,10 @@ def process_multi_layout_umap(v, **kwargs):
         )
     # map each image's index to itself and create one copy of that map for each layout
     relations_dict = {idx: idx for idx, _ in enumerate(v)}
+
     # determine the subset of params that have already been computed
     uncomputed_params = [i for i in params if not os.path.exists(i["out_path"])]
+
     # determine the filepath where this model will be saved
     model_filename = "umap-" + str(abs(hash(kwargs["images"])))
     model_path = get_path("models", model_filename, **kwargs).replace(".json", ".gz")
@@ -392,6 +400,7 @@ def process_multi_layout_umap(v, **kwargs):
         model = load_model(model_path)
         for i in uncomputed_params:
             model.update(v, relations_dict.copy())
+    
         # after updating, we can read the results from the end of the updated model
         for idx, i in enumerate(uncomputed_params):
             embedding = z.embeddings_[len(uncomputed_params) - idx]
@@ -407,8 +416,10 @@ def process_multi_layout_umap(v, **kwargs):
         )
         for idx, i in enumerate(params):
             write_layout(i["out_path"], z.embeddings_[idx], **kwargs)
+    
         # save the model
         save_model(model, model_path)
+
     # load the list of layout variants
     l = []
     for i in params:
@@ -1028,6 +1039,7 @@ def get_hotspots(imageEngine, layouts={}, use_high_dimensional_vectors=True, n_p
         vecs = kwargs["vecs"]
     else:
         vecs = read_json(layouts["umap"]["variants"][0]["layout"], **kwargs)
+    
     model = get_cluster_model(**kwargs)
     if n_preproc_dims != -1:
         print(timestamp(), f"Reducing dimensions to {n_preproc_dims} for input to HDBSCAN")
@@ -1047,7 +1059,9 @@ def get_hotspots(imageEngine, layouts={}, use_high_dimensional_vectors=True, n_p
                     )
         w = umap.fit(vecs).embedding_
         z = model.fit(w)
-    else: z = model.fit(vecs)
+    else: 
+        z = model.fit(vecs)
+
     # create a map from cluster label to image indices in cluster
     d = defaultdict(lambda: defaultdict(list))
     for idx, i in enumerate(z.labels_):
@@ -1055,6 +1069,7 @@ def get_hotspots(imageEngine, layouts={}, use_high_dimensional_vectors=True, n_p
             d[i]["images"].append(idx)
             d[i]["img"] = imageEngine[idx].filename
             d[i]["layout"] = "inception_vectors"
+
     # remove massive clusters
     deletable = []
     for i in d:
@@ -1065,13 +1080,16 @@ def get_hotspots(imageEngine, layouts={}, use_high_dimensional_vectors=True, n_p
             deletable.append(i)
     for i in deletable:
         del d[i]
+
     # sort the clusers by size and then label the clusters
     clusters = d.values()
     clusters = sorted(clusters, key=lambda i: len(i["images"]), reverse=True)
     for idx, i in enumerate(clusters):
         i["label"] = "Cluster {}".format(idx + 1)
+
     # slice off the first `max_clusters`
     clusters = clusters[: kwargs["max_clusters"]]
+
     # save the hotspots to disk and return the path to the saved json
     print(timestamp(), "Found", len(clusters), "hotspots")
     return write_json(get_path("hotspots", "hotspot", **kwargs), clusters, **kwargs)

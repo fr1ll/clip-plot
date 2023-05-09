@@ -227,7 +227,7 @@ def get_image_paths(images:str, out_dir: str) -> List[str]:
 ##
 
 
-def create_atlas_files(imageEngine: 'ImageFactory', plot_id: str, use_cache: bool) -> str:
+def create_atlas_files(imageEngine, plot_id: str, use_cache: bool) -> str:
     """
     Generate and save to disk all atlases to be used for this visualization
     If square, center each cell in an nxn square, else use uniform height
@@ -337,9 +337,7 @@ class Image:
     
     @property
     def unique_name(self):
-        """Save as name when copying image.
-        Also name used in image list
-        """
+        """Save as name when copying image."""
         if self._unique_name is None:
             self._unique_name = self.filename
         return self._unique_name
