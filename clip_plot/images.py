@@ -120,7 +120,7 @@ def save_image(path: str, x: np.array) -> None:
     img.save(path,format=None)
 
 # %% ../nbs/03_images.ipynb 7
-def write_images(imageEngine: 'ImageFactory') -> None:
+def write_images(imageEngine) -> None:
     """Write all originals and thumbnails images to the output dir.
 
     Images are used by lightbox.
@@ -143,7 +143,7 @@ def write_images(imageEngine: 'ImageFactory') -> None:
     """
     print(timestamp(), "Copying images to output directory")
     for img in tqdm(imageEngine, total=imageEngine.count):
-        filename = img.save_as_name
+        filename = img.unique_name
         # Copy original for lightbox
         org_out_dir = os.path.join(imageEngine.out_dir, "originals")
         if not os.path.exists(org_out_dir):
@@ -320,7 +320,7 @@ class Image:
         self.path = img_path
         self._original = None
         self._filename = None
-        self._save_as = None
+        self._unique_name = None
         self.metadata = metadata if metadata else {}
 
     @property
@@ -336,10 +336,13 @@ class Image:
         return self._filename
     
     @property
-    def save_as_name(self):
-        if self._save_as is None:
-            self._save_as = self.filename
-        return self._save_as
+    def unique_name(self):
+        """Save as name when copying image.
+        Also name used in image list
+        """
+        if self._unique_name is None:
+            self._unique_name = self.filename
+        return self._unique_name
 
     def resize_to_max(self, n: int) -> np.array:
         """Resize self.original so its longest side has n pixels (maintain proportion).

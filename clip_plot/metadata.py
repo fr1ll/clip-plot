@@ -106,7 +106,7 @@ def write_metadata(imageEngine, gzip: Optional[bool] = False, encoding:  Optiona
     d = defaultdict(list)
     for img in imageEngine:
         i = img.metadata
-        filename = img.filename
+        filename = img.unique_name
         i["tags"] = [j.strip() for j in i.get("tags", "").split("|")]
         for j in i["tags"]:
             d["__".join(j.split())].append(filename)
@@ -262,7 +262,7 @@ def get_manifest(imageEngine, **kwargs):
     # create images json
     imagelist = {
         "cell_sizes": sizes,
-        "images": [img.filename for img in imageEngine],
+        "images": [img.unique_name for img in imageEngine],
         "atlas": {
             "count": len(atlas_ids),
             "positions": pos,
