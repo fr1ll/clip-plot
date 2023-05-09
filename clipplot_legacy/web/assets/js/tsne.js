@@ -3562,7 +3562,7 @@ function Tooltip() {
     },
     {
       elem: document.querySelector('#layout-categorical'),
-      text: 'Arrange images into metadata groups',
+      text: 'Arrange images into category groups',
     },
     {
       elem: document.querySelector('#layout-geographic'),
