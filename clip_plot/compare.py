@@ -229,6 +229,9 @@ def comFile():
                         if has_useful_diff is True:
                             log_output(f'{asset} Difference', 2)
                             log_output(msg, 2)
+                        else:
+                            log_output(f'{asset} Difference', 2)
+                            log_output('Unrecognized difference', 2)
                     fail = True
 
                 # Update queue
