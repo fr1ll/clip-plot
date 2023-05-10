@@ -11,7 +11,9 @@ import json
 import copy
 import glob2
 import random
+from abc import ABC, abstractmethod
 from typing import Optional, List, Union
+
 
 import numpy as np
 from tqdm.auto import tqdm
@@ -426,8 +428,8 @@ class Image:
 
         return True, ""
 
-# %% ../nbs/03_images.ipynb 13
-class ImageFactoryBase():
+# %% ../nbs/03_images.ipynb 14
+class ImageFactoryBase(ABC):
     """Class encapsulates functionality required to access images,
     including compiling metadata.
 
@@ -439,7 +441,15 @@ class ImageFactoryBase():
 
     Image factory needs to be able to provide an Image instance
         - The image instance needs to be have it's metadata (if applicable)
-    """
+
+    Notes:
+        Class and their children are required to provide the following properties:
+            out_dir
+            shuffle
+            atlas_size
+            cell_size
+            lod_cell_height
+    """        
 
     # Required property values
     DEFAULT_OPTIONS = {
@@ -449,21 +459,35 @@ class ImageFactoryBase():
         'lod_cell_height': 128, # (int, default = 128)
     }
 
-    def __init__(self) -> None:
+    def __init__(self, out_dir: str) -> None:
+        """Initialize ImageEngine instance
+
+        Args:
+            out_dir (str): output directory of data
+
+        """
         # Required initialized properties
+        self.out_dir = out_dir
         self.count = 0  # Total number of images
         self.meta_headers = [] # Headers in metadata
         self.metadata = [] # List of metadata
 
+        # Required property values
+        self.shuffle = self.DEFAULT_OPTIONS['shuffle']
+        self.atlas_size = self.DEFAULT_OPTIONS['atlas_size']
+        self.cell_size = self.DEFAULT_OPTIONS['cell_size']
+        self.lod_cell_height = self.DEFAULT_OPTIONS['lod_cell_height']
+
+    @abstractmethod
     def __iter__(self):
         # Yield an Image instance
-        raise NotImplementedError()
+        pass
     
+    @abstractmethod
     def __getitem__(self, index):
         # Return index's Image instance
-        raise NotImplementedError()
+        pass
     
-
 
 class ImageFactory(ImageFactoryBase):
     # Default internal values
@@ -475,10 +499,9 @@ class ImageFactory(ImageFactoryBase):
     })
     
     def __init__(self, img_path, out_dir, meta_dir, options={}) -> None:
-        super().__init__()
+        super().__init__(out_dir)
         self.img_path = img_path
         self.meta_dir = meta_dir
-        self.out_dir = out_dir
         self.filenames = []
         self.image_paths = []
         
