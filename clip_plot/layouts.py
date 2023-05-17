@@ -54,7 +54,7 @@ cuml_ready = False
 cluster_method = "hdbscan"
 
 
-# %% ../nbs/05_layouts.ipynb 7
+# %% ../nbs/05_layouts.ipynb 9
 def write_layout(path, obj, **kwargs):
     """Write layout json `obj` to disk and return the path to the saved file
     
@@ -81,7 +81,7 @@ def write_layout(path, obj, **kwargs):
     return write_json(path, obj, **kwargs)
 
 
-# %% ../nbs/05_layouts.ipynb 8
+# %% ../nbs/05_layouts.ipynb 10
 def get_pointgrid_layout(path, label, **kwargs):
     """Gridify the positions in `path` and return the path to this new layout
     
@@ -130,7 +130,7 @@ def get_pointgrid_layout(path, label, **kwargs):
     return write_layout(out_path, z, **kwargs)
 
 
-# %% ../nbs/05_layouts.ipynb 9
+# %% ../nbs/05_layouts.ipynb 11
 def get_umap_layout(imageEngine, **kwargs):
     """Get the x,y positions of images passed through a umap projection
     
@@ -509,7 +509,7 @@ def get_umap_model(**kwargs):
             transform_seed=kwargs["seed"],
         )
 
-# %% ../nbs/05_layouts.ipynb 10
+# %% ../nbs/05_layouts.ipynb 12
 def get_rasterfairy_layout(**kwargs):
     """Get the x, y position of images passed through a rasterfairy projection
     
@@ -659,7 +659,7 @@ def get_custom_layout(imageEngine, **kwargs):
         ),
     }
 
-# %% ../nbs/05_layouts.ipynb 12
+# %% ../nbs/05_layouts.ipynb 14
 def get_date_layout(imageEngine, cols=3, bin_units="years", **kwargs):
     """
     Get the x,y positions of input images based on their dates
@@ -776,7 +776,7 @@ def get_date_layout(imageEngine, cols=3, bin_units="years", **kwargs):
     }
 
 
-# %% ../nbs/05_layouts.ipynb 14
+# %% ../nbs/05_layouts.ipynb 16
 def get_categorical_layout(imageEngine, null_category="Other", margin=2, **kwargs):
     """
     Return a numpy array with shape (n_points, 2) with the point
@@ -936,7 +936,7 @@ class Box:
         self.x = None if len(args) < 4 else args[3]
         self.y = None if len(args) < 5 else args[4]
 
-# %% ../nbs/05_layouts.ipynb 16
+# %% ../nbs/05_layouts.ipynb 18
 def get_geographic_layout(imageEngine, **kwargs):
     """Return a 2D array of image positions corresponding to lat, lng coordinates
     
@@ -1015,7 +1015,7 @@ def process_geojson(geojson_path):
         json.dump(l, out)
 
 
-# %% ../nbs/05_layouts.ipynb 18
+# %% ../nbs/05_layouts.ipynb 20
 def get_hotspots(imageEngine, layouts={}, use_high_dimensional_vectors=True, n_preproc_dims=-1,
                  **kwargs):
     """Return the stable clusters from the condensed tree of connected components from the density graph
@@ -1149,7 +1149,7 @@ def get_heightmap(path, label, **kwargs):
     plt.savefig(out_path, pad_inches=0)
 
 
-# %% ../nbs/05_layouts.ipynb 19
+# %% ../nbs/05_layouts.ipynb 21
 ##
 # Layouts
 ##
