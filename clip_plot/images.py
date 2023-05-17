@@ -274,7 +274,7 @@ def create_atlas_files(imageEngine, plot_id: str, use_cache: bool) -> str:
         appendable = False
         if (x + v) <= imageEngine.atlas_size:
             appendable = True
-        elif (y + (2 * imageEngine.cell_siz)) <= imageEngine.atlas_size:
+        elif (y + (2 * imageEngine.cell_size)) <= imageEngine.atlas_size:
             y += imageEngine.cell_size
             x = 0
             appendable = True
