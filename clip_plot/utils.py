@@ -116,14 +116,23 @@ def get_path(*args, **kwargs):
         out_dir (str)
         add_hash (Optional[bool])
         plot_id (Optional[str]): Required if add_hash is True
+        gzip (Optional[bool])
     
     """
     sub_dir, filename = args
-    out_dir = os.path.join(kwargs["out_dir"], sub_dir) if sub_dir else kwargs["out_dir"]
+    if sub_dir:
+        out_dir = os.path.join(kwargs["out_dir"], sub_dir)
+    else:
+        out_dir =  kwargs["out_dir"]
+
     if kwargs.get("add_hash", True):
-        filename += "-" + kwargs["plot_id"]
+        filename += f'-{kwargs["plot_id"]}'
+
     path = os.path.join(out_dir, filename + ".json")
-    return path + ".gz" if kwargs.get("gzip", False) else path
+    if kwargs.get("gzip", False):
+        path += ".gz"
+
+    return path
 
 # %% ../nbs/01_utils.ipynb 14
 def write_json(path, obj, **kwargs):
