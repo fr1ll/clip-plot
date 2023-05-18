@@ -64,8 +64,8 @@ class BaseLayout(ABC):
     FILENAME = ""
     LABEL_FILENAME = ""
     DEFAULT_OPTIONS = {
-        'scale': False, 
-        'round': False,
+        'scale': True, 
+        'round': True,
         'use_cache': False,
         'gzip': False,
         "encoding": "utf8",
