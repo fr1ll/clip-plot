@@ -806,6 +806,15 @@ def process_single_layout_umap(v, imageEngine, **kwargs):
                         y.append(-1)
                     else:
                         y.append(d[i])
+                """
+                What is y being used for?
+                    y = [0,1,2,...,n]
+                    Appears to be list with each entry matching it's index
+
+                Currently there is no way to have an image with the missing field for "label".
+                For scenarios with metadata, If an image is not matched, it is excluded from
+                the project.  If the meta value is empty, it will still have "" value.
+                """
                 y = np.array(y)
         # project the PCA space down to 2d for visualization
         z = model.fit(v, y=y if np.any(y) else None).embedding_
