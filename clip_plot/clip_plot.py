@@ -92,8 +92,12 @@ def get_clip_plot_root() -> Path:
 
 # %% ../nbs/00_clip_plot.ipynb 13
 def process_images(imageEngine, **kwargs):
-    """Main method for processing user images and metadata"""
+    """
+    Main method for processing user images and metadata
+    It would be nice to list out the image processing steps before getting started
+    """
     kwargs = preprocess_kwargs(**kwargs)
+    print(timestamp(), "Starting image processing pipeline.")
 
     copy_web_assets(out_dir=kwargs['out_dir'])
     if kwargs["copy_web_only"]:
