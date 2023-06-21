@@ -75,7 +75,7 @@ def get_timm_embeds(imageEngine, model_name: str, **kwargs):
         if embed_path.exists() and kwargs["use_cache"]:
             vec = np.load(embed_path)
         else:
-            emb = timm_embed(img.original.resize((299, 299)), model, transform)
+            emb = timm_embed(img.original, model, transform)
             np.save(embed_path, emb)
         embeds.append(emb)
     return np.array(embeds)
