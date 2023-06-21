@@ -24,7 +24,8 @@ from tqdm.auto import tqdm
 
 from . import utils
 from .utils import get_version, FILE_NAME
-from .embeddings import get_inception_vectors
+# from clip_plot.embeddings import get_inception_vectors
+from .embeddings import get_timm_embeds
 from .metadata import get_manifest, write_metadata
 
 from .images import write_images, create_atlas_files, ImageFactory
@@ -110,7 +111,7 @@ def process_images(imageEngine, **kwargs):
     
     kwargs["atlas_dir"] = create_atlas_files(imageEngine, kwargs["plot_id"], kwargs["use_cache"])
     
-    kwargs["vecs"] = get_inception_vectors(imageEngine, **kwargs)
+    kwargs["vecs"] = get_timm_embeds(imageEngine, **kwargs)
     get_manifest(imageEngine, **kwargs)
     write_images(imageEngine)
     print(timestamp(), "Done!")

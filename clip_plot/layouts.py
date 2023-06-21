@@ -473,7 +473,7 @@ class CustomLayout(BaseMetaLayout):
             return
         else:
             print(timestamp(), "Creating custom layout based on xy coordinates in metadata")
-        coords = np.array(coords).astype(np.float)
+        coords = np.array(coords).astype(float)
         coords = (minmax_scale(coords) - 0.5) * 2
         print(timestamp(), "Creating custom layout")
         return {
