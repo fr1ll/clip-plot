@@ -112,7 +112,7 @@ def process_images(imageEngine, **kwargs):
     
     kwargs["atlas_dir"] = create_atlas_files(imageEngine, kwargs["plot_id"], kwargs["use_cache"])
     
-    kwargs["vecs"] = get_timm_embeds(imageEngine, **kwargs)
+    kwargs["vecs"] = get_timm_embeds(imageEngine, model_name=kwargs["embed_model"], **kwargs)
     get_manifest(imageEngine, **kwargs)
     write_images(imageEngine)
     print(timestamp(), "Done!")

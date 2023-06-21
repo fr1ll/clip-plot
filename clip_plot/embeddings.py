@@ -56,7 +56,7 @@ def timm_embed(img, model, transform) -> np.ndarray:
     emb = model(transform(img).unsqueeze(0))
     return emb.detach().numpy().squeeze()
 
-def get_timm_embeds(imageEngine, model_name: str="tf_inception_v3", **kwargs):
+def get_timm_embeds(imageEngine, model_name: str, **kwargs):
     '''
     Create embedding vectors for input images using a pre-trained model from timm
     '''
