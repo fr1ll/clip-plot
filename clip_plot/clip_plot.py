@@ -59,6 +59,7 @@ DEFAULTS = {
     "atlas_size": 2048,
     "cell_size": 32,
     "lod_cell_height": 128, # Why is not in parser?
+    "embed_model": "tf_inception_v3",
     "n_neighbors": [15],
     "min_dist": [0.01],
     "umap_on_full_dims": False,
@@ -278,6 +279,10 @@ def project_imgs(images:Param(type=str,
                         help="the size of atlas cells in px",
                         required=False
                         )=DEFAULTS["cell_size"],
+                embed_model:Param(type=str,
+                        help="pre-trained model from timm library to use to create embedding",
+                        required=False
+                        )=DEFAULTS["embed_model"],
                 n_neighbors:Param(type=int,
                         nargs="+",
                         help="the n_neighbors arguments for UMAP"
