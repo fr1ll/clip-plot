@@ -24,7 +24,8 @@ from tqdm.auto import tqdm
 
 from . import utils
 from .utils import get_version, FILE_NAME
-from .embeddings import get_inception_vectors
+# from clip_plot.embeddings import get_inception_vectors
+from .embeddings import get_timm_embeds
 from .metadata import get_manifest, write_metadata
 
 from .images import write_images, create_atlas_files, ImageFactory
@@ -58,6 +59,7 @@ DEFAULTS = {
     "atlas_size": 2048,
     "cell_size": 32,
     "lod_cell_height": 128, # Why is not in parser?
+    "embed_model": "tf_inception_v3",
     "n_neighbors": [15],
     "min_dist": [0.01],
     "umap_on_full_dims": False,
@@ -110,7 +112,7 @@ def process_images(imageEngine, **kwargs):
     
     kwargs["atlas_dir"] = create_atlas_files(imageEngine, kwargs["plot_id"], kwargs["use_cache"])
     
-    kwargs["vecs"] = get_inception_vectors(imageEngine, **kwargs)
+    kwargs["vecs"] = get_timm_embeds(imageEngine, model_name=kwargs["embed_model"], **kwargs)
     get_manifest(imageEngine, **kwargs)
     write_images(imageEngine)
     print(timestamp(), "Done!")
@@ -277,6 +279,10 @@ def project_imgs(images:Param(type=str,
                         help="the size of atlas cells in px",
                         required=False
                         )=DEFAULTS["cell_size"],
+                embed_model:Param(type=str,
+                        help="pre-trained model from timm library to use to create embedding",
+                        required=False
+                        )=DEFAULTS["embed_model"],
                 n_neighbors:Param(type=int,
                         nargs="+",
                         help="the n_neighbors arguments for UMAP"
