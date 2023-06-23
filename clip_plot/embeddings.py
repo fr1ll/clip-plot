@@ -5,27 +5,14 @@ __all__ = ['accelerator', 'timm_embed_model', 'timm_transform_embed', 'get_timm_
 
 # %% ../nbs/04_embeddings.ipynb 3
 from .utils import timestamp, clean_filename
-from .images import image_to_array, Image
 
 from pathlib import Path
-from more_itertools import chunked
 
 import torch
 import timm
-from torchvision.transforms.functional import pil_to_tensor
 from accelerate import Accelerator
 
 accelerator = Accelerator()
-
-
-### Silence tensorflow
-# import os
-# os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-# import tensorflow as tf
-
-# from tensorflow.keras.applications import InceptionV3
-# from tensorflow.keras.models import Model
-# from tensorflow.keras.applications.inception_v3 import preprocess_input
 
 from tqdm.auto import tqdm
 import numpy as np
@@ -68,6 +55,7 @@ def get_timm_embeds(imageEngine, model_name: str, **kwargs):
     '''
     Create embedding vectors for input images using a pre-trained model from timm
     '''
+    # for now, the output directory is still called "inception" though it is generic
     vector_dir = Path(kwargs["out_dir"]) / "image-vectors" / "inception"
     vector_dir.mkdir(exist_ok=True, parents=True)
 
@@ -77,6 +65,8 @@ def get_timm_embeds(imageEngine, model_name: str, **kwargs):
     embeds = []
 
     model, transform = timm_embed_model(model_name)
+
+    # make some efficiency tweaks to model
     device = accelerator.device
     torch_dtype = torch.float16
     model = accelerator.prepare(model)
@@ -85,36 +75,10 @@ def get_timm_embeds(imageEngine, model_name: str, **kwargs):
     for img in tqdm(imageEngine, total=imageEngine.count):
         embed_path = vector_dir / (clean_filename(img.path) + ".npy")
         if embed_path.exists() and kwargs["use_cache"]:
-            vec = np.load(embed_path)
+            emb = np.load(embed_path)
         else:
+            # create embedding for one image
             emb = timm_transform_embed(img.original, model, transform, device, torch_dtype)
             np.save(embed_path, emb)
         embeds.append(emb)
     return np.array(embeds)
-
-# %% ../nbs/04_embeddings.ipynb 6
-# def get_inception_vectors(imageEngine, **kwargs):
-#     """Create and return Inception vector representation of Image() instances"""
-
-#     vector_dir = Path(kwargs["out_dir"]) / "image-vectors" / "inception"
-#     vector_dir.mkdir(exist_ok=True, parents=True)
-#     base = InceptionV3(
-#         include_top=True,
-#         weights="imagenet",
-#     )
-#     model = Model(inputs=base.input, outputs=base.get_layer("avg_pool").output)
-#     tf.random.set_seed(kwargs["seed"])
-
-#     print(timestamp(), "Creating Inception vectors")
-#     vecs = []   
-
-#     for img in tqdm(imageEngine, total=imageEngine.count):
-#         vector_path = vector_dir / (clean_filename(img.path) + ".npy")
-#         if vector_path.exists() and kwargs["use_cache"]:
-#             vec = np.load(vector_path)
-#         else:
-#             img_processed = preprocess_input(image_to_array(img.original.resize((299, 299))))
-#             vec = model.predict(np.expand_dims(img_processed, 0), verbose = 0).squeeze()
-#             np.save(vector_path, vec)
-#         vecs.append(vec)
-#     return np.array(vecs)

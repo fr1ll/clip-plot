@@ -24,10 +24,8 @@ from tqdm.auto import tqdm
 
 from . import utils
 from .utils import get_version, FILE_NAME
-# from clip_plot.embeddings import get_inception_vectors
 from .embeddings import get_timm_embeds
 from .metadata import get_manifest, write_metadata
-
 from .images import write_images, create_atlas_files, ImageFactory
 
 # %% ../nbs/00_clip_plot.ipynb 6

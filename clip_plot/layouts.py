@@ -27,9 +27,6 @@ import multiprocessing
 # TODO: Change math references to numpy
 
 from hdbscan import HDBSCAN
-# surprise, surprise -- UMAP imports tensorflow if its available
-# this will print ugly warnings unless you set a high log level
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 from umap import UMAP, AlignedUMAP
 
 from sklearn.decomposition import PCA
