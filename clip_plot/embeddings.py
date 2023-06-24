@@ -59,25 +59,25 @@ def timm_transform_embed(img, model, transform, device, dtype) -> np.ndarray:
 
 
 # %% ../nbs/04_embeddings.ipynb 8
-def get_timm_embeds(imageEngine, model_name: str, **kwargs):
+def get_timm_embeds(imageEngine, model_name: str, data_dir: Path, **kwargs):
     '''
     Create embedding vectors for input images using a pre-trained model from timm
     '''
     # for now, the output directory is still called "inception" though it is generic
-    vector_dir = Path(kwargs["out_dir"]) / "image-vectors" / "inception"
+    vector_dir = data_dir / "image-vectors" / "inception"
     vector_dir.mkdir(exist_ok=True, parents=True)
 
     torch.manual_seed(kwargs["seed"])
 
     print(timestamp(), f"Creating embeddings using {model_name}")
     embeds = []
+    embed_paths = []
 
     model, transform = timm_embed_model(model_name)
 
     # make some efficiency tweaks to model
     device = accelerator.device
     model = accelerator.prepare(model)
-    # model = model.to(device, TORCH_DTYPE)
 
     with accelerator.autocast():
         for img in tqdm(imageEngine, total=imageEngine.count):
@@ -89,4 +89,4 @@ def get_timm_embeds(imageEngine, model_name: str, **kwargs):
                 emb = timm_transform_embed(img.original, model, transform, device, TORCH_DTYPE)
                 np.save(embed_path, emb)
             embeds.append(emb)
-    return np.array(embeds)
+    return np.array(embeds), embed_paths
