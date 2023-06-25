@@ -359,7 +359,7 @@ def project_imgs(images:Param(type=str,
                 
                 process_images(imageEngine, **config)
 
-# %% ../nbs/00_clip_plot.ipynb 19
+# %% ../nbs/00_clip_plot.ipynb 20
 @call_parse
 def embed_images(images:Param(type=str,
                         help="path or glob of images to process"
@@ -376,11 +376,12 @@ def embed_images(images:Param(type=str,
                         help="path to a csv or glob of JSON files with image metadata (see readme for format)"
                         )=DEFAULTS["meta_dir"],
                 id:Param(type=str,
-                        help="identifier for table linking embeddings, images, and metadata",
+                        help="identifier for table that links embeddings to images and (optionally) metadata",
                         required=False
                         )=str(uuid.uuid1()),
                 table_format:Param(type=str,
-                        help="Table format -- either parquet or csv",
+                        choices=["parquet", "csv"],
+                        help="format for table linking embeddings, images, and metadata",
                         required=False
                         )="parquet",
                 seed:Param(type=int, help="seed for random processes"
@@ -394,22 +395,22 @@ def embed_images(images:Param(type=str,
                 data_dir = Path.cwd() / Path(out_dir).resolve() / "data"
 
                 imageEngine = ImageFactory(img_path=images, out_dir=data_dir, meta_dir=metadata)
-                _, embed_paths = get_timm_embeds(imageEngine_simple, model_name=embed_model,
+                _, embed_paths = get_timm_embeds(imageEngine, model_name=embed_model,
                                                 data_dir=data_dir, **kwargs)
                 
-                df = pd.DataFrame({"image_paths": imageEngine.image_paths,
-                                   "embed_paths": embed_paths})
-                
-                if len(imageEngine.metadata) > 0: raise NotImplementedError("not handling metadata in table yet")
+                df = pd.DataFrame({"image_path": imageEngine.image_paths,
+                                   "image_filename": imageEngine.filenames,
+                                   "embed_path": embed_paths})
 
-                ## TODO: Add check that table format is either "csv" or "parquet"
+                if len(imageEngine.metadata) > 0:
+                        df_meta = pd.DataFrame(imageEngine.metadata)
+                        df_meta = df_meta.rename(columns={"filename": "image_filename"})
+                        df = df.merge(df_meta, on="image_filename")
+
                 if table_format == "csv":
-                        df.write_csv(data_dir / f"{id}.csv")
-                else: df.write_parquet(data_dir / f"{id}.parquet")
-                
-                
+                        df.to_csv(data_dir / f"EmbedImages__{id}.csv", index=False)
+                else: df.to_parquet(data_dir / f"EmbedImages__{id}.parquet", index=False)
 
-
-# %% ../nbs/00_clip_plot.ipynb 20
+# %% ../nbs/00_clip_plot.ipynb 21
 if __name__ == "__main__":
     project_imgs()
