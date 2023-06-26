@@ -47,7 +47,7 @@ import json
 # %% ../nbs/00_clip_plot.ipynb 10
 DEFAULTS = {
     "images": None,
-    "embeds": None,
+    "tables": None,
     "meta_dir": None,
     "out_dir": "output",
     "max_images": None,
@@ -93,7 +93,7 @@ def get_clip_plot_root() -> Path:
         return Path(__file__).parents[1]
 
 # %% ../nbs/00_clip_plot.ipynb 13
-def project_images(imageEngine, vecs: Optional[np.ndarray]=None, **kwargs):
+def project_images(imageEngine, embeds: Optional[np.ndarray]=None, **kwargs):
     """
     Main method for embedding user images, projecting to 2D, and creating visualization
     It would be nice to list out the image processing steps before getting started
@@ -112,9 +112,12 @@ def project_images(imageEngine, vecs: Optional[np.ndarray]=None, **kwargs):
     
     kwargs["atlas_dir"] = create_atlas_files(imageEngine, kwargs["plot_id"], kwargs["use_cache"])
     
-    if vecs is None:
+    if embeds is None:
         kwargs["vecs"], _ = get_timm_embeds(imageEngine, model_name=kwargs["embed_model"],
                                             data_dir=Path(kwargs["out_dir"]), **kwargs)
+    else:
+        kwargs["vecs"] = embeds
+
     get_manifest(imageEngine, **kwargs)
     write_images(imageEngine)
     print(timestamp(), "Done!")
@@ -245,9 +248,6 @@ def test_no_meta_dir(config):
 def project_imgs(images:Param(type=str,
                         help="path or glob of images to process"
                         )=DEFAULTS["images"],
-                embeds:Param(type=str,
-                        help="path or glob of embeddings to process (must match images folder/file structure)"
-                        )=DEFAULTS["embeds"],
                 tables:Param(type=str,
                         help="path or glob of tables with image_path and embed_path columns (and optionally metadata)"
                         )=None,
@@ -370,8 +370,8 @@ def project_imgs(images:Param(type=str,
                         embeds = [np.load(e) for e in tqdm(table.embed_path)]
                         # A real hack here to ensure consistency between columns
                         imageEngine.image_paths = table.image_path
-                        imageEngine.filename = table.filname
-                        project_images(imageEngine, np.ndarray(embeds), **config)
+                        imageEngine.filename = table.filename
+                        project_images(imageEngine, np.array(embeds), **config)
 
 # %% ../nbs/00_clip_plot.ipynb 21
 @call_parse
