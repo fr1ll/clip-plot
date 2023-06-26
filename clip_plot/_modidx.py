@@ -136,5 +136,4 @@ d = { 'settings': { 'branch': 'main',
                                  'clip_plot.utils.round_date': ('utils.html#round_date', 'clip_plot/utils.py'),
                                  'clip_plot.utils.round_floats': ('utils.html#round_floats', 'clip_plot/utils.py'),
                                  'clip_plot.utils.timestamp': ('utils.html#timestamp', 'clip_plot/utils.py'),
-                                 'clip_plot.utils.write_json': ('utils.html#write_json', 'clip_plot/utils.py')},
-            'clip_plot.web_config': {}}}
+                                 'clip_plot.utils.write_json': ('utils.html#write_json', 'clip_plot/utils.py')}}}
