@@ -7,7 +7,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 # %% auto 0
-__all__ = ['DEFAULTS', 'PILLoadTruncated', 'copy_root_dir', 'get_clip_plot_root', 'process_images', 'umap_args_to_list',
+__all__ = ['DEFAULTS', 'PILLoadTruncated', 'copy_root_dir', 'get_clip_plot_root', 'project_images', 'umap_args_to_list',
            'copy_web_assets', 'test_iiif', 'test_butterfly_duplicate', 'test_butterfly', 'test_butterfly_missing_meta',
            'test_no_meta_dir', 'project_imgs', 'embed_images']
 
@@ -23,6 +23,7 @@ from fastcore.all import *
 from tqdm.auto import tqdm
 
 from . import utils
+from .from_tables import glob_to_tables
 from .utils import get_version, FILE_NAME
 from .embeddings import get_timm_embeds
 from .metadata import get_manifest, write_metadata
@@ -92,9 +93,9 @@ def get_clip_plot_root() -> Path:
         return Path(__file__).parents[1]
 
 # %% ../nbs/00_clip_plot.ipynb 13
-def process_images(imageEngine, vecs: Optional[np.ndarray]=None, **kwargs):
+def project_images(imageEngine, vecs: Optional[np.ndarray]=None, **kwargs):
     """
-    Main method for processing user images and metadata
+    Main method for embedding user images, projecting to 2D, and creating visualization
     It would be nice to list out the image processing steps before getting started
     """
     kwargs = umap_args_to_list(**kwargs)
@@ -118,7 +119,7 @@ def process_images(imageEngine, vecs: Optional[np.ndarray]=None, **kwargs):
     write_images(imageEngine)
     print(timestamp(), "Done!")
 
-
+# %% ../nbs/00_clip_plot.ipynb 14
 def umap_args_to_list(**kwargs):
     """Convert n_neighbors and min_dist arguments into lists
 
@@ -135,7 +136,7 @@ def umap_args_to_list(**kwargs):
             kwargs[i] = [kwargs[i]]
     return kwargs
 
-# %% ../nbs/00_clip_plot.ipynb 14
+# %% ../nbs/00_clip_plot.ipynb 15
 def copy_web_assets(out_dir: str) -> None:
     """Copy the /web directory from the clipplot source to the users cwd.
     Copies version number into assets.
@@ -162,7 +163,7 @@ def copy_web_assets(out_dir: str) -> None:
                 out.write(f)
 
 
-# %% ../nbs/00_clip_plot.ipynb 16
+# %% ../nbs/00_clip_plot.ipynb 17
 copy_root_dir = get_clip_plot_root()
 
 def test_iiif(config):
@@ -239,7 +240,7 @@ def test_no_meta_dir(config):
     return config
 
 
-# %% ../nbs/00_clip_plot.ipynb 18
+# %% ../nbs/00_clip_plot.ipynb 19
 @call_parse
 def project_imgs(images:Param(type=str,
                         help="path or glob of images to process"
@@ -247,6 +248,9 @@ def project_imgs(images:Param(type=str,
                 embeds:Param(type=str,
                         help="path or glob of embeddings to process (must match images folder/file structure)"
                         )=DEFAULTS["embeds"],
+                tables:Param(type=str,
+                        help="path or glob of tables with image_path and embed_path columns (and optionally metadata)"
+                        )=None,
                 metadata:Param(type=str,
                         help="path to a csv or glob of JSON files with image metadata (see readme for format)"
                         )=DEFAULTS["meta_dir"],
@@ -357,9 +361,19 @@ def project_imgs(images:Param(type=str,
                 data_dir = os.path.join(config["out_dir"], "data")
                 imageEngine = ImageFactory(config['images'], data_dir, config['meta_dir'], options)
                 
-                process_images(imageEngine, **config)
+                if tables is None:
+                        project_images(imageEngine, **config)
+                else:
+                        print(timestamp(), "Loading tables")
+                        table = glob_to_tables(tables)
+                        print(timestamp(), "Loading embeddings from disk")
+                        embeds = [np.load(e) for e in tqdm(table.embed_path)]
+                        # A real hack here to ensure consistency between columns
+                        imageEngine.image_paths = table.image_path
+                        imageEngine.filename = table.filname
+                        project_images(imageEngine, np.ndarray(embeds), **config)
 
-# %% ../nbs/00_clip_plot.ipynb 20
+# %% ../nbs/00_clip_plot.ipynb 21
 @call_parse
 def embed_images(images:Param(type=str,
                         help="path or glob of images to process"
@@ -411,6 +425,6 @@ def embed_images(images:Param(type=str,
                         df.to_csv(data_dir / f"EmbedImages__{id}.csv", index=False)
                 else: df.to_parquet(data_dir / f"EmbedImages__{id}.parquet", index=False)
 
-# %% ../nbs/00_clip_plot.ipynb 21
+# %% ../nbs/00_clip_plot.ipynb 22
 if __name__ == "__main__":
     project_imgs()
