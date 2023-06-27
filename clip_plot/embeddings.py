@@ -5,24 +5,19 @@ __all__ = ['MIXED_PRECISION', 'TORCH_DTYPE', 'accelerator', 'timm_embed_model', 
 
 # %% ../nbs/04_embeddings.ipynb 3
 from .utils import timestamp, clean_filename
-
 from pathlib import Path
 
 import torch
-print(f"CUDA is available? {torch.cuda.is_available()}")
-
-
-# %% ../nbs/04_embeddings.ipynb 4
 import timm
 from accelerate import Accelerator
 MIXED_PRECISION = "fp16" if torch.cuda.is_available() else "bf16"
 TORCH_DTYPE = torch.float16 if MIXED_PRECISION == "fp16" else torch.bfloat16
-
 accelerator = Accelerator(mixed_precision=MIXED_PRECISION)
+
 from tqdm.auto import tqdm
 import numpy as np
 
-# %% ../nbs/04_embeddings.ipynb 6
+# %% ../nbs/04_embeddings.ipynb 5
 def timm_embed_model(model_name: str):
     '''
     Load model and image transform to create embeddings
@@ -43,7 +38,7 @@ def timm_embed_model(model_name: str):
     
     return m, t
 
-# %% ../nbs/04_embeddings.ipynb 7
+# %% ../nbs/04_embeddings.ipynb 6
 def timm_transform_embed(img, model, transform, device, dtype) -> np.ndarray:
     '''
     apply transform to image and run inference on it to generate an embedding
@@ -58,26 +53,26 @@ def timm_transform_embed(img, model, transform, device, dtype) -> np.ndarray:
     return emb.detach().cpu().numpy().squeeze()
 
 
-# %% ../nbs/04_embeddings.ipynb 8
-def get_timm_embeds(imageEngine, model_name: str, **kwargs):
+# %% ../nbs/04_embeddings.ipynb 7
+def get_timm_embeds(imageEngine, model_name: str, data_dir: Path, **kwargs):
     '''
     Create embedding vectors for input images using a pre-trained model from timm
     '''
     # for now, the output directory is still called "inception" though it is generic
-    vector_dir = Path(kwargs["out_dir"]) / "image-vectors" / "inception"
+    vector_dir = data_dir / "image-vectors" / "inception"
     vector_dir.mkdir(exist_ok=True, parents=True)
 
     torch.manual_seed(kwargs["seed"])
 
     print(timestamp(), f"Creating embeddings using {model_name}")
     embeds = []
+    embed_paths = []
 
     model, transform = timm_embed_model(model_name)
 
     # make some efficiency tweaks to model
     device = accelerator.device
     model = accelerator.prepare(model)
-    # model = model.to(device, TORCH_DTYPE)
 
     with accelerator.autocast():
         for img in tqdm(imageEngine, total=imageEngine.count):
@@ -89,4 +84,5 @@ def get_timm_embeds(imageEngine, model_name: str, **kwargs):
                 emb = timm_transform_embed(img.original, model, transform, device, TORCH_DTYPE)
                 np.save(embed_path, emb)
             embeds.append(emb)
-    return np.array(embeds)
+            embed_paths.append(embed_path.as_posix())
+    return np.array(embeds), embed_paths

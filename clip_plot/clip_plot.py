@@ -7,9 +7,9 @@ import warnings
 warnings.filterwarnings("ignore")
 
 # %% auto 0
-__all__ = ['DEFAULTS', 'PILLoadTruncated', 'copy_root_dir', 'get_clip_plot_root', 'process_images', 'preprocess_kwargs',
+__all__ = ['DEFAULTS', 'PILLoadTruncated', 'copy_root_dir', 'get_clip_plot_root', 'project_images', 'umap_args_to_list',
            'copy_web_assets', 'test_iiif', 'test_butterfly_duplicate', 'test_butterfly', 'test_butterfly_missing_meta',
-           'test_no_meta_dir', 'project_imgs']
+           'test_no_meta_dir', 'project_imgs', 'embed_images']
 
 # %% ../nbs/00_clip_plot.ipynb 4
 # print separately that we're loading dependencies, as this can take a while
@@ -23,6 +23,7 @@ from fastcore.all import *
 from tqdm.auto import tqdm
 
 from . import utils
+from .from_tables import glob_to_tables
 from .utils import get_version, FILE_NAME
 from .embeddings import get_timm_embeds
 from .metadata import get_manifest, write_metadata
@@ -35,6 +36,7 @@ from typing import Optional, List, Union, Tuple
 import uuid
 import sys
 import os
+import pandas as pd
 
 # %% ../nbs/00_clip_plot.ipynb 8
 import numpy as np
@@ -45,7 +47,7 @@ import json
 # %% ../nbs/00_clip_plot.ipynb 10
 DEFAULTS = {
     "images": None,
-    "embeds": None,
+    "tables": None,
     "meta_dir": None,
     "out_dir": "output",
     "max_images": None,
@@ -91,12 +93,12 @@ def get_clip_plot_root() -> Path:
         return Path(__file__).parents[1]
 
 # %% ../nbs/00_clip_plot.ipynb 13
-def process_images(imageEngine, **kwargs):
+def project_images(imageEngine, embeds: Optional[np.ndarray]=None, **kwargs):
     """
-    Main method for processing user images and metadata
+    Main method for embedding user images, projecting to 2D, and creating visualization
     It would be nice to list out the image processing steps before getting started
     """
-    kwargs = preprocess_kwargs(**kwargs)
+    kwargs = umap_args_to_list(**kwargs)
     print(timestamp(), "Starting image processing pipeline.")
 
     copy_web_assets(out_dir=kwargs['out_dir'])
@@ -110,15 +112,19 @@ def process_images(imageEngine, **kwargs):
     
     kwargs["atlas_dir"] = create_atlas_files(imageEngine, kwargs["plot_id"], kwargs["use_cache"])
     
-    kwargs["vecs"] = get_timm_embeds(imageEngine, model_name=kwargs["embed_model"], **kwargs)
+    if embeds is None:
+        kwargs["vecs"], _ = get_timm_embeds(imageEngine, model_name=kwargs["embed_model"],
+                                            data_dir=Path(kwargs["out_dir"]), **kwargs)
+    else:
+        kwargs["vecs"] = embeds
+
     get_manifest(imageEngine, **kwargs)
     write_images(imageEngine)
     print(timestamp(), "Done!")
 
-
-def preprocess_kwargs(**kwargs):
-    """Preprocess incoming key word arguments
-    Converts n_neighbors and min_dist arguments into a list
+# %% ../nbs/00_clip_plot.ipynb 14
+def umap_args_to_list(**kwargs):
+    """Convert n_neighbors and min_dist arguments into lists
 
     Args:
         n_neighbors (int, list[int], default = [15])
@@ -133,7 +139,7 @@ def preprocess_kwargs(**kwargs):
             kwargs[i] = [kwargs[i]]
     return kwargs
 
-# %% ../nbs/00_clip_plot.ipynb 14
+# %% ../nbs/00_clip_plot.ipynb 15
 def copy_web_assets(out_dir: str) -> None:
     """Copy the /web directory from the clipplot source to the users cwd.
     Copies version number into assets.
@@ -160,7 +166,7 @@ def copy_web_assets(out_dir: str) -> None:
                 out.write(f)
 
 
-# %% ../nbs/00_clip_plot.ipynb 16
+# %% ../nbs/00_clip_plot.ipynb 17
 copy_root_dir = get_clip_plot_root()
 
 def test_iiif(config):
@@ -237,14 +243,14 @@ def test_no_meta_dir(config):
     return config
 
 
-# %% ../nbs/00_clip_plot.ipynb 18
+# %% ../nbs/00_clip_plot.ipynb 19
 @call_parse
 def project_imgs(images:Param(type=str,
                         help="path or glob of images to process"
                         )=DEFAULTS["images"],
-                embeds:Param(type=str,
-                        help="path or glob of embeddings to process (must match images folder/file structure)"
-                        )=DEFAULTS["embeds"],
+                tables:Param(type=str,
+                        help="path or glob of tables with image_path and embed_path columns (and optionally metadata)"
+                        )=None,
                 metadata:Param(type=str,
                         help="path to a csv or glob of JSON files with image metadata (see readme for format)"
                         )=DEFAULTS["meta_dir"],
@@ -290,7 +296,7 @@ def project_imgs(images:Param(type=str,
                         help="the min_dist arguments for UMAP"
                         )=DEFAULTS["min_dist"],
                 umap_on_full_dims:Param(type=store_true,
-                        help="perform PCA prior to main dimensionality reduction"
+                        help="skip PCA (faster dimensionality reduction) prior to UMAP"
                         )=DEFAULTS["umap_on_full_dims"],
                 n_components:Param(type=int,
                         help="the n_components argument for UMAP"
@@ -352,11 +358,73 @@ def project_imgs(images:Param(type=str,
                         'validate': True, 
                 }
 
-                out_dir = os.path.join(config["out_dir"], "data")
-                imageEngine = ImageFactory(config['images'], out_dir, config['meta_dir'], options)
+                data_dir = os.path.join(config["out_dir"], "data")
+                imageEngine = ImageFactory(config['images'], data_dir, config['meta_dir'], options)
                 
-                process_images(imageEngine, **config)
+                if tables is None:
+                        project_images(imageEngine, **config)
+                else:
+                        print(timestamp(), "Loading tables")
+                        table = glob_to_tables(tables)
+                        print(timestamp(), "Loading embeddings from disk")
+                        embeds = [np.load(e) for e in tqdm(table.embed_path)]
+                        # A real hack here to ensure consistency between columns
+                        imageEngine.image_paths = table.image_path
+                        imageEngine.filename = table.filename
+                        project_images(imageEngine, np.array(embeds), **config)
 
-# %% ../nbs/00_clip_plot.ipynb 19
+# %% ../nbs/00_clip_plot.ipynb 21
+@call_parse
+def embed_images(images:Param(type=str,
+                        help="path or glob of images to process"
+                        )=DEFAULTS["images"],
+                embed_model:Param(type=str,
+                        help="pre-trained model from timm library to use to create embedding",
+                        required=False
+                        )=DEFAULTS["embed_model"],
+                out_dir:Param(type=str,
+                        help="the directory to which outputs will be saved",
+                        required=False
+                        )=DEFAULTS["out_dir"],
+                metadata:Param(type=str,
+                        help="path to a csv or glob of JSON files with image metadata (see readme for format)"
+                        )=DEFAULTS["meta_dir"],
+                id:Param(type=str,
+                        help="identifier for table that links embeddings to images and (optionally) metadata",
+                        required=False
+                        )=str(uuid.uuid1()),
+                table_format:Param(type=str,
+                        choices=["parquet", "csv"],
+                        help="format for table linking embeddings, images, and metadata",
+                        required=False
+                        )="parquet",
+                seed:Param(type=int, help="seed for random processes"
+                           )=DEFAULTS["seed"],
+                ):
+                "Embed a folder of images and save embeddings as .npy file to disk"
+
+                kwargs = {"seed": seed, "use_cache": False}
+
+                # using Path.cwd() to handle ../ names -- not sure if this is superstitious
+                data_dir = Path.cwd() / Path(out_dir).resolve() / "data"
+
+                imageEngine = ImageFactory(img_path=images, out_dir=data_dir, meta_dir=metadata)
+                _, embed_paths = get_timm_embeds(imageEngine, model_name=embed_model,
+                                                data_dir=data_dir, **kwargs)
+                
+                df = pd.DataFrame({"image_path": imageEngine.image_paths,
+                                   "image_filename": imageEngine.filenames,
+                                   "embed_path": embed_paths})
+
+                if len(imageEngine.metadata) > 0:
+                        df_meta = pd.DataFrame(imageEngine.metadata)
+                        df_meta = df_meta.rename(columns={"filename": "image_filename"})
+                        df = df.merge(df_meta, on="image_filename")
+
+                if table_format == "csv":
+                        df.to_csv(data_dir / f"EmbedImages__{id}.csv", index=False)
+                else: df.to_parquet(data_dir / f"EmbedImages__{id}.parquet", index=False)
+
+# %% ../nbs/00_clip_plot.ipynb 22
 if __name__ == "__main__":
     project_imgs()
