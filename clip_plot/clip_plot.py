@@ -370,7 +370,7 @@ def project_images(images:Param(type=str,
                         embeds = [np.load(e) for e in tqdm(table.embed_path)]
                         # A real hack here to ensure consistency between columns
                         imageEngine.image_paths = table.image_path
-                        imageEngine.filename = table.filename
+                        imageEngine.filename = table.image_filename
                         _project_images(imageEngine, np.array(embeds), **config)
 
 # %% ../nbs/00_clip_plot.ipynb 21
