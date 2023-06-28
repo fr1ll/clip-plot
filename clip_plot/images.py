@@ -9,7 +9,7 @@ import io
 import os
 import json
 import copy
-import glob2
+from glob import glob
 import random
 from abc import ABC, abstractmethod
 from typing import Optional, List, Union
@@ -211,11 +211,11 @@ def get_image_paths(images:str, out_dir: str) -> List[str]:
             if count == 0:
                 raise Exception('No IIIF images were successfully downloaded!')
 
-            image_paths = glob2.glob(os.path.join(out_dir,"iiif-downloads", "images", "*"))
+            image_paths = glob(os.path.join(out_dir,"iiif-downloads", "images", "*"), recursive=True)
    
     # handle case where images flag points to a glob of images
     if not image_paths:
-        image_paths = glob2.glob(images)
+        image_paths = glob(images, recursive=True)
 
     # handle case user provided no images
     if not image_paths:

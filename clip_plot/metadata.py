@@ -7,7 +7,7 @@ __all__ = ['get_metadata_list', 'write_metadata', 'get_manifest']
 import os
 import csv
 import json
-import glob2
+from glob import glob
 from math import ceil
 from datetime import datetime
 from collections import defaultdict
@@ -56,7 +56,7 @@ def get_metadata_list(meta_dir: str) -> Union[List[dict], List[str]]:
     
     # handle json metadata
     else:
-        for i in glob2.glob(meta_dir):
+        for i in glob(meta_dir, recursive=True):
             with open(i) as f:
                 metaList.append(json.load(f))
 

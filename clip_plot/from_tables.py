@@ -7,6 +7,7 @@ __all__ = ['glob_to_tables']
 import pandas as pd
 import pyarrow.parquet as pq
 from pathlib import Path
+from glob import glob
 
 # %% ../nbs/08_from_tables.ipynb 4
 def glob_to_tables(pattern: str) -> pd.DataFrame:
@@ -14,7 +15,7 @@ def glob_to_tables(pattern: str) -> pd.DataFrame:
     expand a glob of tables, read in the tables,
     and output as concatenated DataFrame
     '''
-    table_paths = list(Path().glob(pattern))
+    table_paths = [Path(p) for p in glob(pattern, recursive=True)]
     if len(table_paths) == 0: raise FileNotFoundError("No tables matched.")
 
     extensions = {p.suffix for p in table_paths}
