@@ -7,9 +7,9 @@ import warnings
 warnings.filterwarnings("ignore")
 
 # %% auto 0
-__all__ = ['DEFAULTS', 'PILLoadTruncated', 'copy_root_dir', 'get_clip_plot_root', 'project_images', 'umap_args_to_list',
-           'copy_web_assets', 'test_iiif', 'test_butterfly_duplicate', 'test_butterfly', 'test_butterfly_missing_meta',
-           'test_no_meta_dir', 'project_imgs', 'embed_images']
+__all__ = ['DEFAULTS', 'PILLoadTruncated', 'copy_root_dir', 'get_clip_plot_root', 'umap_args_to_list', 'copy_web_assets',
+           'test_iiif', 'test_butterfly_duplicate', 'test_butterfly', 'test_butterfly_missing_meta', 'test_no_meta_dir',
+           'project_images', 'embed_images']
 
 # %% ../nbs/00_clip_plot.ipynb 4
 # print separately that we're loading dependencies, as this can take a while
@@ -93,7 +93,7 @@ def get_clip_plot_root() -> Path:
         return Path(__file__).parents[1]
 
 # %% ../nbs/00_clip_plot.ipynb 13
-def project_images(imageEngine, embeds: Optional[np.ndarray]=None, **kwargs):
+def _project_images(imageEngine, embeds: Optional[np.ndarray]=None, **kwargs):
     """
     Main method for embedding user images, projecting to 2D, and creating visualization
     It would be nice to list out the image processing steps before getting started
@@ -245,7 +245,7 @@ def test_no_meta_dir(config):
 
 # %% ../nbs/00_clip_plot.ipynb 19
 @call_parse
-def project_imgs(images:Param(type=str,
+def project_images(images:Param(type=str,
                         help="path or glob of images to process"
                         )=DEFAULTS["images"],
                 tables:Param(type=str,
@@ -362,7 +362,7 @@ def project_imgs(images:Param(type=str,
                 imageEngine = ImageFactory(config['images'], data_dir, config['meta_dir'], options)
                 
                 if tables is None:
-                        project_images(imageEngine, **config)
+                        _project_images(imageEngine, **config)
                 else:
                         print(timestamp(), "Loading tables")
                         table = glob_to_tables(tables)
@@ -371,7 +371,7 @@ def project_imgs(images:Param(type=str,
                         # A real hack here to ensure consistency between columns
                         imageEngine.image_paths = table.image_path
                         imageEngine.filename = table.filename
-                        project_images(imageEngine, np.array(embeds), **config)
+                        _project_images(imageEngine, np.array(embeds), **config)
 
 # %% ../nbs/00_clip_plot.ipynb 21
 @call_parse
@@ -427,4 +427,4 @@ def embed_images(images:Param(type=str,
 
 # %% ../nbs/00_clip_plot.ipynb 22
 if __name__ == "__main__":
-    project_imgs()
+    project_images()
