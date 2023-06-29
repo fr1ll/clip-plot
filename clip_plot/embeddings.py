@@ -72,17 +72,17 @@ def get_timm_embeds(imageEngine, model_name: str, data_dir: Path, **kwargs):
 
     # make some efficiency tweaks to model
     device = accelerator.device
-    model = accelerator.prepare(model)
+    # note passing in global parameter
+    model = accelerator.prepare(model).to(TORCH_DTYPE)
 
-    with accelerator.autocast():
-        for img in tqdm(imageEngine, total=imageEngine.count):
-            embed_path = vector_dir / (clean_filename(img.path) + ".npy")
-            if embed_path.exists() and kwargs["use_cache"]:
-                emb = np.load(embed_path)
-            else:
-                # create embedding for one image
-                emb = timm_transform_embed(img.original, model, transform, device, TORCH_DTYPE)
-                np.save(embed_path, emb)
-            embeds.append(emb)
-            embed_paths.append(embed_path.as_posix())
+    for img in tqdm(imageEngine, total=imageEngine.count):
+        embed_path = vector_dir / (clean_filename(img.path) + ".npy")
+        if embed_path.exists() and kwargs["use_cache"]:
+            emb = np.load(embed_path)
+        else:
+            # create embedding for one image
+            emb = timm_transform_embed(img.original, model, transform, device, TORCH_DTYPE)
+            np.save(embed_path, emb)
+        embeds.append(emb)
+        embed_paths.append(embed_path.as_posix())
     return np.array(embeds), embed_paths
