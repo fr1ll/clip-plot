@@ -7,9 +7,8 @@ import warnings
 warnings.filterwarnings("ignore")
 
 # %% auto 0
-__all__ = ['DEFAULTS', 'PILLoadTruncated', 'copy_root_dir', 'umap_args_to_list', 'copy_web_assets', 'test_iiif',
-           'test_butterfly_duplicate', 'test_butterfly', 'test_butterfly_missing_meta', 'test_no_meta_dir',
-           'project_images', 'embed_images']
+__all__ = ['DEFAULTS', 'PILLoadTruncated', 'copy_root_dir', 'umap_args_to_list', 'test_iiif', 'test_butterfly_duplicate',
+           'test_butterfly', 'test_butterfly_missing_meta', 'test_no_meta_dir', 'project_images', 'embed_images']
 
 # %% ../nbs/00_clip_plot.ipynb 4
 # print separately that we're loading dependencies, as this can take a while
@@ -22,10 +21,8 @@ print(timestamp(), "Beginning to load dependencies")
 from fastcore.all import *
 from tqdm.auto import tqdm
 
-from . import utils
 from .from_tables import glob_to_tables
-from .utils import get_version, FILE_NAME
-from .web_config import get_clip_plot_root
+from .web_config import get_clip_plot_root, copy_web_assets
 from .embeddings import get_timm_embeds
 from .metadata import get_manifest, write_metadata
 from .images import write_images, create_atlas_files, ImageFactory
@@ -133,30 +130,30 @@ def umap_args_to_list(**kwargs):
     return kwargs
 
 # %% ../nbs/00_clip_plot.ipynb 15
-def copy_web_assets(out_dir: str) -> None:
-    """Copy the /web directory from the clipplot source to the users cwd.
-    Copies version number into assets.
+# def copy_web_assets(out_dir: str) -> None:
+#     """Copy the /web directory from the clipplot source to the users cwd.
+#     Copies version number into assets.
     
-    Args: 
-        out_dir (str): directory to copy web assets
+#     Args: 
+#         out_dir (str): directory to copy web assets
 
-    Returns:
-        None
-    """
-    copy_root_dir = get_clip_plot_root()
-    src = copy_root_dir / "clip_plot/web"
+#     Returns:
+#         None
+#     """
+#     copy_root_dir = get_clip_plot_root()
+#     src = copy_root_dir / "clip_plot/web"
 
-    # resolve will handle cases with ../ in the path
-    dest = Path.cwd() / Path(out_dir).resolve()
-    utils.copytree_agnostic(src.as_posix(), dest.as_posix())
+#     # resolve will handle cases with ../ in the path
+#     dest = Path.cwd() / Path(out_dir).resolve()
+#     utils.copytree_agnostic(src.as_posix(), dest.as_posix())
 
-    # write version numbers into output
-    for i in ["index.html", os.path.join("assets", "js", "tsne.js")]:
-        path = os.path.join(dest, i)
-        with open(path, "r") as f:
-            f = f.read().replace("VERSION_NUMBER", get_version())
-            with open(path, "w") as out:
-                out.write(f)
+#     # write version numbers into output
+#     for i in ["index.html", os.path.join("assets", "js", "tsne.js")]:
+#         path = os.path.join(dest, i)
+#         with open(path, "r") as f:
+#             f = f.read().replace("VERSION_NUMBER", get_version())
+#             with open(path, "w") as out:
+#                 out.write(f)
 
 
 # %% ../nbs/00_clip_plot.ipynb 17

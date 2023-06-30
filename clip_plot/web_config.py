@@ -5,8 +5,10 @@ __all__ = ['get_clip_plot_root', 'copy_web_assets']
 
 # %% ../nbs/06_web_config.ipynb 4
 from . import utils
+from .utils import get_version
 from fastcore.all import *
 import os
+from pathlib import Path
 
 # %% ../nbs/06_web_config.ipynb 5
 def get_clip_plot_root() -> Path:
