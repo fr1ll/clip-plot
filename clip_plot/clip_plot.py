@@ -419,11 +419,11 @@ def embed_images(images:Param(type=str,
                 if len(imageEngine.metadata) > 0:
                         df_meta = pd.DataFrame(imageEngine.metadata)
                         df_meta = df_meta.rename(columns={"filename": "image_filename"})
-                        # handle case that df_meta has "image_path" column
+                        # drop "image_path" column if df_meta has it
                         if "image_path" in df_meta.columns:
                                 df_meta = df_meta.drop(columns=["image_path"])
 
-                        df = df.merge(df_meta, on="image_filename")
+                        df = df.merge(df_meta.drop_duplicates(["image_filename"]), on="image_filename")
 
                 if table_format == "csv":
                         df.to_csv(data_dir / f"EmbedImages__{id}.csv", index=False)
