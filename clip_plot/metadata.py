@@ -248,6 +248,11 @@ def get_manifest(imageEngine, **kwargs):
         "creation_date": datetime.today().strftime("%d-%B-%Y-%H:%M:%S"),
     }
 
+    # store parameters that will impact embedding
+    embed_params = ["embed_model", "n_neighbors", "min_dist", "metric", "max_clusters", "min_cluster_size"]
+    for e in embed_params:
+        manifest.update({e: kwargs[e]})
+
     # write the manifest without gzipping
     no_gzip_kwargs = {
         "out_dir": kwargs["out_dir"],
