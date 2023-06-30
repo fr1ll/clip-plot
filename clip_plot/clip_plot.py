@@ -7,8 +7,8 @@ import warnings
 warnings.filterwarnings("ignore")
 
 # %% auto 0
-__all__ = ['DEFAULTS', 'PILLoadTruncated', 'copy_root_dir', 'get_clip_plot_root', 'umap_args_to_list', 'copy_web_assets',
-           'test_iiif', 'test_butterfly_duplicate', 'test_butterfly', 'test_butterfly_missing_meta', 'test_no_meta_dir',
+__all__ = ['DEFAULTS', 'PILLoadTruncated', 'copy_root_dir', 'umap_args_to_list', 'copy_web_assets', 'test_iiif',
+           'test_butterfly_duplicate', 'test_butterfly', 'test_butterfly_missing_meta', 'test_no_meta_dir',
            'project_images', 'embed_images']
 
 # %% ../nbs/00_clip_plot.ipynb 4
@@ -25,6 +25,7 @@ from tqdm.auto import tqdm
 from . import utils
 from .from_tables import glob_to_tables
 from .utils import get_version, FILE_NAME
+from .web_config import get_clip_plot_root
 from .embeddings import get_timm_embeds
 from .metadata import get_manifest, write_metadata
 from .images import write_images, create_atlas_files, ImageFactory
@@ -83,14 +84,6 @@ PILLoadTruncated  = True
 NB: Keras Image class objects return image.size as w,h
     Numpy array representations of images return image.shape as h,w,c
 """
-
-# %% ../nbs/00_clip_plot.ipynb 12
-def get_clip_plot_root() -> Path:
-    # ipython doesn't have __file__ attribute
-    if in_ipython():
-        return Path(utils.__file__).parents[1]
-    else:
-        return Path(__file__).parents[1]
 
 # %% ../nbs/00_clip_plot.ipynb 13
 def _project_images(imageEngine, embeds: Optional[np.ndarray]=None, **kwargs):
