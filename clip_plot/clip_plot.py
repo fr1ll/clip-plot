@@ -91,7 +91,8 @@ def _project_images(imageEngine, embeds: Optional[np.ndarray]=None, **kwargs):
     kwargs = umap_args_to_list(**kwargs)
     print(timestamp(), "Starting image processing pipeline.")
 
-    copy_web_assets(out_dir=kwargs['out_dir'], tagline=kwargs['tagline'])
+    copy_web_assets(out_dir=kwargs['out_dir'],
+                    tagline=kwargs['tagline'], logo=kwargs["logo"])
     if kwargs["copy_web_only"]:
         print(timestamp(), "Done!")
         sys.exit()
@@ -129,34 +130,7 @@ def umap_args_to_list(**kwargs):
             kwargs[i] = [kwargs[i]]
     return kwargs
 
-# %% ../nbs/00_clip_plot.ipynb 15
-# def copy_web_assets(out_dir: str) -> None:
-#     """Copy the /web directory from the clipplot source to the users cwd.
-#     Copies version number into assets.
-    
-#     Args: 
-#         out_dir (str): directory to copy web assets
-
-#     Returns:
-#         None
-#     """
-#     copy_root_dir = get_clip_plot_root()
-#     src = copy_root_dir / "clip_plot/web"
-
-#     # resolve will handle cases with ../ in the path
-#     dest = Path.cwd() / Path(out_dir).resolve()
-#     utils.copytree_agnostic(src.as_posix(), dest.as_posix())
-
-#     # write version numbers into output
-#     for i in ["index.html", os.path.join("assets", "js", "tsne.js")]:
-#         path = os.path.join(dest, i)
-#         with open(path, "r") as f:
-#             f = f.read().replace("VERSION_NUMBER", get_version())
-#             with open(path, "w") as out:
-#                 out.write(f)
-
-
-# %% ../nbs/00_clip_plot.ipynb 17
+# %% ../nbs/00_clip_plot.ipynb 16
 copy_root_dir = get_clip_plot_root()
 
 def test_iiif(config):
@@ -233,7 +207,7 @@ def test_no_meta_dir(config):
     return config
 
 
-# %% ../nbs/00_clip_plot.ipynb 19
+# %% ../nbs/00_clip_plot.ipynb 18
 @call_parse
 def project_images(images:Param(type=str,
                         help="path or glob of images to process"
@@ -247,6 +221,9 @@ def project_images(images:Param(type=str,
                 tagline:Param(type=str,
                         help="tagline for image web page"
                         )="Images arranged by visual similarity",
+                logo:Param(type=str,
+                        help="path to a small, squarish logo -- SVG is best"
+                        )=None,
                 max_images:Param(type=int,
                         help="maximum number of images to process"
                         )=DEFAULTS["max_images"],
@@ -366,7 +343,7 @@ def project_images(images:Param(type=str,
                         imageEngine.filename = table.image_filename
                         _project_images(imageEngine, np.array(embeds), **config)
 
-# %% ../nbs/00_clip_plot.ipynb 21
+# %% ../nbs/00_clip_plot.ipynb 20
 @call_parse
 def embed_images(images:Param(type=str,
                         help="path or glob of images to process"
@@ -422,6 +399,6 @@ def embed_images(images:Param(type=str,
                         df.to_csv(data_dir / f"EmbedImages__{id}.csv", index=False)
                 else: df.to_parquet(data_dir / f"EmbedImages__{id}.parquet", index=False)
 
-# %% ../nbs/00_clip_plot.ipynb 22
+# %% ../nbs/00_clip_plot.ipynb 21
 if __name__ == "__main__":
     project_images()
