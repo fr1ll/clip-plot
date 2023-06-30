@@ -137,4 +137,6 @@ d = { 'settings': { 'branch': 'main',
             'clip_plot.web_config': { 'clip_plot.web_config.copy_web_assets': ( 'web_config.html#copy_web_assets',
                                                                                 'clip_plot/web_config.py'),
                                       'clip_plot.web_config.get_clip_plot_root': ( 'web_config.html#get_clip_plot_root',
-                                                                                   'clip_plot/web_config.py')}}}
+                                                                                   'clip_plot/web_config.py'),
+                                      'clip_plot.web_config.replace_web_strings': ( 'web_config.html#replace_web_strings',
+                                                                                    'clip_plot/web_config.py')}}}

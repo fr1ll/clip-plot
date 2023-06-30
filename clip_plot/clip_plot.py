@@ -91,7 +91,7 @@ def _project_images(imageEngine, embeds: Optional[np.ndarray]=None, **kwargs):
     kwargs = umap_args_to_list(**kwargs)
     print(timestamp(), "Starting image processing pipeline.")
 
-    copy_web_assets(out_dir=kwargs['out_dir'])
+    copy_web_assets(out_dir=kwargs['out_dir'], tagline=kwargs['tagline'])
     if kwargs["copy_web_only"]:
         print(timestamp(), "Done!")
         sys.exit()
@@ -244,6 +244,9 @@ def project_images(images:Param(type=str,
                 metadata:Param(type=str,
                         help="path to a csv or glob of JSON files with image metadata (see readme for format)"
                         )=DEFAULTS["meta_dir"],
+                tagline:Param(type=str,
+                        help="tagline for image web page"
+                        )="Images arranged by visual similarity",
                 max_images:Param(type=int,
                         help="maximum number of images to process"
                         )=DEFAULTS["max_images"],
