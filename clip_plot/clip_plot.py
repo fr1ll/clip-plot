@@ -328,20 +328,20 @@ def project_images(images:Param(type=str,
                         'validate': True, 
                 }
 
-                data_dir = os.path.join(config["out_dir"], "data")
-                imageEngine = ImageFactory(config['images'], data_dir, config['meta_dir'], options)
-                
-                if tables is None:
-                        _project_images(imageEngine, **config)
-                else:
+                if tables is not None:
+                        if images is not None: raise ValueError("Provide either tables or images parameter, not both.")
                         print(timestamp(), "Loading tables")
                         table = glob_to_tables(tables)
+                        config["images"] = list(table.image_path.values)
+                        images = config["images"]
                         print(timestamp(), "Loading embeddings from disk")
-                        embeds = [np.load(e) for e in tqdm(table.embed_path)]
-                        # A real hack here to ensure consistency between columns
-                        imageEngine.image_paths = table.image_path
-                        imageEngine.filename = table.image_filename
-                        _project_images(imageEngine, np.array(embeds), **config)
+                        embeds = np.array([np.load(e) for e in tqdm(table.embed_path)])
+                else: embeds = None
+
+                data_dir = os.path.join(config["out_dir"], "data")
+                imageEngine = ImageFactory(config['images'], data_dir, config['meta_dir'], options)
+
+                _project_images(imageEngine, embeds, **config)
 
 # %% ../nbs/00_clip_plot.ipynb 20
 @call_parse
