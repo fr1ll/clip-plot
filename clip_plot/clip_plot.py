@@ -359,7 +359,7 @@ def embed_images(images:Param(type=str,
                 metadata:Param(type=str,
                         help="path to a csv or glob of JSON files with image metadata (see readme for format)"
                         )=DEFAULTS["meta_dir"],
-                id:Param(type=str,
+                table_id:Param(type=str,
                         help="identifier for table that links embeddings to images and (optionally) metadata",
                         required=False
                         )=str(uuid.uuid1()),
@@ -396,8 +396,8 @@ def embed_images(images:Param(type=str,
                         df = df.merge(df_meta.drop_duplicates(["image_filename"]), on="image_filename")
 
                 if table_format == "csv":
-                        df.to_csv(data_dir / f"EmbedImages__{id}.csv", index=False)
-                else: df.to_parquet(data_dir / f"EmbedImages__{id}.parquet", index=False)
+                        df.to_csv(data_dir / f"EmbedImages__{table_id}.csv", index=False)
+                else: df.to_parquet(data_dir / f"EmbedImages__{table_id}.parquet", index=False)
 
 # %% ../nbs/00_clip_plot.ipynb 21
 if __name__ == "__main__":

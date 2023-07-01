@@ -24,7 +24,6 @@ def replace_web_strings(web_dir: Path, from_to: dict):
     '''sequentially replace strings based on dict'''
     for i in ["index.html", "assets/js/tsne.js"]:
         f = web_dir / i
-        print(f"file to get things replaced: {f.as_posix()}")
         t = f.read_text()
         for k, v in from_to.items():
             t = t.replace(k, v)
@@ -35,7 +34,6 @@ def replace_web_strings(web_dir: Path, from_to: dict):
 def byo_logo(web_dir: Path, logo_path: Path):
     '''copy logo into web folder and replace reference in index.html'''
     logo_dest = web_dir / "assets/images" / logo_path.name
-    print(f"copying logo to {logo_dest.as_posix()}")
     copy(logo_path, logo_dest)
     replace_web_strings(web_dir, {"dhlab-logo.svg": logo_path.name,
                                   "DHLab logo": "Custom logo"
