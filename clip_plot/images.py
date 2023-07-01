@@ -189,8 +189,11 @@ def get_image_paths(images:str, out_dir: str) -> List[str]:
 
     image_paths = None
 
+    # allow images to be input as list, i.e. from tables input
+    if isinstance(images, list):
+        image_paths = images
     # Is images a iiif file or image directory?
-    if os.path.isfile(images):
+    elif os.path.isfile(images):
         # Handle list of IIIF image inputs
         iiif_dir = os.path.join(out_dir,"iiif-downloads")
 
