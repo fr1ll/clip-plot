@@ -33,6 +33,8 @@ def glob_to_tables(pattern: str) -> pd.DataFrame:
 # %% ../nbs/08_from_tables.ipynb 7
 def table_to_meta(table: pd.DataFrame) -> Tuple[List, List]:
     '''convert table to metadata columns and list'''
-    meta_columns = set(table.columns) - set(["image_path", "embed_path", "filename"])
+    # viewer expects filename column
+    table = table.rename(columns={"image_filename": "filename"})
+    meta_columns = set(table.columns) - set(["image_path", "embed_path"])
     df_meta = table[meta_columns]
     return meta_columns, list(df_meta.to_dict(orient='index').values())
