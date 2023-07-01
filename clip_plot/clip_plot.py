@@ -21,7 +21,7 @@ print(timestamp(), "Beginning to load dependencies")
 from fastcore.all import *
 from tqdm.auto import tqdm
 
-from .from_tables import glob_to_tables
+from .from_tables import glob_to_tables, table_to_meta
 from .web_config import get_clip_plot_root, copy_web_assets
 from .embeddings import get_timm_embeds
 from .metadata import get_manifest, write_metadata
@@ -328,7 +328,10 @@ def project_images(images:Param(type=str,
                         'validate': True, 
                 }
 
-                if tables is not None:
+                if not tables:
+                        embeds = None
+                        table = None
+                else:
                         if images is not None: raise ValueError("Provide either tables or images parameter, not both.")
                         print(timestamp(), "Loading tables")
                         table = glob_to_tables(tables)
@@ -336,10 +339,13 @@ def project_images(images:Param(type=str,
                         images = config["images"]
                         print(timestamp(), "Loading embeddings from disk")
                         embeds = np.array([np.load(e) for e in tqdm(table.embed_path)])
-                else: embeds = None
 
                 data_dir = os.path.join(config["out_dir"], "data")
                 imageEngine = ImageFactory(config['images'], data_dir, config['meta_dir'], options)
+                
+                # grab metadata from table if provided
+                if table is not None:
+                        imageEngine.meta_headers, imageEngine.metadata = table_to_meta(table) 
 
                 _project_images(imageEngine, embeds, **config)
 
