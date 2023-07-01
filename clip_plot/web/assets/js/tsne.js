@@ -1995,15 +1995,26 @@ Lasso.prototype.getSelectedMetadata = function(callback) {
         // if all metadata has loaded prepare data download
         if (Object.keys(metadata).length == images.length) {
           var keys = Object.keys(metadata);
-          for (var i=0; i<keys.length; i++) {
-            var m = metadata[keys[i]];
-            rows.push([
-              m.filename || '',
-              (m.tags || []).join('|'),
-              m.description,
-              m.permalink,
-            ])
-          }
+          var cols = Object.keys(metadata[keys[0]]);
+          cols = cols.filter(item => item !== 'filename')
+          cols = cols.filter(item => item !== 'tags')
+          console.log(cols)
+          Object.values(metadata).forEach( m =>{
+              console.log(m)
+              var row = [];
+              // handle two special columns
+              row.push(
+                m.filename || '',
+                (m.tags || []).join('|'),
+              )
+              // handle the other columns
+              cols.forEach(col => {
+                row.push(m[col])
+                }
+              )
+              rows.push(row)
+            }
+          )
           callback(rows);
         }
       }.bind(this));
