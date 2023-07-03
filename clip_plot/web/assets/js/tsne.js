@@ -1998,16 +1998,18 @@ Lasso.prototype.getSelectedMetadata = function(callback) {
           var cols = Object.keys(metadata[keys[0]]);
           cols = cols.filter(item => item !== 'filename')
           cols = cols.filter(item => item !== 'tags')
-          console.log(cols)
+          var headers = ['filename','tags'].concat(cols);
+          // put header labels as first row
+          rows.push(headers)
           Object.values(metadata).forEach( m =>{
               console.log(m)
               var row = [];
-              // handle two special columns
+              // two required columns -- blank if they aren't in input
               row.push(
                 m.filename || '',
                 (m.tags || []).join('|'),
               )
-              // handle the other columns
+              // all other columns
               cols.forEach(col => {
                 row.push(m[col])
                 }
