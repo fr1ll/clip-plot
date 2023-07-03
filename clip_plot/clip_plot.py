@@ -35,6 +35,8 @@ import uuid
 import sys
 import os
 import pandas as pd
+from ast import literal_eval
+import re
 
 # %% ../nbs/00_clip_plot.ipynb 8
 import numpy as np
@@ -88,7 +90,8 @@ def _project_images(imageEngine, embeds: Optional[np.ndarray]=None, **kwargs):
     Main method for embedding user images, projecting to 2D, and creating visualization
     It would be nice to list out the image processing steps before getting started
     """
-    kwargs = umap_args_to_list(**kwargs)
+    for a in ["n_neighbors", "min_dist"]:
+        kwargs[a] = umap_args_to_list(kwargs[a], a)
     print(timestamp(), "Starting image processing pipeline.")
 
     copy_web_assets(out_dir=kwargs['out_dir'],
@@ -114,7 +117,7 @@ def _project_images(imageEngine, embeds: Optional[np.ndarray]=None, **kwargs):
     print(timestamp(), "Done!")
 
 # %% ../nbs/00_clip_plot.ipynb 14
-def umap_args_to_list(**kwargs):
+def umap_args_to_list(arg, argname):
     """Convert n_neighbors and min_dist arguments into lists
 
     Args:
@@ -125,10 +128,15 @@ def umap_args_to_list(**kwargs):
         Convenient hook for preprocessing arguments
     
     """
-    for i in ["n_neighbors", "min_dist"]:
-        if not isinstance(kwargs[i], list):
-            kwargs[i] = [kwargs[i]]
-    return kwargs
+    if isinstance(arg, str):
+        if re.match("^\[[\d\.,\',\"\s]*\]$", arg):
+            return literal_eval(arg)
+        else:
+            raise ValueError(f"Argument {argname} must fit list-like pattern e.g. [5,15.0,]. You provided {arg}")
+    elif not isinstance(arg, list):
+        return [arg]
+    else:
+        return arg
 
 # %% ../nbs/00_clip_plot.ipynb 16
 copy_root_dir = get_clip_plot_root()
@@ -257,11 +265,11 @@ def project_images(images:Param(type=str,
                         help="pre-trained model from timm library to use to create embedding",
                         required=False
                         )=DEFAULTS["embed_model"],
-                n_neighbors:Param(type=int,
+                n_neighbors:Param(type=Union[str,int],
                         nargs="+",
                         help="the n_neighbors arguments for UMAP"
                         )=DEFAULTS["n_neighbors"],
-                min_dist:Param(type=float,
+                min_dist:Param(type=Union[str,float],
                         nargs="+",
                         help="the min_dist arguments for UMAP"
                         )=DEFAULTS["min_dist"],
