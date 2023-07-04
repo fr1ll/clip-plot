@@ -891,7 +891,13 @@ def process_multi_layout_umap(v, **kwargs):
     uncomputed_params = [i for i in params if not os.path.exists(i["out_path"])]
 
     # determine the filepath where this model will be saved
-    model_filename = "umap-" + str(abs(hash(kwargs["images"])))
+    if isinstance(kwargs["images"], list):
+        # images may be a list of strings or may be a string
+        images_hash = str(abs(hash(kwargs["images"][0])))
+    else:
+        images_hash = str(abs(hash(kwargs["images"])))
+    
+    model_filename = "umap-" + images_hash
     model_path = get_path("models", model_filename, **kwargs).replace(".json", ".gz")
     out_dir = os.path.join(kwargs["out_dir"], "models")
     if not os.path.exists(out_dir):
