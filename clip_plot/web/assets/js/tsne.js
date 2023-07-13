@@ -113,7 +113,7 @@ function Data() {
   this.cells = [];
   this.textures = [];
   this.textureProgress = {};
-  this.loadedTextures = 0;
+  this.loadedTextures = 0.0;
   this.boundingBox = {
     x: { min: Number.POSITIVE_INFINITY, max: Number.NEGATIVE_INFINITY, },
     y: { min: Number.POSITIVE_INFINITY, max: Number.NEGATIVE_INFINITY, },
@@ -1547,7 +1547,8 @@ World.prototype.flyTo = function(obj) {
     onUpdate: function() {
       time++;
       var deg = time / (config.transitions.duration * 60); // scale time 0:1
-      THREE.Quaternion.slerp(q0, camera.quaternion, this.camera.quaternion, deg);
+      this.camera.quaternion.copy(q0).slerp(camera.quaternion, deg)
+      // THREE.Quaternion.slerp(q0, camera.quaternion, this.camera.quaternion, deg);
     }.bind(this),
     onComplete: function() {
       var q = camera.quaternion,
@@ -3413,9 +3414,9 @@ Hotspots.prototype.setHotspotHoverBuffer = function(arr) {
 **/
 
 function Globe() {
-  this.globeGeometry = new THREE.Geometry();
+  this.globeGeometry = new THREE.BufferGeometry();
   this.globeMesh = null;
-  this.featureGeometry = new THREE.Geometry();
+  this.featureGeometry = new THREE.BufferGeometry();
   this.featureMesh = null;
 }
 
