@@ -98,8 +98,12 @@ def create_atlases_and_thumbs(imageEngine, plot_id, use_cache:bool=False, autoco
         thumb.save(thumbs_dir / img.unique_name)
 
         # copy resized original
-        orig = resize_to_height(img.original, h=600)
-        orig.save(orig_dir / img.unique_name)
+        fullsize_path = orig_dir / img.unique_name
+        if use_cache and fullsize_path.exists():
+            pass
+        else:
+            fullsize = resize_to_height(img.original, h=600)
+            fullsize.save(orig_dir / img.unique_name)
 
         # create atlas
         cell = resize_to_height(img.original, h=imageEngine.cell_size)
