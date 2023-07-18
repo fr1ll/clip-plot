@@ -53,8 +53,8 @@ def thumb_exact_height(img, h=128):
     resize to an exact height
     '''
     w = np.round(h*(img.width/img.height))
-    w = np.max([w,128]).astype(int)
-    return img.resize((w,128),reducing_gap=2.0)
+    w = np.max([w,h]).astype(int)
+    return img.resize((w,h),reducing_gap=2.0)
 
 # %% ../nbs/03_images.ipynb 10
 def thumbify(img, w=None,  h=128):
@@ -106,7 +106,7 @@ def create_atlases_and_thumbs(imageEngine, plot_id, use_cache:bool=False, autoco
         if (x+cell.width) > atlas_size[0]: # end of a row
             y+=cell.height; x=0
         if (y+cell.height) > atlas_size[0]: # end of first column
-            atlas.save(atlas_dir/f"{n_atlases}.jpg")
+            atlas.save(atlas_dir/f"atlas-{n_atlases}.jpg")
             n_atlases+=1
             x,y=0,0 # start a new atlas
         if x == 0 and y == 0:
@@ -126,7 +126,7 @@ def create_atlases_and_thumbs(imageEngine, plot_id, use_cache:bool=False, autoco
         x+=cell.width
 
     if not (x == 0 and y == 0): # if last atlas wasn't already written
-        atlas.save(atlas_dir/f"{n_atlases}.jpg")
+        atlas.save(atlas_dir/f"atlas-{n_atlases}.jpg")
     return atlas_dir.as_posix(), positions
 
 # %% ../nbs/03_images.ipynb 14
