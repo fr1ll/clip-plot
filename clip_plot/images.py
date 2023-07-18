@@ -2,7 +2,8 @@
 
 # %% auto 0
 __all__ = ['PILLoadTruncated', 'load_image', 'thumb_exact_pad', 'resize_to_max_side', 'resize_to_height',
-           'create_atlases_and_thumbs', 'get_image_paths', 'Image', 'ImageFactoryBase', 'ImageFactory']
+           'autocontrast_symmetric', 'create_atlases_and_thumbs', 'get_image_paths', 'Image', 'ImageFactoryBase',
+           'ImageFactory']
 
 # %% ../nbs/03_images.ipynb 3
 import io
@@ -19,6 +20,8 @@ import numpy as np
 from tqdm.auto import tqdm
 from iiif_downloader import Manifest
 from PIL import Image as pil_image, ImageFile
+from PIL.ImageStat import Stat
+from PIL import ImageEnhance
 
 from .utils import clean_filename, timestamp, FILE_NAME
 from .metadata import get_metadata_list
@@ -68,8 +71,25 @@ def resize_to_height(img, h=128):
     w = np.max([w,h]).astype(int)
     return img.resize((w,h), reducing_gap=2.0)
 
-# %% ../nbs/03_images.ipynb 14
-def create_atlases_and_thumbs(imageEngine, plot_id, use_cache:bool=False, autocontrast=True):
+# %% ../nbs/03_images.ipynb 12
+def autocontrast_symmetric(img: pil_image):
+    '''
+    normalize histogram based on average highs and lows
+    based on PIL's autocontrast, but with modification to make symmetric
+    and also no option to clip the histogram
+    '''
+    lo,hi = Stat(img.convert("L")).extrema[0]
+    avg_lack = (lo + hi - 255)/2
+    print(f"Average distance of extremes: {avg_lack}")
+    contrast_level = min(2.0, 1.0 + avg_lack/20)
+    print(f"Contrast: {contrast_level}")
+    contrast = ImageEnhance.Contrast(img)
+    return contrast.enhance(contrast_level)
+    
+
+
+# %% ../nbs/03_images.ipynb 22
+def create_atlases_and_thumbs(imageEngine, plot_id, use_cache:bool=False, autocontrast:bool=True):
     '''create folder with atlases in data dir'''
 
     print(timestamp(), "Copying images to output directory")
@@ -135,7 +155,7 @@ def create_atlases_and_thumbs(imageEngine, plot_id, use_cache:bool=False, autoco
         atlas.save(atlas_dir/f"atlas-{n_atlases}.jpg")
     return atlas_dir.as_posix(), positions
 
-# %% ../nbs/03_images.ipynb 15
+# %% ../nbs/03_images.ipynb 23
 def get_image_paths(images:str, out_dir: str) -> List[str]:
     """Called once to provide a list of image paths--handles IIIF manifest input.
     
@@ -193,7 +213,7 @@ def get_image_paths(images:str, out_dir: str) -> List[str]:
 
     return image_paths
 
-# %% ../nbs/03_images.ipynb 17
+# %% ../nbs/03_images.ipynb 25
 class Image:
     def __init__(self, img_path: str, metadata: Optional[dict] = None) -> 'Image':
         self.path = img_path
@@ -251,7 +271,7 @@ class Image:
 
         return True, ""
 
-# %% ../nbs/03_images.ipynb 19
+# %% ../nbs/03_images.ipynb 27
 class ImageFactoryBase(ABC):
     """Class encapsulates functionality required to access images,
     including compiling metadata.
