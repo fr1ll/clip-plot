@@ -114,10 +114,10 @@ def create_atlases_and_thumbs(imageEngine, plot_id, use_cache:bool=False, autoco
         atlas.paste(cell, (x,y))
 
         ##! I do not not know why I created the logic below, and I am afraid to remove it
-        # if cell.width > cell_height:
-        #     lod_h = np.round(cell_height*img.height/img.width).astype(np.int32)
-        # else: lod_h = cell_height
-        # lod_w = np.min([lod_h,cell.width])
+        # if thumb.width > imageEngine.lod_cell_height:
+        #     lod_h = np.round(imageEngine.lod_cell_height*img.original.height/img.original.width).astype(np.int32)
+        # else: lod_h = imageEngine.lod_cell_height
+        # lod_w = np.min([lod_h,thumb.width])
 
         positions.append({
             "idx": n_atlases,

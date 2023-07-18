@@ -262,7 +262,6 @@ def get_manifest(imageEngine, atlas_data, **kwargs):
     path = get_path(None, "manifest", add_hash=False, **no_gzip_kwargs)
     write_json(path, manifest, **no_gzip_kwargs)
 
-    # create images json
     imagelist = {
         "cell_sizes": sizes,
         "images": [img.unique_name for img in imageEngine],
@@ -271,4 +270,5 @@ def get_manifest(imageEngine, atlas_data, **kwargs):
             "positions": pos,
         },
     }
+
     write_json(manifest["imagelist"], imagelist, **kwargs)
