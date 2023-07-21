@@ -25,7 +25,7 @@ from .from_tables import glob_to_tables, table_to_meta
 from .web_config import get_clip_plot_root, copy_web_assets
 from .embeddings import get_timm_embeds
 from .metadata import get_manifest, write_metadata
-from .images import write_images, create_atlas_files, ImageFactory
+from .images import create_atlases_and_thumbs, ImageFactory
 
 # %% ../nbs/00_clip_plot.ipynb 6
 from shutil import rmtree
@@ -101,7 +101,7 @@ def _project_images(imageEngine, embeds: Optional[np.ndarray]=None, **kwargs):
     kwargs["out_dir"] = os.path.join(kwargs["out_dir"], "data")
     write_metadata(imageEngine, kwargs["gzip"], kwargs["encoding"])
     
-    kwargs["atlas_dir"] = create_atlas_files(imageEngine, kwargs["plot_id"], kwargs["use_cache"])
+    kwargs["atlas_dir"], atlas_data = create_atlases_and_thumbs(imageEngine, kwargs["plot_id"], kwargs["use_cache"])
     
     if embeds is None:
         kwargs["vecs"], _ = get_timm_embeds(imageEngine, model_name=kwargs["embed_model"],
@@ -109,8 +109,8 @@ def _project_images(imageEngine, embeds: Optional[np.ndarray]=None, **kwargs):
     else:
         kwargs["vecs"] = embeds
 
-    get_manifest(imageEngine, **kwargs)
-    write_images(imageEngine)
+    get_manifest(imageEngine, atlas_data, **kwargs)
+    # write_images(imageEngine)
     print(timestamp(), "Done!")
 
 # %% ../nbs/00_clip_plot.ipynb 14

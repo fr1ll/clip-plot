@@ -162,7 +162,7 @@ def write_metadata(imageEngine, gzip: Optional[bool] = False, encoding:  Optiona
 ##
 
 
-def get_manifest(imageEngine, **kwargs):
+def get_manifest(imageEngine, atlas_data, **kwargs):
     """Create and return the base object for the manifest output file
     
     Args:
@@ -184,16 +184,14 @@ def get_manifest(imageEngine, **kwargs):
 
     Notes:
         Original description is inadequate
-        Function is to big (god function)
+        Function is too big (god function)
     
     """
-    # load the atlas data
-    atlas_data = json.load(open(os.path.join(kwargs["atlas_dir"], "atlas_positions.json")))
     # store each cell's size and atlas position
     atlas_ids = set([i["idx"] for i in atlas_data])
     sizes = [[] for _ in atlas_ids]
     pos = [[] for _ in atlas_ids]
-    for idx, i in enumerate(atlas_data):
+    for i in atlas_data:
         sizes[i["idx"]].append([i["w"], i["h"]])
         pos[i["idx"]].append([i["x"], i["y"]])
 
@@ -264,7 +262,6 @@ def get_manifest(imageEngine, **kwargs):
     path = get_path(None, "manifest", add_hash=False, **no_gzip_kwargs)
     write_json(path, manifest, **no_gzip_kwargs)
 
-    # create images json
     imagelist = {
         "cell_sizes": sizes,
         "images": [img.unique_name for img in imageEngine],
@@ -273,4 +270,5 @@ def get_manifest(imageEngine, **kwargs):
             "positions": pos,
         },
     }
+
     write_json(manifest["imagelist"], imagelist, **kwargs)
