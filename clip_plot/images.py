@@ -2,7 +2,8 @@
 
 # %% auto 0
 __all__ = ['PILLoadTruncated', 'load_image', 'resize_to_max_side', 'resize_to_height', 'autocontrast_preserve_lightness',
-           'create_atlases_and_thumbs', 'get_image_paths', 'Image', 'ImageFactoryBase', 'ImageFactory']
+           'channel_extrema', 'keras_autocontrast_preserve_lightness', 'create_atlases_and_thumbs', 'get_image_paths',
+           'Image', 'ImageFactoryBase', 'ImageFactory']
 
 # %% ../nbs/03_images.ipynb 3
 import io
@@ -13,14 +14,14 @@ from glob import glob
 import random
 from abc import ABC, abstractmethod
 from typing import Optional, List, Union
-
+from rich import print
 
 import numpy as np
 from tqdm.auto import tqdm
 from iiif_downloader import Manifest
 from PIL import Image as pil_image, ImageFile
 from PIL.ImageStat import Stat
-from PIL import ImageEnhance
+from einops import reduce
 
 from .utils import clean_filename, timestamp, FILE_NAME
 from .metadata import get_metadata_list
@@ -70,12 +71,44 @@ def autocontrast_preserve_lightness(img:pil_image, cutoff:float=0.)->pil_image:
     `cutoff` defines a percentage of the histogram to remove before scaling
     '''
     mean_before = Stat(img.convert("L")).mean[0]
-    img = ImageOps.autocontrast(img, preserve_tone=True, cutoff=cutoff)
+    print(f"Before:\t{Stat(img).extrema}")
+    # img = ImageOps.autocontrast(img, preserve_tone=True, cutoff=cutoff)
+    img = ImageOps.autocontrast(img, cutoff=cutoff)
+    print(f"After contrast:\t{Stat(img).extrema}")
     mean_after = Stat(img.convert("L")).mean[0]
     mean_shift = mean_after - mean_before
-    return img.point(lambda i: np.clip(i - mean_shift, 0, 255))
+    img = img.point(lambda i: np.clip(i - mean_shift, 0, 255))
+    print(f"After scale:\t{Stat(img).extrema}")
+    return img
 
-# %% ../nbs/03_images.ipynb 16
+# %% ../nbs/03_images.ipynb 12
+def channel_extrema(x:np.array):
+    min = reduce(x, 'h w c -> c', 'min')
+    max = reduce(x, 'h w c -> c', 'max')
+    return np.dstack((min,max))[0]
+
+# %% ../nbs/03_images.ipynb 13
+def keras_autocontrast_preserve_lightness(img: pil_image) -> pil_image:
+    '''autocontrast lifted from keras library
+    added lightness normalization'''
+    x = np.asarray(img, dtype=float)
+    print(f"Before:\t{channel_extrema(x)}")
+    
+    mean_before = x.mean()
+    x = x - np.min(x)
+    x_max = np.max(x)
+    if x_max != 0:
+        x /= x_max
+    x *= 255
+    print(f"After contrast:\t{channel_extrema(x)}")
+
+    mean_shift = x.mean() - mean_before
+    x = np.clip(x - mean_shift, 0, 255)
+    print(f"After scale:\t{channel_extrema(x)}")
+
+    return pil_image.fromarray(x.astype("uint8"))
+
+# %% ../nbs/03_images.ipynb 19
 def create_atlases_and_thumbs(imageEngine, plot_id, use_cache:bool=False, autocontrast:bool=True):
     '''create folder with atlases in data dir'''
 
@@ -100,7 +133,7 @@ def create_atlases_and_thumbs(imageEngine, plot_id, use_cache:bool=False, autoco
 
         # copy thumbnail
         thumb = resize_to_max_side(img.original, n=imageEngine.lod_cell_height)
-        if autocontrast: thumb=autocontrast_preserve_lightness(thumb, cutoff=0.1)
+        if autocontrast: thumb=keras_autocontrast_preserve_lightness(thumb)
         thumb_w, thumb_h = thumb.width, thumb.height
         thumb.save(thumbs_dir / img.unique_name)
 
@@ -114,7 +147,7 @@ def create_atlases_and_thumbs(imageEngine, plot_id, use_cache:bool=False, autoco
 
         # create atlas
         cell = resize_to_height(img.original, height=imageEngine.cell_size)
-        if autocontrast: cell=autocontrast_preserve_lightness(cell, cutoff=0.1)
+        if autocontrast: cell=keras_autocontrast_preserve_lightness(cell)
 
         if (x+cell.width) > atlas_size[0]: # end of a row
             y+=cell.height; x=0
@@ -142,7 +175,7 @@ def create_atlases_and_thumbs(imageEngine, plot_id, use_cache:bool=False, autoco
         atlas.save(atlas_dir/f"atlas-{n_atlases}.jpg")
     return atlas_dir.as_posix(), positions
 
-# %% ../nbs/03_images.ipynb 17
+# %% ../nbs/03_images.ipynb 20
 def get_image_paths(images:str, out_dir: str) -> List[str]:
     """Called once to provide a list of image paths--handles IIIF manifest input.
     
@@ -200,7 +233,7 @@ def get_image_paths(images:str, out_dir: str) -> List[str]:
 
     return image_paths
 
-# %% ../nbs/03_images.ipynb 19
+# %% ../nbs/03_images.ipynb 22
 class Image:
     def __init__(self, img_path: str, metadata: Optional[dict] = None) -> 'Image':
         self.path = img_path
@@ -258,7 +291,7 @@ class Image:
 
         return True, ""
 
-# %% ../nbs/03_images.ipynb 21
+# %% ../nbs/03_images.ipynb 24
 class ImageFactoryBase(ABC):
     """Class encapsulates functionality required to access images,
     including compiling metadata.
