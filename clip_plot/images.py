@@ -40,9 +40,11 @@ def resize_to_max_side(img:pil_image, n:int=128):
     '''
     w, h = img.size
     if w > h:
-        size =  (n, int(n * h / w))
+        # preserve ratio but ensure height is >=1 pixel
+        size =  (n, max(1, int(n * h / w)))
     else:
-        size =  (int(n * w / h), n)
+        # preserve ratio but ensure width is >=1 pixel
+        size =  (max(1, int(n * w / h)), n)
     return img.resize(size, reducing_gap=2.0)
 
 # %% ../nbs/03_images.ipynb 9
