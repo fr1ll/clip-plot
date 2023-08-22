@@ -36,5 +36,7 @@ def table_to_meta(table: pd.DataFrame) -> Tuple[List, List]:
     # viewer expects filename column
     table = table.rename(columns={"image_filename": "filename"})
     meta_columns = set(table.columns) - set(["image_path", "embed_path"])
+    # convert to list as pandas does not let you index with a set
+    df_meta = list(df_meta)
     df_meta = table[meta_columns]
     return meta_columns, list(df_meta.to_dict(orient='index').values())
