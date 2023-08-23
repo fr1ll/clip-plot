@@ -782,6 +782,20 @@ def process_single_layout_umap(v, imageEngine, **kwargs):
                         path (str)
                         **gzip (Optional[bool]): Default = False
                         **encoding (str): Required if gzip = True
+
+        A. cuml_ready  = True
+            fit model
+        B. cuml_ready  = False
+            if exist and use cache   
+                return out_path
+            if labels
+                populate y
+
+            fit model
+            return dictionary
+
+            
+            
         
     """
     print(timestamp(), "Creating single umap layout")
@@ -792,6 +806,7 @@ def process_single_layout_umap(v, imageEngine, **kwargs):
     else:
         if os.path.exists(out_path) and kwargs["use_cache"]:
             return out_path
+
         y = []
         if "label" in imageEngine.meta_headers:
             labels = [img.metadata.get("label", None) for img in imageEngine]
@@ -804,13 +819,9 @@ def process_single_layout_umap(v, imageEngine, **kwargs):
                     else:
                         y.append(d[i])
                 """
-                What is y being used for?
-                    y = [0,1,2,...,n]
-                    Appears to be list with each entry matching it's index
-
-                Currently there is no way to have an image with the missing field for "label".
-                For scenarios with metadata, If an image is not matched, it is excluded from
-                the project.  If the meta value is empty, it will still have "" value.
+                Currently there is no way to have a particular image with the missing field for 
+                "label". For scenarios with metadata, If an image is not matched, it is excluded from
+                the project.  If the meta value is empty, it will still have "" value .
                 """
                 y = np.array(y)
         # project the PCA space down to 2d for visualization
