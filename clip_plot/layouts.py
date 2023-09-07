@@ -731,7 +731,7 @@ def get_umap_layout(imageEngine, **kwargs):
 
     # Single model umap?
     if len(kwargs["n_neighbors"]) == 1 and len(kwargs["min_dist"]) == 1:
-        return process_single_layout_umap(w, imageEngine, **kwargs)
+        return process_multi_layout_umap(w, imageEngine, **kwargs)
     else:
         return process_multi_layout_umap(w, imageEngine, **kwargs)
 
@@ -908,11 +908,14 @@ def process_multi_layout_umap(v, imageEngine, **kwargs):
                 "out_path": out_path,
             }
         )
+
+    singleLayout = len(params) == 1
+    
     # map each image's index to itself and create one copy of that map for each layout
     relations_dict = {idx: idx for idx, _ in enumerate(v)}
 
     # determine the subset of params that have already been computed
-    uncomputed_params = [i for i in params if not os.path.exists(i["out_path"])]
+    uncomputed_params = [i for i in params if not os.path.exists(i["out_path"]) or kwargs['use_cache']]
 
     # determine the filepath where this model will be saved
     if isinstance(kwargs["images"], list):
@@ -927,8 +930,8 @@ def process_multi_layout_umap(v, imageEngine, **kwargs):
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
 
-    # load or create the model
-    if os.path.exists(model_path):
+    # load or create the model (only for multi layout)
+    if os.path.exists(model_path) and kwargs['use_cache'] and singleLayout is False:
         model = load_model(model_path)
         for i in uncomputed_params:
             model.update(v, relations_dict.copy())
@@ -938,10 +941,7 @@ def process_multi_layout_umap(v, imageEngine, **kwargs):
             embedding = z.embeddings_[len(uncomputed_params) - idx]
             write_layout(i["out_path"], embedding, **kwargs)
     else:
-        model = AlignedUMAP(
-            n_neighbors=[i["n_neighbors"] for i in uncomputed_params],
-            min_dist=[i["min_dist"] for i in uncomputed_params],
-        )
+        # Use labels for fitting if available
         y = []
         if "label" in imageEngine.meta_headers:
             labels = [img.metadata.get("label", None) for img in imageEngine]
@@ -959,17 +959,29 @@ def process_multi_layout_umap(v, imageEngine, **kwargs):
                 the project.  If the meta value is empty, it will still have "" value .
                 """
                 y = np.array(y)
+        
+        # Fit the model on the data
+        if singleLayout is True: # Single layout
+            model = get_umap_model(**kwargs)
+            z = model.fit(v, y=y if np.any(y) else None).embedding_            
+            write_layout(params[0]["out_path"], z, **kwargs)
 
-        # fit the model on the data
-        z = model.fit(
-            [v for _ in params], y=[y for _ in params], relations=[relations_dict for _ in params[1:]]
-        )
-        for idx, i in enumerate(params):
-            write_layout(i["out_path"], z.embeddings_[idx], **kwargs)
+        else:  # Multiple layouts
+            model = AlignedUMAP(
+                n_neighbors=[i["n_neighbors"] for i in uncomputed_params],
+                min_dist=[i["min_dist"] for i in uncomputed_params],
+            )
+            z = model.fit(
+                [v for _ in params], y=[y for _ in params], relations=[relations_dict for _ in params[1:]]
+            )
+            for idx, i in enumerate(params):
+                write_layout(i["out_path"], z.embeddings_[idx], **kwargs)
     
-        # save the model
-        save_model(model, model_path)
-
+            # save the model
+            """ Why are models saved for multi layout but not single layout?
+            """
+            save_model(model, model_path)
+    
     # load the list of layout variants
     l = []
     for i in params:
