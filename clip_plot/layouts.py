@@ -16,7 +16,7 @@ import json
 import math
 import pickle
 import itertools
-from typing import List
+from typing import List, Union
 from collections import defaultdict
 
 import numpy as np
@@ -1000,7 +1000,7 @@ def process_multi_layout_umap(v, imageEngine, **kwargs):
     }
 
 
-def save_model(model: AlignedUMAP, path: str) -> None:
+def save_model(model: Union[AlignedUMAP, UMAP], path: str) -> None:
     """Save AlignedUMAP model as a pickle
 
     Args:
@@ -1013,10 +1013,15 @@ def save_model(model: AlignedUMAP, path: str) -> None:
             attr for attr in model.__dir__() if attr not in params and attr[0] != "_"
         ]
         attributes = {key: model.__getattribute__(key) for key in attributes_names}
-        attributes["embeddings_"] = list(model.embeddings_)
+        if isinstance(model, AlignedUMAP):
+            attributes["embeddings_"] = list(model.embeddings_)
+        else:
+            attributes["embedding_"] = list(model.embedding_)
+
         for x in ["fit", "fit_transform", "update", "get_params", "set_params"]:
             del attributes[x]
         all_params = {
+            "AlignedUMAP": isinstance(model, AlignedUMAP),
             "umap_params": params,
             "umap_attributes": {key: value for key, value in attributes.items()},
         }
@@ -1025,19 +1030,25 @@ def save_model(model: AlignedUMAP, path: str) -> None:
         print(timestamp(), "Could not save model")
 
 
-def load_model(path: str) -> AlignedUMAP:
+def load_model(path: str) -> Union[AlignedUMAP, UMAP]:
     """Load AlignedUMAP from pickle
     
     Args:
         path (str): Location of pickled AlignedUMAP model
     """
     params = pickle.load(open(path, "rb"))
-    model = AlignedUMAP()
+    if params.get("AlignedUMAP") is True:
+        model = AlignedUMAP()
+        embAtt = "embeddings_"
+    else:
+        model = UMAP()
+        embAtt = "embedding_"
     model.set_params(**params.get("umap_params"))
     for attr, value in params.get("umap_attributes").items():
         model.__setattr__(attr, value)
+    
     model.__setattr__(
-        "embeddings_", List(params.get("umap_attributes").get("embeddings_"))
+        embAtt, list(params.get("umap_attributes").get(embAtt))
     )
 
     return model
