@@ -47,6 +47,10 @@ import matplotlib.pyplot as plt
 
 ## TODO: Profile clip-plot on mnist as worst-case for umap (cheap embeddings, high number of points)
 
+"""
+cuML is a suite of fast, GPU-accelerated machine learning algorithms designed for data science and analytical tasks
+https://docs.rapids.ai/api/cuml/stable/
+"""
 cuml_ready = False
 cluster_method = "hdbscan"
 
