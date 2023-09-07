@@ -729,7 +729,7 @@ def get_umap_layout(imageEngine, **kwargs):
     if len(kwargs["n_neighbors"]) == 1 and len(kwargs["min_dist"]) == 1:
         return process_single_layout_umap(w, imageEngine, **kwargs)
     else:
-        return process_multi_layout_umap(w, **kwargs)
+        return process_multi_layout_umap(w, imageEngine, **kwargs)
 
 
 def process_single_layout_umap(v, imageEngine, **kwargs):
@@ -838,7 +838,7 @@ def process_single_layout_umap(v, imageEngine, **kwargs):
     }
 
 
-def process_multi_layout_umap(v, **kwargs):
+def process_multi_layout_umap(v, imageEngine, **kwargs):
     """Create a multi-layout UMAP projection
     
     Args:
@@ -929,9 +929,27 @@ def process_multi_layout_umap(v, **kwargs):
             n_neighbors=[i["n_neighbors"] for i in uncomputed_params],
             min_dist=[i["min_dist"] for i in uncomputed_params],
         )
+        y = []
+        if "label" in imageEngine.meta_headers:
+            labels = [img.metadata.get("label", None) for img in imageEngine]
+            # if the user provided labels, integerize them
+            if any([i for i in labels]):
+                d = defaultdict(lambda: len(d))
+                for i in labels:
+                    if i == None:
+                        y.append(-1)
+                    else:
+                        y.append(d[i])
+                """
+                Currently there is no way to have a particular image with the missing field for 
+                "label". For scenarios with metadata, If an image is not matched, it is excluded from
+                the project.  If the meta value is empty, it will still have "" value .
+                """
+                y = np.array(y)
+
         # fit the model on the data
         z = model.fit(
-            [v for _ in params], relations=[relations_dict for _ in params[1:]]
+            [v for _ in params], y=[y for _ in params], relations=[relations_dict for _ in params[1:]]
         )
         for idx, i in enumerate(params):
             write_layout(i["out_path"], z.embeddings_[idx], **kwargs)
