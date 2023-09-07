@@ -809,7 +809,16 @@ def process_single_layout_umap(v, imageEngine, **kwargs):
         z = model.fit(v).embedding_
     else:
         if os.path.exists(out_path) and kwargs["use_cache"]:
-            return out_path
+            return {
+                'variants': [
+                    {
+                        'n_neighbors': kwargs['n_neighbors'][0],
+                        'min_dist': kwargs['min_dist'][0],
+                        'jittered': get_pointgrid_layout(out_path, 'umap', **kwargs),
+                        'layout': out_path
+                    }
+                ]
+            }
 
         y = []
         if "label" in imageEngine.meta_headers:
