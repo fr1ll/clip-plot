@@ -401,6 +401,14 @@ def embed_images(images:Param(type=str,
 
                         df = df.merge(df_meta.drop_duplicates(["image_filename"]), on="image_filename")
 
+                ## standardize sort order of table
+                # put standard columns first if they exist in df
+                standard_cols = pd.Index(["image_path", "image_filename", "embed_path", "category", "tags", "x", "y"])
+                cols_sorted = standard_cols.intersection(df.columns)
+                # append non-standard columns, sorted alphabetically
+                cols_sorted = cols_sorted.append(df.columns.difference(standard_cols).sort_values())
+                df = df[cols_sorted]
+
                 if table_format == "csv":
                         df.to_csv(data_dir / f"EmbedImages__{table_id}.csv", index=False)
                 else: df.to_parquet(data_dir / f"EmbedImages__{table_id}.parquet", index=False)
