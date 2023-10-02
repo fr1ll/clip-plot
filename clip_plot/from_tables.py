@@ -24,7 +24,7 @@ def glob_to_tables(pattern: str) -> pd.DataFrame:
         dataset = [pd.read_csv(t) for t in table_paths]
         return pd.concat(dataset, ignore_index=True)
     elif extensions == {".parquet"}:
-        dataset = pq.ParquetDataset(table_paths)
+        dataset = pq.ParquetDataset(table_paths, use_legacy_dataset=False)
         return dataset.read().to_pandas()
     else:
         raise ValueError(f"Unsupported table extensions: {extensions}")
