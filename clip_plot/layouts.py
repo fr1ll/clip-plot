@@ -972,7 +972,7 @@ def process_multi_layout_umap(v, imageEngine, **kwargs):
                 min_dist=[i["min_dist"] for i in uncomputed_params],
             )
             z = model.fit(
-                [v for _ in params], y=[y for _ in params], relations=[relations_dict for _ in params[1:]]
+                [v for _ in params], y=[y if np.any(y) else None for _ in params], relations=[relations_dict for _ in params[1:]]
             )
             for idx, i in enumerate(params):
                 write_layout(i["out_path"], z.embeddings_[idx], **kwargs)
