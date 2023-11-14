@@ -29,8 +29,8 @@ so the exciting viz stuff is easier to install
 Initial ambitions coming from PixPlot:
 
 - ☑️ Unpin requirements versions
-- ⬛ Remove all TensorFlow dependencies
-- ⬛ Enable to go directly from what you’d expect to have after running
+- ☑️ Remove all TensorFlow dependencies
+- ☑️ Enable to go directly from what you’d expect to have after running
   `clip-retrieval` inference: i.e. a folder of JPGs and a folder with
   embeddings in numpy format
 
@@ -38,7 +38,7 @@ Later ambitions
 
 - ⬛ Add a linear dimensionality reduction method to complement UMAP
 - ⬛ Include option to output as a desktop app via Tauri
-- ⬛ BYO logo
+- ☑️ BYO logo
 
 ## Acknowledgements
 
