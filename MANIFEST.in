@@ -1,3 +1,0 @@
-graft web
-graft models
-graft clip_plot/web

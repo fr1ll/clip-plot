@@ -1,0 +1,73 @@
+[project]
+name = "clip-plot"
+version = "0.1.0"
+description = "View images arranged by visual similarity"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+dependencies = [
+    "fastcore<=1.5.33",
+    "hdbscan",
+    "matplotlib>=3.10.0",
+    "pandas>=2.2.3",
+    "pillow>=11.1.0",
+    "pyarrow",
+    "pointgrid",
+    "rasterfairy",
+    "timm",
+    "torch",
+    "torchvision",
+    "umap-learn",
+]
+	
+[project.urls]
+repository = "https://github.com/fr1ll/clip-plot"
+documentation = "https://github.com/fr1ll/clip-plot"
+homepage = "https://github.com/fr1ll/clip-plot"
+
+[project.scripts]
+clipplot_from_images = "clip_plot.clip_plot:project_images"
+clipplot_embed_images = "clip_plot.clip_plot:embed_images"
+
+
+[tool.uv]
+package = true
+dev-dependencies = [
+    "clip-plot",
+    "nbdev>=2.3.31",
+    "nbqa>=1.9.0",
+    "ruff>=0.6.8",
+    "setuptools>=75.2.0",
+    # Needed by `nbdev`, but undeclared
+]
+
+[tool.uv.sources]
+bedmap = { workspace = true }
+rasterfairy = { git = "https://github.com/Quasimondo/RasterFairy.git" }
+torch = [
+  { index = "pytorch-cpu" },
+]
+torchvision = [
+  { index = "pytorch-cpu" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+output-format = "concise"  # Works better for CI
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "PD", "PERF", "UP", "C4"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["bedmap"]
+
+[tool.ruff.lint.per-file-ignores]
+# Ignore `E402` (import violations) in all `*.ipynb` files.
+# Reason: nbdev typically does nbdev_export at the end of notebooks
+"*.ipynb" = ["E402"]
