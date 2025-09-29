@@ -36,6 +36,7 @@ dev-dependencies = [
     "clip-plot",
     "nbdev>=2.3.31",
     "nbqa>=1.9.0",
+    "pre-commit>=4.3.0",
     "ruff>=0.6.8",
     "setuptools>=75.2.0",
     # Needed by `nbdev`, but undeclared
