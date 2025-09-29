@@ -14,7 +14,6 @@ from typing import Optional, List, Union
 
 import numpy as np
 from tqdm.auto import tqdm
-from iiif_downloader import Manifest
 from PIL import Image as pil_image, ImageFile
 
 from .utils import clean_filename, timestamp, FILE_NAME
@@ -141,21 +140,15 @@ def create_atlases_and_thumbs(imageEngine, plot_id, use_cache:bool=False):
 
 # %% ../nbs/03_images.ipynb 16
 def get_image_paths(images:str, out_dir: str) -> List[str]:
-    """Called once to provide a list of image paths--handles IIIF manifest input.
+    """Called once to provide a list of image paths.
     
     args:
         images (str): directory location of images.
-        out_dir (str): output directory for downloaded IIIF files.
+        out_dir (str): kept to avoid ruffling IIIF feathers.
 
     returns:
         image_paths list(str): list of image paths.
 
-    Note:
-        Old/previous images are not deleted from IIIF directory.
-
-    Todo:
-        Consider separate function that handles IIIF images
-        from glob images.
     """
 
     image_paths = None
@@ -163,29 +156,6 @@ def get_image_paths(images:str, out_dir: str) -> List[str]:
     # allow images to be input as list, i.e. from tables input
     if isinstance(images, list):
         image_paths = images
-    # Is images a iiif file or image directory?
-    elif os.path.isfile(images):
-        # Handle list of IIIF image inputs
-        iiif_dir = os.path.join(out_dir,"iiif-downloads")
-
-        # Check if directory already contains anything
-        if os.path.exists(iiif_dir) and os.listdir(iiif_dir):
-            print("Warning: IIIF directory already contains content!")
-
-        with open(images) as f:
-            urls = [url.strip() for url in f.read().split("\n") if url.startswith("http")]
-            count = 0
-            for url in urls:
-                try:
-                    Manifest(url=url, out_dir=iiif_dir).save_images(limit=1)
-                    count += 1
-                except:
-                    print(timestamp(), "Could not download url " + url)
-
-            if count == 0:
-                raise Exception('No IIIF images were successfully downloaded!')
-
-            image_paths = glob(os.path.join(out_dir,"iiif-downloads", "images", "*"), recursive=True)
    
     # handle case where images flag points to a glob of images
     if not image_paths:
