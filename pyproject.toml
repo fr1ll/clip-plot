@@ -44,7 +44,7 @@ dev-dependencies = [
 
 [tool.uv.sources]
 bedmap = { workspace = true }
-rasterfairy = { git = "https://github.com/Quasimondo/RasterFairy.git" }
+rasterfairy = { url = "https://github.com/fr1ll/RasterFairy_WheelBuild/releases/download/v1.0.5a/rasterfairy-1.0.5a0-py3-none-any.whl" }
 torch = [
   { index = "pytorch-cpu" },
 ]
