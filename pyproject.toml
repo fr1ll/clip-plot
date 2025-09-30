@@ -1,6 +1,6 @@
 [project]
 name = "clip-plot"
-version = "0.1.1"
+version = "0.1.1a2"
 description = "View images arranged by visual similarity"
 readme = "README.md"
 license = "MIT"
