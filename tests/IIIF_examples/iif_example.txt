@@ -1,3 +1,0 @@
-https://api.bl.uk/metadata/iiif/ark:/81055/vdc_00000004216E/manifest.json?iiif-manifest=1
-https://d.lib.ncsu.edu/collections/catalog/nubian-message-1992-11-30/manifest
-www.d.lib.ncsu.edu/collections/catalog/nubian-message-1992-11-30/manifest
