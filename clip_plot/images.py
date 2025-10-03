@@ -139,16 +139,17 @@ def create_atlases_and_thumbs(imageEngine, plot_id, use_cache:bool=False):
     return atlas_dir.as_posix(), positions
 
 # %% ../nbs/03_images.ipynb 16
-def get_image_paths(images:str, out_dir: str) -> List[str]:
+def get_image_paths(images:str) -> List[str]:
     """Called once to provide a list of image paths.
     
     args:
         images (str): directory location of images.
-        out_dir (str): kept to avoid ruffling IIIF feathers.
 
     returns:
         image_paths list(str): list of image paths.
 
+    Note:
+        Removed IIIF images functionality.
     """
 
     image_paths = None
@@ -354,7 +355,7 @@ class ImageFactory(ImageFactoryBase):
             Need to split function
         """
         # validate that input image names are unique
-        image_paths = get_image_paths(images=self.img_path, out_dir=self.out_dir)
+        image_paths = get_image_paths(images=self.img_path)
         image_names = list(map(clean_filename,image_paths))
         duplicates = set([x for x in image_names if image_names.count(x) > 1])
 
