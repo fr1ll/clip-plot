@@ -304,6 +304,8 @@ def project_images_cli(images:Param(type=str,
                 if table is not None:
                         imageEngine.meta_headers, imageEngine.metadata = table_to_meta(table)
 
+                print(f"Config to project images: {str(config)}")
+
                 _project_images(imageEngine, embeds, **config)
 
 # %% ../nbs/00_clip_plot.ipynb 18
