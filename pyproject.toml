@@ -1,10 +1,10 @@
 [project]
-name = "clip-plot"
-version = "0.1.1a4"
+name="clip-plot"
+version = "0.1.1a5"
 description = "View images arranged by visual similarity"
 readme = "README.md"
 license = "MIT"
-requires-python = ">=3.10"
+requires-python=">=3.10"
 dependencies = [
     "fastcore>=1.8",
     "hdbscan",
@@ -54,9 +54,14 @@ torchvision = [
 ]
 
 [[tool.uv.index]]
-name = "pytorch-cpu"
+name="clip-plot"
 url = "https://download.pytorch.org/whl/cpu"
 explicit = true
+
+[tool.uv.build-backend]
+module-name = "clip_plot"
+module-root = ""
+data = ["clip_plot/web"]
 
 [tool.ruff]
 line-length = 120

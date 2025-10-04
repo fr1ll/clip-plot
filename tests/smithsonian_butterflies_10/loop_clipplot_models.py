@@ -9,7 +9,7 @@ EMBED_MODELS = [
     "timm/vit_small_patch16_dinov3.lvd1689m",
     "timm/vit_large_patch16_dinov3.lvd1689m",
     "timm/vit_large_patch16_dinov3.sat493m",
-    "timm/ViT-SO400M-16-SigLIP2-384",
+    "timm/ViT-SO400M-14-SigLIP2-378",
     "timm/PE-Core-L-14-336"
 ]
 
@@ -33,10 +33,10 @@ def clipplot_many_models(embed_models: list, jpgs: str):
     for m in embed_models:
         start = time.time()
         print(f"Starting with embedding model {m} at {start}")
-        project_images(images=jpgs,
+        project_images.__wrapped__(images=jpgs,
                        out_dir=f"test_outs/{m.split('/')[-1]}",
-                       embed_model=m,
-                       max_images=5)
+                       embed_model=m
+                       )
         end = time.time()
         print(f"Ending time: {end}\tElapsed time: {end-start}")
 

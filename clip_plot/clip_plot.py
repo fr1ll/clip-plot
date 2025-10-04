@@ -8,7 +8,7 @@ warnings.filterwarnings("ignore")
 
 # %% auto 0
 __all__ = ['DEFAULTS', 'PILLoadTruncated', 'copy_root_dir', 'umap_args_to_list', 'test_iiif', 'test_butterfly_duplicate',
-           'test_butterfly', 'test_butterfly_missing_meta', 'test_no_meta_dir', 'project_images', 'embed_images']
+           'test_butterfly_missing_meta', 'test_no_meta_dir', 'project_images', 'embed_images']
 
 # %% ../nbs/00_clip_plot.ipynb 4
 # print separately that we're loading dependencies, as this can take a while
@@ -18,7 +18,8 @@ print(timestamp(), "Beginning to load dependencies")
 
 
 # %% ../nbs/00_clip_plot.ipynb 5
-from fastcore.all import *
+from fastcore.all import call_parse, in_ipython, Param, store_true
+from pathlib import Path
 from tqdm.auto import tqdm
 
 from .from_tables import glob_to_tables, table_to_meta
@@ -82,7 +83,7 @@ NB: Keras Image class objects return image.size as w,h
     Numpy array representations of images return image.shape as h,w,c
 """
 
-# %% ../nbs/00_clip_plot.ipynb 13
+# %% ../nbs/00_clip_plot.ipynb 12
 def _project_images(imageEngine, embeds: Optional[np.ndarray]=None, **kwargs):
     """
     Main method for embedding user images, projecting to 2D, and creating visualization
@@ -113,24 +114,20 @@ def _project_images(imageEngine, embeds: Optional[np.ndarray]=None, **kwargs):
     # write_images(imageEngine)
     print(timestamp(), "Done!")
 
-# %% ../nbs/00_clip_plot.ipynb 14
+# %% ../nbs/00_clip_plot.ipynb 13
 def umap_args_to_list(**kwargs):
     """Convert n_neighbors and min_dist arguments into lists
 
     Args:
         n_neighbors (int, list[int], default = [15])
         min_dist (int, list[int], default = [0.01])
-
-    Notes:
-        Convenient hook for preprocessing arguments
-    
     """
     for i in ["n_neighbors", "min_dist"]:
         if not isinstance(kwargs[i], list):
             kwargs[i] = [kwargs[i]]
     return kwargs
 
-# %% ../nbs/00_clip_plot.ipynb 16
+# %% ../nbs/00_clip_plot.ipynb 15
 copy_root_dir = get_clip_plot_root()
 
 def test_iiif(config):
@@ -161,24 +158,6 @@ def test_butterfly_duplicate(config):
 
     return config
 
-
-def test_butterfly(config):
-    test_images = copy_root_dir/"tests/smithsonian_butterflies_10/jpgs/*.jpg"
-    test_out_dir = copy_root_dir/"tests/smithsonian_butterflies_10/output_test_temp"
-    meta_dir = copy_root_dir/"tests/smithsonian_butterflies_10/meta_data/good_meta.csv"
-    if Path(test_out_dir).exists():
-        rmtree(test_out_dir)
-
-    config["images"] = test_images.as_posix()
-    config["out_dir"] = test_out_dir.as_posix()
-    config["meta_dir"] = meta_dir.as_posix()
-    config["plot_id"] = "test_diff"
-    
-    config["test_mode"] = True
-
-    return config
-
-
 def test_butterfly_missing_meta(config):
     test_images = copy_root_dir/"tests/smithsonian_butterflies_10/jpgs/*.jpg"
     test_out_dir = copy_root_dir/"tests/smithsonian_butterflies_10/output_test_temp"
@@ -193,7 +172,6 @@ def test_butterfly_missing_meta(config):
 
     return config
 
-
 def test_no_meta_dir(config):
     test_images = copy_root_dir/"tests/smithsonian_butterflies_10/jpgs/*.jpg"
     test_out_dir = copy_root_dir/"tests/smithsonian_butterflies_10/output_test_temp"
@@ -207,7 +185,7 @@ def test_no_meta_dir(config):
     return config
 
 
-# %% ../nbs/00_clip_plot.ipynb 18
+# %% ../nbs/00_clip_plot.ipynb 17
 @call_parse
 def project_images(images:Param(type=str,
                         help="path or glob of images to process"
@@ -306,17 +284,11 @@ def project_images(images:Param(type=str,
                 # grab local variables as configuration dict
                 config = dict(locals())
 
+
                 # some parameters exist in DEFAULTS but not in the function signature
                 default_only_keys = set(set(DEFAULTS.keys() - config.keys()))
                 default_only = {k:DEFAULTS[k] for k in default_only_keys}
                 config.update(default_only)
-
-
-                if in_ipython() and config["images"] == None:
-                        print("Clip-plot is being run from ipython")
-                        # at least for now, this means we're in testing mode.
-                        # TODO: pass explicit "test_mode" flag
-                        config = test_butterfly(config)
 
                 options = {
                         'shuffle': config['shuffle'], 
@@ -349,7 +321,7 @@ def project_images(images:Param(type=str,
 
                 _project_images(imageEngine, embeds, **config)
 
-# %% ../nbs/00_clip_plot.ipynb 20
+# %% ../nbs/00_clip_plot.ipynb 19
 @call_parse
 def embed_images(images:Param(type=str,
                         help="path or glob of images to process"
@@ -412,7 +384,3 @@ def embed_images(images:Param(type=str,
                 if table_format == "csv":
                         df.to_csv(data_dir / f"EmbedImages__{table_id}.csv", index=False)
                 else: df.to_parquet(data_dir / f"EmbedImages__{table_id}.parquet", index=False)
-
-# %% ../nbs/00_clip_plot.ipynb 21
-if __name__ == "__main__":
-    project_images()
