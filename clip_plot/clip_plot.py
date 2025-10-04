@@ -7,8 +7,9 @@ import warnings
 warnings.filterwarnings("ignore")
 
 # %% auto 0
-__all__ = ['DEFAULTS', 'PILLoadTruncated', 'copy_root_dir', 'umap_args_to_list', 'test_iiif', 'test_butterfly_duplicate',
-           'test_butterfly_missing_meta', 'test_no_meta_dir', 'project_images', 'embed_images']
+__all__ = ['DEFAULTS', 'PILLoadTruncated', 'copy_root_dir', 'project_images', 'embed_images', 'umap_args_to_list',
+           'test_butterfly_duplicate', 'test_butterfly_missing_meta', 'test_no_meta_dir', 'project_images_cli',
+           'embed_images_cli']
 
 # %% ../nbs/00_clip_plot.ipynb 4
 # print separately that we're loading dependencies, as this can take a while
@@ -19,19 +20,18 @@ print(timestamp(), "Beginning to load dependencies")
 
 # %% ../nbs/00_clip_plot.ipynb 5
 from fastcore.all import call_parse, in_ipython, Param, store_true
-from pathlib import Path
 from tqdm.auto import tqdm
 
 from .from_tables import glob_to_tables, table_to_meta
 from .web_config import get_clip_plot_root, copy_web_assets
-from .embeddings import get_timm_embeds
+from .embeddings import get_embeddings, write_embeddings
 from .metadata import get_manifest, write_metadata
 from .images import create_atlases_and_thumbs, ImageFactory
 
 # %% ../nbs/00_clip_plot.ipynb 6
 from shutil import rmtree
 from pathlib import Path
-from typing import Optional, List, Union, Tuple
+from typing import Optional
 import uuid
 import sys
 import os
@@ -58,7 +58,7 @@ DEFAULTS = {
     "atlas_size": 2048,
     "cell_size": 32,
     "lod_cell_height": 128, # Why is not in parser?
-    "embed_model": "tf_inception_v3",
+    "embed_model": "timm/convnext_tiny.dinov3_lvd1689m",
     "n_neighbors": [15],
     "min_dist": [0.01],
     "umap_on_full_dims": False,
@@ -84,7 +84,7 @@ NB: Keras Image class objects return image.size as w,h
 """
 
 # %% ../nbs/00_clip_plot.ipynb 12
-def _project_images(imageEngine, embeds: Optional[np.ndarray]=None, **kwargs):
+def _project_images(imageEngine, embeds: np.ndarray | None = None, **kwargs):
     """
     Main method for embedding user images, projecting to 2D, and creating visualization
     It would be nice to list out the image processing steps before getting started
@@ -105,8 +105,7 @@ def _project_images(imageEngine, embeds: Optional[np.ndarray]=None, **kwargs):
     kwargs["atlas_dir"], atlas_data = create_atlases_and_thumbs(imageEngine, kwargs["plot_id"], kwargs["use_cache"])
     
     if embeds is None:
-        kwargs["vecs"], _ = get_timm_embeds(imageEngine, model_name=kwargs["embed_model"],
-                                            data_dir=Path(kwargs["out_dir"]), **kwargs)
+        kwargs["vecs"] = get_embeddings(imageEngine, model_name=kwargs["embed_model"])
     else:
         kwargs["vecs"] = embeds
 
@@ -129,20 +128,6 @@ def umap_args_to_list(**kwargs):
 
 # %% ../nbs/00_clip_plot.ipynb 15
 copy_root_dir = get_clip_plot_root()
-
-def test_iiif(config):
-    test_images = copy_root_dir/"tests/IIIF_examples/iif_example.txt"
-    test_out_dir = copy_root_dir/"tests/smithsonian_butterflies_10/output_test_temp"
-
-    if Path(test_out_dir).exists():
-        rmtree(test_out_dir)
-
-    config["images"] = test_images.as_posix()
-    config["out_dir"] = test_out_dir.as_posix()
-    config["plot_id"] = "test_diff"
-
-    return config
-
 
 def test_butterfly_duplicate(config):
     test_images = copy_root_dir/"tests/smithsonian_butterflies_10/jpgs_duplicates/**/*.jpg"
@@ -187,7 +172,7 @@ def test_no_meta_dir(config):
 
 # %% ../nbs/00_clip_plot.ipynb 17
 @call_parse
-def project_images(images:Param(type=str,
+def project_images_cli(images:Param(type=str,
                         help="path or glob of images to process"
                         )=DEFAULTS["images"],
                 tables:Param(type=str,
@@ -286,7 +271,7 @@ def project_images(images:Param(type=str,
 
 
                 # some parameters exist in DEFAULTS but not in the function signature
-                default_only_keys = set(set(DEFAULTS.keys() - config.keys()))
+                default_only_keys = set(DEFAULTS.keys() - config.keys())
                 default_only = {k:DEFAULTS[k] for k in default_only_keys}
                 config.update(default_only)
 
@@ -317,13 +302,17 @@ def project_images(images:Param(type=str,
                 
                 # grab metadata from table if provided
                 if table is not None:
-                        imageEngine.meta_headers, imageEngine.metadata = table_to_meta(table) 
+                        imageEngine.meta_headers, imageEngine.metadata = table_to_meta(table)
 
                 _project_images(imageEngine, embeds, **config)
 
-# %% ../nbs/00_clip_plot.ipynb 19
+# %% ../nbs/00_clip_plot.ipynb 18
+# awful workaround because I think call_parse only works with sys.argv (cli)
+project_images = project_images_cli.__wrapped__
+
+# %% ../nbs/00_clip_plot.ipynb 20
 @call_parse
-def embed_images(images:Param(type=str,
+def embed_images_cli(images:Param(type=str,
                         help="path or glob of images to process"
                         )=DEFAULTS["images"],
                 embed_model:Param(type=str,
@@ -346,23 +335,21 @@ def embed_images(images:Param(type=str,
                         help="format for table linking embeddings, images, and metadata",
                         required=False
                         )="parquet",
-                seed:Param(type=int, help="seed for random processes"
-                           )=DEFAULTS["seed"],
                 ):
                 "Embed a folder of images and save embeddings as .npy file to disk"
-
-                kwargs = {"seed": seed, "use_cache": False}
 
                 # using Path.cwd() to handle ../ names -- not sure if this is superstitious
                 data_dir = Path.cwd() / Path(out_dir).resolve() / "data"
 
                 imageEngine = ImageFactory(img_path=images, out_dir=data_dir, meta_dir=metadata)
-                _, embed_paths = get_timm_embeds(imageEngine, model_name=embed_model,
-                                                data_dir=data_dir, **kwargs)
+
+                embeddings = get_embeddings(imageEngine, model_name=embed_model)
+                emb_paths = write_embeddings(embeddings, imageEngine.filenames,
+                                             data_dir/"embeddings_{embed_model.replace('/', '__')}")
                 
                 df = pd.DataFrame({"image_path": imageEngine.image_paths,
                                    "image_filename": imageEngine.filenames,
-                                   "embed_path": embed_paths})
+                                   "embed_path": [str(e) for e in emb_paths]})
 
                 if len(imageEngine.metadata) > 0:
                         df_meta = pd.DataFrame(imageEngine.metadata)
@@ -384,3 +371,7 @@ def embed_images(images:Param(type=str,
                 if table_format == "csv":
                         df.to_csv(data_dir / f"EmbedImages__{table_id}.csv", index=False)
                 else: df.to_parquet(data_dir / f"EmbedImages__{table_id}.parquet", index=False)
+
+# %% ../nbs/00_clip_plot.ipynb 21
+# awful workaround because I think call_parse only works with sys.argv (cli)
+embed_images = embed_images_cli.__wrapped__

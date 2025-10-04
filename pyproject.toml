@@ -1,6 +1,6 @@
 [project]
 name="clip-plot"
-version = "0.1.1a5"
+version = "0.1.1a6"
 description = "Visual-similarity-space viewer for images"
 readme = "README.md"
 license = "MIT"
