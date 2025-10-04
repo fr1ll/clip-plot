@@ -17,6 +17,7 @@ dependencies = [
     "timm",
     "torch",
     "torchvision",
+    "transformers",
     "umap-learn",
 ]
 	
@@ -26,14 +27,14 @@ documentation = "https://github.com/fr1ll/clip-plot"
 homepage = "https://github.com/fr1ll/clip-plot"
 
 [project.scripts]
-clipplot_from_images = "clip_plot.clip_plot:project_images"
-clipplot_embed_images = "clip_plot.clip_plot:embed_images"
-
+clipplot_from_images = "clip_plot.clip_plot:project_images_cli"
+clipplot_embed_images = "clip_plot.clip_plot:embed_images_cli"
 
 [tool.uv]
 package = true
 dev-dependencies = [
     "clip-plot",
+    "ipykernel",
     "nbdev>=2.3.31",
     "nbqa>=1.9.0",
     "pre-commit>=4.3.0",
@@ -46,12 +47,8 @@ dev-dependencies = [
 bedmap = { workspace = true }
 rasterfairy = { url = "https://github.com/fr1ll/RasterFairy_WheelBuild/releases/download/v1.0.5a/rasterfairy-1.0.5a0-py3-none-any.whl" }
 pointgrid = { url = "https://github.com/fr1ll/pointgrid/releases/download/0.0.6/pointgrid-0.0.6-py3-none-any.whl"}
-torch = [
-  { index = "pytorch-cpu" },
-]
-torchvision = [
-  { index = "pytorch-cpu" },
-]
+torch = [ { index = "pytorch-cpu" },]
+torchvision = [ { index = "pytorch-cpu" },]
 
 [[tool.uv.index]]
 name="clip-plot"
