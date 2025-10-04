@@ -35,9 +35,12 @@ def embed_images(imagepaths : list[Path],
 
     print(timestamp(), f"Creating embeddings using {model_name}")
     embeddings = []
+    imagepath_strs = [Path(p).as_posix() for p in imagepaths]
 
-    for out in tqdm(pipe([Path(p).as_posix() for p in imagepaths], batch_size=batch_size),
-                    total=len(imagepaths)//batch_size):
+    # for out in tqdm(pipe(imagepath_strs, batch_size=batch_size), total=len(imagepath_strs)):
+    #     embeddings += out
+    for p in tqdm(imagepath_strs): # giving up on progress bar with batch size
+        out = pipe(p)
         embeddings += out
 
     print(timestamp(), "Done creating embeddings.")
