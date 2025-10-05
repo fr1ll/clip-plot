@@ -52,7 +52,7 @@ torch = [ { index = "pytorch-cpu" },]
 torchvision = [ { index = "pytorch-cpu" },]
 
 [[tool.uv.index]]
-name = "pytorch-cpu"
+name="clip-plot"
 url = "https://download.pytorch.org/whl/cpu"
 explicit = true
 
