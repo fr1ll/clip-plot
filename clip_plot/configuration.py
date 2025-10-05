@@ -48,14 +48,14 @@ class Paths(BaseModel):
 class UmapSpec(BaseModel):
     n_neighbors: list[int] = Field([15], description="Number of neighbors in UMAP")
     min_dist: list[float] = Field([0.1], description="Minimum distance in UMAP")
-    metric: str = Field("correlation", exclude=True)
-    umap_on_full_dims: bool = Field(True, exclude=True)
+    metric: CliSuppress[str] = Field("correlation")
+    umap_on_full_dims: CliSuppress[bool] = Field(True)
 
 class ClusterSpec(BaseModel):
-    n_clusters: int = Field(12, exclude=True)
-    max_clusters: int = Field(10, exclude=True)
-    min_cluster_size: int = Field(20, exclude=True)
-    cluster_preproc_dims: int = Field(-1, exclude=True)
+    n_clusters: CliSuppress[int] = Field(12)
+    max_clusters: CliSuppress[int] = Field(10)
+    min_cluster_size: CliSuppress[int] = Field(20)
+    cluster_preproc_dims: CliSuppress[int] = Field(-1)
 
 class Cfg(BaseSettings):
     thumbnail_size: int = Field(128, description="Size of images in main bedmap view")
@@ -80,8 +80,6 @@ class Cfg(BaseSettings):
     gzip: CliSuppress[bool] = Field(False)
     logo: CliSuppress[None | Path] = Field(None)
     tagline: CliSuppress[None] | str = Field(None)
-    # "min_score": 0.3,
-    # "min_vertices": 18,
 
 
     model_config = SettingsConfigDict(
