@@ -349,7 +349,11 @@ def embed_images_cli(images:Param(type=str,
                 imageEngine = ImageFactory(img_path=images, out_dir=data_dir, meta_dir=metadata)
 
                 embeddings = get_embeddings(imageEngine, model_name=embed_model)
-                embs_dir = data_dir/f"embeddings_{embed_model.replace('/', '__')}"
+
+                def _model_shortname(n: str) -> str:
+                        return "__".join(p.split("/")[-2:])
+                
+                embs_dir = data_dir/f"embeddings_{_model_shortname(embed_model)}"
                 embs_dir.mkdir(parents=True, exist_ok=True)
                 emb_paths = write_embeddings(embeddings, imageEngine.filenames, embs_dir)
                 
