@@ -351,7 +351,7 @@ def embed_images_cli(images:Param(type=str,
                 embeddings = get_embeddings(imageEngine, model_name=embed_model)
 
                 def _model_shortname(n: str) -> str:
-                        return "__".join(p.split("/")[-2:])
+                        return "__".join(n.split("/")[-2:])
                 
                 embs_dir = data_dir/f"embeddings_{_model_shortname(embed_model)}"
                 embs_dir.mkdir(parents=True, exist_ok=True)
