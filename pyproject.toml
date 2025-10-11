@@ -1,6 +1,6 @@
 [project]
 name="clip-plot"
-version = "0.1.1a7"
+version = "0.1.1a9"
 description = "Visual-similarity-space viewer for images"
 readme = "README.md"
 license = "MIT"
@@ -35,7 +35,9 @@ clipplot_embed_images = "clip_plot.clip_plot:embed_images_cli"
 
 [tool.uv]
 package = true
-dev-dependencies = [
+
+[dependency-groups]
+dev = [
     "clip-plot",
     "ipykernel",
     "ipywidgets",
@@ -55,7 +57,7 @@ torch = [ { index = "pytorch-cpu" },]
 torchvision = [ { index = "pytorch-cpu" },]
 
 [[tool.uv.index]]
-name="clip-plot"
+name="pytorch-cpu"
 url = "https://download.pytorch.org/whl/cpu"
 explicit = true
 

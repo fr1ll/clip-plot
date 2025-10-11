@@ -337,6 +337,9 @@ def embed_images_cli(images:Param(type=str,
                         help="format for table linking embeddings, images, and metadata",
                         required=False
                         )="parquet",
+                local_only:Param(type=store_true,
+                        help="Prevent connection to Huggingface Hub"
+                        )=False,
                 ):
                 "Embed a folder of images and save embeddings as .npy file to disk"
 
@@ -346,8 +349,13 @@ def embed_images_cli(images:Param(type=str,
                 imageEngine = ImageFactory(img_path=images, out_dir=data_dir, meta_dir=metadata)
 
                 embeddings = get_embeddings(imageEngine, model_name=embed_model)
-                emb_paths = write_embeddings(embeddings, imageEngine.filenames,
-                                             data_dir/"embeddings_{embed_model.replace('/', '__')}")
+
+                def _model_shortname(n: str) -> str:
+                        return "__".join(n.split("/")[-2:])
+                
+                embs_dir = data_dir/f"embeddings_{_model_shortname(embed_model)}"
+                embs_dir.mkdir(parents=True, exist_ok=True)
+                emb_paths = write_embeddings(embeddings, imageEngine.filenames, embs_dir)
                 
                 df = pd.DataFrame({"image_path": imageEngine.image_paths,
                                    "image_filename": imageEngine.filenames,
