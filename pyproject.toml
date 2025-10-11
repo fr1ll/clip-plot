@@ -32,6 +32,7 @@ homepage = "https://github.com/fr1ll/clip-plot"
 [project.scripts]
 clipplot_from_images = "clip_plot.clip_plot:project_images_cli"
 clipplot_embed_images = "clip_plot.clip_plot:embed_images_cli"
+embed_to_tables = "clip_plot.embed_to_tables:embed_to_tables_cli"
 
 [tool.uv]
 package = true
@@ -56,10 +57,6 @@ pointgrid = { url = "https://github.com/fr1ll/pointgrid/releases/download/0.0.6/
 torch = [ { index = "pytorch-cpu" },]
 torchvision = [ { index = "pytorch-cpu" },]
 
-[[tool.uv.index]]
-name="pytorch-cpu"
-url = "https://download.pytorch.org/whl/cpu"
-explicit = true
 
 [tool.uv.build-backend]
 module-name = "clip_plot"

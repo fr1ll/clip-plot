@@ -4,11 +4,12 @@
 __all__ = ['Paths', 'UmapSpec', 'ClusterSpec', 'Cfg']
 
 # %% ../nbs/09_configuration.ipynb 2
-from typing import Optional
+from typing import Literal
 from typing_extensions import Self
 from pathlib import Path
 from importlib.metadata import version
 from uuid import uuid4
+from glob import glob
 
 from pydantic import Field, BaseModel, model_validator
 from pydantic_settings import (
@@ -24,26 +25,43 @@ import clip_plot # for version
 
 # %% ../nbs/09_configuration.ipynb 3
 class Paths(BaseModel):
-    image_dir: Path | None = Field(None, description="Directory for input images")
-    image_glob: str | None = Field(None, description="glob pattern for input images")
-    table_file: Path | None = Field(None,
-                               description="Path to csv or JSON table w/ image_path and embed_path columns (optionally: metadata)")
-    table_glob: str | None = Field(None,
-                               description="glob to csv or JSON table w/ image_path and embed_path columns (optionally: metadata)")
-    meta_file: Path | None = Field(None, description="path to csv or JSON table with metadata")
-    meta_glob: str | None = Field(None, description="glob pattern for to csv or JSON table with metadata")
-    output_dir: Path | None = Field((Path()/"clipplot_output").resolve(),
-            description="Directory for output files")
+    image_glob: str | None = Field(None, description="Glob of images")
+    image_dir: Path | None = Field(None, description="Path to image folder")
+    images: CliSuppress[list[Path]] = Field([])
+    table_glob: list[Path] | None = Field(None,
+                               description="Glob of table(s) with image_path, embed_path cols")
+    table_dir: Path | None = Field(None, description="Folder with table(s) with image_path, embed_path cols")
+    tables: CliSuppress[list[Path] | None] = Field([])
+    meta_glob: list[Path] | None = Field(None,
+                               description="Glob of table(s) with image_path, embed_path cols")
+    meta_dir: Path | None = Field(None, description="Folder with table(s) with image_path, embed_path cols")
+    metadata: CliSuppress[list[Path] | None] = Field([], description="Path(s) to csv or JSON table with metadata")
+    table_id: str = Field(default_factory=lambda: str(uuid4()), description="identifier for table output")
+    output_dir: Path = Field((Path()/"clipplot_output").resolve(),
+            description="Directory for output data files and viewer")
+    table_format: Literal["parquet", "csv"] = Field("parquet", description="Format for table, `csv` or `parquet`")
 
     @model_validator(mode='after')
-    def check_source_exclusion(self) -> Self:
-        if self.image_dir is not None and self.image_glob is not None:
-            raise ValueError("'image_dir' and 'image_glob' are mutually exclusive.")
-        if self.table_file is not None and self.table_glob is not None:
-            raise ValueError("'table_file' and 'table_glob' are mutually exclusive.")
-        if self.meta_file is not None and self.meta_glob is not None:
-            raise ValueError("'meta_file' and 'meta_glob' are mutually exclusive.")
+    def check_glob_or_folder(self) -> Self:
+        if self.image_glob is not None and self.image_dir is not None:
+            raise ValueError("'image_glob' and 'image_dir' are mutually exclusive.")
+        if self.table_glob is not None and self.table_dir is not None:
+            raise ValueError("'tables_glob' and 'tables_dir' are mutually exclusive.")
+        if self.meta_glob is not None and self.meta_dir is not None:
+            raise ValueError("'meta_glob' and 'meta_dir' are mutually exclusive.")
         return self
+    
+    @model_validator(mode="after")
+    def expand_globs(self) -> Self:
+        if self.image_glob and not self.image_dir:
+            self.images = [Path(p) for p in glob(self.image_glob, recursive=True)]
+        return self
+
+    # @model_validator(mode='after')
+    # def check_table_vs_meta(self) -> Self:
+    #     if self.metadata is not None and self.tables is not None:
+    #         raise ValueError("'metadata' and 'tables' are mutually exclusive.")
+    #     return self
 
 class UmapSpec(BaseModel):
     n_neighbors: list[int] = Field([15], description="Number of neighbors in UMAP")
@@ -59,7 +77,7 @@ class ClusterSpec(BaseModel):
 
 class Cfg(BaseSettings):
     thumbnail_size: int = Field(128, description="Size of images in main bedmap view")
-    model_name: str = Field("timm/convnext_tiny.dinov3_lvd1689m",
+    model: str = Field("timm/convnext_tiny.dinov3_lvd1689m",
                             description="Model name on huggingface.co/models")
     umap_spec: UmapSpec = UmapSpec()
     clipplot_version: str = Field(version(clip_plot.__name__), description="Version of clipplot")
@@ -89,5 +107,5 @@ class Cfg(BaseSettings):
         cli_prog_name = "clipplot",
         cli_hide_none_type = True,
         cli_ignore_unknown_args=True,
-        pyproject_toml_table_header=(),
+        # pyproject_toml_table_header=(),
     )
