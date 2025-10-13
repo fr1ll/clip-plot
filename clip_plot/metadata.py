@@ -13,6 +13,9 @@ from datetime import datetime
 from collections import defaultdict
 from typing import Optional, List, Union
 
+from pathlib import Path
+import pandas as pd
+
 import numpy as np
 
 from .utils import clean_filename, FILE_NAME
@@ -25,7 +28,7 @@ def get_metadata_list(meta_dir: str) -> Union[List[dict], List[str]]:
 
     Will create 'tags' key if 'category' is in metadata
     but not 'tags'.
-    
+
     Args:
         metadata (str, default = None): Metadata location
 
@@ -39,7 +42,6 @@ def get_metadata_list(meta_dir: str) -> Union[List[dict], List[str]]:
         Think about separating .csv and json functionality.
         Can we use pandas numpy to process csv?
     """
-
     # handle csv metadata
     metaList = []
     if meta_dir.endswith(".csv"):
@@ -67,66 +69,41 @@ def get_metadata_list(meta_dir: str) -> Union[List[dict], List[str]]:
     return metaList, headers
 
 # %% ../nbs/07_metadata.ipynb 6
-def write_metadata(imageEngine, gzip: Optional[bool] = False, encoding:  Optional[str] = 'utf8'):
-    """Write list `metadata` of objects to disk
-    
-    Args:
-        metadata (list[dict])
-        out_dir (str)
-
-        subfunctions:
-            write_json():
-                gzip (Optional[bool]):
-                encoding (Optional[str]): Required if gzip is provided
-                    default = 'utf8'
-
-    Returns:
-        None
-
-    Notes:
-        Improve variable naming
-    
+def write_metadata(imageEngine):
+    """
+    Write list `metadata` of objects to disk
+    Tightly coupled to ImageEngine class
     """
     metadata = imageEngine.metadata
-    out_dir = imageEngine.out_dir
-
+    output_dir = imageEngine.output_dir
     if not metadata:
         return
-    
-    # Create kwargs replacement for write_json function
-    writeJasonDict = {'encoding': encoding, 'gzip': gzip}
 
-    out_dir = os.path.join(out_dir, "metadata")
-    for i in ["filters", "options", "file"]:
-        out_path = os.path.join(out_dir, i)
-        if not os.path.exists(out_path):
-            os.makedirs(out_path)
-    
+    meta_dir = output_dir / "metadata"
+    for subdir in ["filters", "options", "file"]:
+        (meta_dir / subdir).mkdir(parents=True, exist_ok=True)
+
     # Create the lists of images with each tag
     d = defaultdict(list)
     for img in imageEngine:
-        i = img.metadata
+        row = img.metadata
         filename = img.unique_name
-        i["tags"] = [j.strip() for j in i.get("tags", "").split("|")]
-        for j in i["tags"]:
+        row["tags"] = [j.strip() for j in row.get("tags", "").split("|")]
+        for j in row["tags"]:
             d["__".join(j.split())].append(filename)
-        write_json(os.path.join(out_dir, "file", filename + ".json"), i, **writeJasonDict)
+        write_json((meta_dir/"file"/f"{filename}.json"), row)
 
     write_json(
-        os.path.join(out_dir, "filters", "filters.json"),
-        [
-            {
-                "filter_name": "select",
-                "filter_values": list(d.keys()),
-            }
-        ],
-        **writeJasonDict
+        (meta_dir/"filters"/"filters.json"),
+        [{"filter_name": "select",
+          "filter_values": list(d.keys()),
+        }],
     )
 
     # create the options for the category dropdown
     for i in d:
-        write_json(os.path.join(out_dir, "options", i + ".json"), d[i], **writeJasonDict)
-    
+        write_json((meta_dir/"options"/ f"{i}.json"), d[i])
+
     # create the map from date to images with that date (if dates present)
     date_d = defaultdict(list)
     for i in metadata:
@@ -148,47 +125,26 @@ def write_metadata(imageEngine, gzip: Optional[bool] = False, encoding:  Optiona
     # write the dates json
     if len(date_d) > 1:
         write_json(
-            os.path.join(out_dir, "dates.json"),
-            {
-                "domain": domain,
-                "dates": date_d,
-            },
-            **writeJasonDict
+            (meta_dir/"dates.json"),
+            {"domain": domain, "dates": date_d,},
         )
 
 # %% ../nbs/07_metadata.ipynb 7
-##
-# Main
-##
-
-
-def get_manifest(imageEngine, atlas_data, **kwargs):
-    """Create and return the base object for the manifest output file
-    
-    Args:
-        atlas_dir (str)
-        image_paths (str)
-        plot_id (str, default = str(uuid.uuid1()))
-        out_dir (str)
-        metadata (list[dict]): Only checking if provided
-        gzip (bool, default = False)
-        atlas_size (int, default = 2048)
-        cell_size (int, default = 32)
-        lod_cell_height (int, default = 128)
-
-        Need to check subfunctions
-
-
-    Returns:
-        None
-
-    Notes:
-        Original description is inadequate
-        Function is too big (god function)
-    
+def get_manifest(imageEngine, atlas_data,
+                 plot_id: str | None,
+                 output_dir: Path,
+                 has_metadata: bool = False,
+                 gzip: bool = False,
+                 atlas_size: int = 4096,
+                 cell_size: int = 64,
+                 lod_cell_height: int = 128,
+                 ):
+    """
+    Create and return the base object for the manifest output file
+    Returns: None
     """
     # store each cell's size and atlas position
-    atlas_ids = set([i["idx"] for i in atlas_data])
+    atlas_ids = {i["idx"] for i in atlas_data}
     sizes = [[] for _ in atlas_ids]
     pos = [[] for _ in atlas_ids]
     for i in atlas_data:
@@ -200,7 +156,7 @@ def get_manifest(imageEngine, atlas_data, **kwargs):
     # create a heightmap for the umap layout
     if "umap" in layouts and layouts["umap"]:
         get_heightmap(layouts["umap"]["variants"][0]["layout"], "umap", **kwargs)
-    
+
     # specify point size scalars
     point_sizes = {}
     point_sizes["min"] = 0
@@ -221,21 +177,21 @@ def get_manifest(imageEngine, atlas_data, **kwargs):
     # create manifest json
     manifest = {
         "version": get_version(),
-        "plot_id": kwargs["plot_id"],
-        "output_directory": os.path.split(kwargs["out_dir"])[0],
+        "plot_id": plot_id,
+        "output_directory": output_dir.as_posix(),
         "layouts": layouts,
         "initial_layout": "umap",
         "point_sizes": point_sizes,
         "imagelist": get_path("imagelists", "imagelist", **kwargs),
-        "atlas_dir": kwargs["atlas_dir"],
-        "metadata": True if imageEngine.metadata else False,
+        "atlas_dir": (output_dir/"atlases").as_posix(),
+        "metadata": has_metadata,
         "default_hotspots": get_hotspots(imageEngine, layouts=layouts,
                                          n_preproc_dims=kwargs["cluster_preproc_dims"],
                                          **kwargs),
         "custom_hotspots": get_path(
             "hotspots", "user_hotspots", add_hash=False, **kwargs
         ),
-        "gzipped": kwargs["gzip"],
+        "gzipped": gzip,
         "config": {
             "sizes": {
                 "atlas": imageEngine.atlas_size,
@@ -246,21 +202,15 @@ def get_manifest(imageEngine, atlas_data, **kwargs):
         "creation_date": datetime.today().strftime("%d-%B-%Y-%H:%M:%S"),
     }
 
-    # store parameters that will impact embedding
-    embed_params = ["embed_model", "n_neighbors", "min_dist", "metric", "max_clusters", "min_cluster_size"]
-    for e in embed_params:
-        manifest.update({e: kwargs[e]})
+    # # store parameters that will impact embedding
+    # embed_params = ["embed_model", "n_neighbors", "min_dist", "metric", "max_clusters", "min_cluster_size"]
+    # for e in embed_params:
+    #     manifest.update({e: kwargs[e]})
 
-    # write the manifest without gzipping
-    no_gzip_kwargs = {
-        "out_dir": kwargs["out_dir"],
-        "gzip": False,
-        "plot_id": kwargs["plot_id"],
-    }
-    path = get_path("manifests", "manifest", **no_gzip_kwargs)
-    write_json(path, manifest, **no_gzip_kwargs)
+    path = get_path("manifests", "manifest")
+    write_json(path, manifest)
     path = get_path(None, "manifest", add_hash=False, **no_gzip_kwargs)
-    write_json(path, manifest, **no_gzip_kwargs)
+    write_json(path, manifest)
 
     imagelist = {
         "cell_sizes": sizes,
@@ -271,4 +221,4 @@ def get_manifest(imageEngine, atlas_data, **kwargs):
         },
     }
 
-    write_json(manifest["imagelist"], imagelist, **kwargs)
+    write_json(manifest["imagelist"], imagelist)

@@ -41,11 +41,11 @@ def embed_to_tables_pipeline(
 
                 def _model_shortname(n: str) -> str:
                         return "__".join(n.split("/")[-2:])
-                
+
                 embs_dir = data_dir/f"embeddings_{_model_shortname(embed_model)}"
                 embs_dir.mkdir(parents=True, exist_ok=True)
                 emb_paths = write_embeddings(embeddings, imageEngine.filenames, embs_dir)
-                
+
                 df = pd.DataFrame({"image_path": [p.as_posix() for p in imageEngine.image_paths],
                                    "image_filename": imageEngine.filenames,
                                    "embed_path": [str(e) for e in emb_paths]})
