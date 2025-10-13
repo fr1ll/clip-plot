@@ -68,7 +68,7 @@ class BaseLayout(ABC):
 
     # Hardcoded for each particular layout
     # User should change
-    _SCALE = True 
+    _SCALE = True
     _ROUND = True
     _SUBDIR = "layouts"
     _FILENAME = ""
@@ -113,7 +113,7 @@ class BaseLayout(ABC):
             obj = obj.tolist()
 
         return write_json(path, obj, **self.jsonOptions)
-    
+
     @abstractmethod
     def get_layout(self):
         # Get or create layout
@@ -123,11 +123,8 @@ class BaseLayout(ABC):
         if filename is None:
             filename = self._FILENAME
         pathDict = {
-            "out_dir": self.out_dir,
-            "add_hash": self._ADD_HASH,
-            "plot_id": self.plot_id,
-            "gzip": self.gzip}
-        
+            "out_dir": self.out_dir}
+    
         return get_path(self._SUBDIR, filename, **pathDict)
 
 
@@ -824,10 +821,10 @@ def process_single_layout_umap(v, imageEngine, **kwargs):
         if "label" in imageEngine.meta_headers:
             labels = [img.metadata.get("label", None) for img in imageEngine]
             # if the user provided labels, integerize them
-            if any([i for i in labels]):
+            if any(i for i in labels):
                 d = defaultdict(lambda: len(d))
                 for i in labels:
-                    if i == None:
+                    if i is None:
                         y.append(-1)
                     else:
                         y.append(d[i])

@@ -4,7 +4,6 @@
 __all__ = ['tables_to_viewer_pipeline', 'tables_to_viewer_cli']
 
 # %% ../nbs/11_tables_to_viewer.ipynb 2
-from typing import Literal
 from pathlib import Path
 from copy import deepcopy
 
@@ -19,7 +18,7 @@ from .metadata import get_manifest, write_metadata
 from .images import create_atlases_and_thumbs, ImageFactory
 
 
-from .from_tables import glob_to_tables, table_to_meta
+from .from_tables import table_to_meta, cat_tables
 
 # %% ../nbs/11_tables_to_viewer.ipynb 3
 _D = Cfg() # defaults
