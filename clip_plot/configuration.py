@@ -4,14 +4,17 @@
 __all__ = ['Paths', 'UmapSpec', 'ClusterSpec', 'Cfg']
 
 # %% ../nbs/09_configuration.ipynb 2
-from typing import Literal
+from typing import Literal, Any
 from typing_extensions import Self
 from pathlib import Path
 from importlib.metadata import version
 from uuid import uuid4
 from glob import glob
 
-from pydantic import Field, BaseModel, model_validator
+from pydantic import (
+    Field, BaseModel,
+    model_validator, field_validator, ValidationInfo
+)
 from pydantic_settings import (
     BaseSettings,
     SettingsConfigDict,
@@ -25,56 +28,56 @@ import clip_plot # for version
 
 # %% ../nbs/09_configuration.ipynb 3
 class Paths(BaseModel):
-    image_glob: str | None = Field(None, description="Glob of images")
-    image_dir: Path | None = Field(None, description="Path to image folder")
-    images: CliSuppress[list[Path]] = Field([])
-    table_glob: list[Path] | None = Field(None,
+    images: list[Path] = Field([], description="Path to folder, image dir, or glob")
+    tables: list[Path] | None = Field(None,
                                description="Glob of table(s) with image_path, embed_path cols")
-    table_dir: Path | None = Field(None, description="Folder with table(s) with image_path, embed_path cols")
-    tables: CliSuppress[list[Path] | None] = Field([])
-    meta_glob: list[Path] | None = Field(None,
+    metadata: list[Path] | None = Field(None,
                                description="Glob of table(s) with image_path, embed_path cols")
-    meta_dir: Path | None = Field(None, description="Folder with table(s) with image_path, embed_path cols")
-    metadata: CliSuppress[list[Path] | None] = Field([], description="Path(s) to csv or JSON table with metadata")
     table_id: str = Field(default_factory=lambda: str(uuid4()), description="identifier for table output")
     output_dir: Path = Field((Path()/"clipplot_output").resolve(),
             description="Directory for output data files and viewer")
     table_format: Literal["parquet", "csv"] = Field("parquet", description="Format for table, `csv` or `parquet`")
 
+
+    @field_validator("images", "tables", "metadata", mode="before")
+    @classmethod
+    def expand_paths(cls, value: Any, info: ValidationInfo) -> Any:
+        if value is None:
+            return None
+        if isinstance(value, list) and len(value) == 1:
+            value = value[0] # yikes unpack
+        elif isinstance(value, list) and len(value) > 1:
+            return value
+        if "*" in str(value):
+            return [Path(p) for p in glob(str(value), recursive=True)]
+        elif Path(value).is_dir():
+            if info.field_name == "images":
+                exts = {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.tif'}
+            else:
+                exts = {'.json', '.csv', '.parquet'}
+            return [p for p in Path(value).rglob('*') if p.suffix.lower() in exts]
+
     @model_validator(mode='after')
-    def check_glob_or_folder(self) -> Self:
-        if self.image_glob is not None and self.image_dir is not None:
-            raise ValueError("'image_glob' and 'image_dir' are mutually exclusive.")
-        if self.table_glob is not None and self.table_dir is not None:
-            raise ValueError("'tables_glob' and 'tables_dir' are mutually exclusive.")
-        if self.meta_glob is not None and self.meta_dir is not None:
-            raise ValueError("'meta_glob' and 'meta_dir' are mutually exclusive.")
-        return self
-    
-    @model_validator(mode="after")
-    def expand_globs(self) -> Self:
-        if self.image_glob and not self.image_dir:
-            self.images = [Path(p) for p in glob(self.image_glob, recursive=True)]
+    def check_table_vs_meta(self) -> Self:
+        if self.metadata is not None and self.tables is not None:
+            raise ValueError("'metadata' and 'tables' are mutually exclusive.")
         return self
 
-    # @model_validator(mode='after')
-    # def check_table_vs_meta(self) -> Self:
-    #     if self.metadata is not None and self.tables is not None:
-    #         raise ValueError("'metadata' and 'tables' are mutually exclusive.")
-    #     return self
-
+# %% ../nbs/09_configuration.ipynb 4
 class UmapSpec(BaseModel):
     n_neighbors: list[int] = Field([15], description="Number of neighbors in UMAP")
     min_dist: list[float] = Field([0.1], description="Minimum distance in UMAP")
     metric: CliSuppress[str] = Field("correlation")
     umap_on_full_dims: CliSuppress[bool] = Field(True)
 
+# %% ../nbs/09_configuration.ipynb 5
 class ClusterSpec(BaseModel):
     n_clusters: CliSuppress[int] = Field(12)
     max_clusters: CliSuppress[int] = Field(10)
     min_cluster_size: CliSuppress[int] = Field(20)
     cluster_preproc_dims: CliSuppress[int] = Field(-1)
 
+# %% ../nbs/09_configuration.ipynb 6
 class Cfg(BaseSettings):
     thumbnail_size: int = Field(128, description="Size of images in main bedmap view")
     model: str = Field("timm/convnext_tiny.dinov3_lvd1689m",
@@ -97,8 +100,7 @@ class Cfg(BaseSettings):
     min_size: CliSuppress[int] = Field(100, description="min edge for image")
     gzip: CliSuppress[bool] = Field(False)
     logo: CliSuppress[None | Path] = Field(None)
-    tagline: CliSuppress[None] | str = Field(None)
-
+    tagline: CliSuppress[None] | str = Field(None)\
 
     model_config = SettingsConfigDict(
         env_prefix = "CLIPPLOT_",

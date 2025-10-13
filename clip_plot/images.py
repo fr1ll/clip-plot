@@ -348,8 +348,9 @@ class ImageFactory(ImageFactoryBase):
             image_paths = get_image_paths(images=self.img_path)
         image_names = [p.name for p in image_paths]
         duplicates = {x for x in image_names if image_names.count(x) > 1}
-        print("First three paths:", "\n".join(p.as_posix() for p in image_paths[:3]))
-
+        print(timestamp(),
+              "First three paths:", "\n".join(p.as_posix() for p in image_paths[:3])
+              )
 
         if duplicates:
             raise Exception(

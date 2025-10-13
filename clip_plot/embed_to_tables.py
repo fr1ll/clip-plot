@@ -79,7 +79,6 @@ def embed_to_tables_cli():
     from pydantic-settings configuration object
     """
     cfg = CliApp.run(Cfg)
-    print(f"paths: {cfg.paths.images}")
     embed_to_tables_pipeline(
         images=cfg.paths.images,
         embed_model=cfg.model,
