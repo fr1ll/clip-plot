@@ -8,11 +8,14 @@ __all__ = ['FILE_NAME', 'get_version', 'round_floats', 'is_number', 'date_to_sec
 import os
 import sys
 import json
+from typing import Any
 import gzip
 import datetime
 from shutil import copytree
 from urllib.parse import unquote
 from dateutil.parser import parse as parse_date
+
+from pathlib import Path
 
 # %% ../nbs/01_utils.ipynb 3
 FILE_NAME = "filename"  # Filename name key
@@ -125,9 +128,6 @@ def get_path(*args, **kwargs):
     else:
         out_dir =  kwargs["out_dir"]
 
-    if kwargs.get("add_hash", True):
-        filename += f'-{kwargs["plot_id"]}'
-
     path = os.path.join(out_dir, filename + ".json")
     if kwargs.get("gzip", False):
         path += ".gz"
@@ -135,52 +135,29 @@ def get_path(*args, **kwargs):
     return path
 
 # %% ../nbs/01_utils.ipynb 14
-def write_json(path, obj, **kwargs):
-    """Write json object `obj` to disk and return the path to that file
-    
-    Args:
-        path (str)
-        obj (json serializable)
-        gzip (Optional[bool]): Default = False
-        encoding (str): Required if gzip = True
+def write_json(output_path: Path, object: Any):
     """
-    out_dir, filename = os.path.split(path)
-    if not os.path.exists(out_dir):
-        os.makedirs(out_dir)
-    if kwargs.get("gzip", False):
-        with gzip.GzipFile(path, "w") as out:
-            out.write(json.dumps(obj, indent=4).encode(kwargs["encoding"]))
-        return path
-    else:
-        with open(path, "w") as out:
-            json.dump(obj, out, indent=4)
-        return path
-
-
-def read_json(path, **kwargs):
-    """Read and return the json object written by the current process at `path`
-    
-    Args:
-        path (str)
-        gzip (Optional[bool]): Default = False
-        encoding (str): Required if gzip = True
-
+    Write json object `obj` to disk and return the path to that file
     """
-    if kwargs.get("gzip", False):
-        with gzip.GzipFile(path, "r") as f:
-            return json.loads(f.read().decode(kwargs["encoding"]))
-    with open(path) as f:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with output_path.open("w", encoding="utf-8") as out:
+        json.dump(object, out, indent=4)
+
+# %% ../nbs/01_utils.ipynb 15
+def read_json(path: Path) -> dict:
+    with path.open("r") as f:
         return json.load(f)
 
 
-# %% ../nbs/01_utils.ipynb 16
+# %% ../nbs/01_utils.ipynb 17
 def copytree_agnostic(a,b):
-    if sys.version_info.major >=3 and sys.version_info.minor >=8: copytree(a, b, dirs_exist_ok=True)
+    if sys.version_info.major >=3 and sys.version_info.minor >=8:
+        copytree(a, b, dirs_exist_ok=True)
     else:
         from distutils.dir_util import copy_tree
         copy_tree(a, b)
 
-# %% ../nbs/01_utils.ipynb 19
+# %% ../nbs/01_utils.ipynb 20
 def clean_filename(s, **kwargs):
     """Given a string that points to a filename, return a clean filename
     

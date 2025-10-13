@@ -20,10 +20,10 @@ import numpy as np
 
 from .utils import clean_filename, FILE_NAME
 from .layouts import get_layouts, get_heightmap, get_hotspots
-from .utils import is_number, get_path, get_version, write_json, read_json
+from .utils import is_number, get_version, write_json, read_json
 
 # %% ../nbs/07_metadata.ipynb 5
-def get_metadata_list(meta_dir: str) -> Union[List[dict], List[str]]:
+def get_metadata_list(meta_dir: str) -> list[dict] | list[str]:
     """Return a list of objects with image metadata.
 
     Will create 'tags' key if 'category' is in metadata
@@ -33,7 +33,7 @@ def get_metadata_list(meta_dir: str) -> Union[List[dict], List[str]]:
         metadata (str, default = None): Metadata location
 
     Returns:
-        l (List[dict]): List of metadata 
+        l (List[dict]): List of metadata
 
     Notes:
         No check for 'filename' is performed
@@ -75,11 +75,11 @@ def write_metadata(imageEngine):
     Tightly coupled to ImageEngine class
     """
     metadata = imageEngine.metadata
-    output_dir = imageEngine.output_dir
+    data_dir = imageEngine.data_dir
     if not metadata:
         return
 
-    meta_dir = output_dir / "metadata"
+    meta_dir = data_dir / "metadata"
     for subdir in ["filters", "options", "file"]:
         (meta_dir / subdir).mkdir(parents=True, exist_ok=True)
 
@@ -134,15 +134,12 @@ def get_manifest(imageEngine, atlas_data,
                  plot_id: str | None,
                  output_dir: Path,
                  has_metadata: bool = False,
-                 gzip: bool = False,
-                 atlas_size: int = 4096,
-                 cell_size: int = 64,
-                 lod_cell_height: int = 128,
                  ):
     """
     Create and return the base object for the manifest output file
     Returns: None
     """
+    data_dir = output_dir/"data"
     # store each cell's size and atlas position
     atlas_ids = {i["idx"] for i in atlas_data}
     sizes = [[] for _ in atlas_ids]
@@ -169,7 +166,7 @@ def get_manifest(imageEngine, atlas_data,
 
     # fetch the date distribution data for point sizing
     if "date" in layouts and layouts["date"]:
-        date_layout = read_json(layouts["date"]["labels"], **kwargs)
+        date_layout = read_json(layouts["date"]["labels"])
         point_sizes["date"] = 1 / (
             (date_layout["cols"] + 1) * len(date_layout["labels"])
         )
@@ -182,16 +179,14 @@ def get_manifest(imageEngine, atlas_data,
         "layouts": layouts,
         "initial_layout": "umap",
         "point_sizes": point_sizes,
-        "imagelist": get_path("imagelists", "imagelist", **kwargs),
-        "atlas_dir": (output_dir/"atlases").as_posix(),
+        "imagelist": (data_dir / "imagelist.json").as_posix(),
+        "atlas_dir": (data_dir/"atlases").as_posix(),
         "metadata": has_metadata,
         "default_hotspots": get_hotspots(imageEngine, layouts=layouts,
                                          n_preproc_dims=kwargs["cluster_preproc_dims"],
                                          **kwargs),
-        "custom_hotspots": get_path(
-            "hotspots", "user_hotspots", add_hash=False, **kwargs
-        ),
-        "gzipped": gzip,
+        "custom_hotspots": data_dir/"hotspots/user_hotspots.json",
+        "gzipped": False,
         "config": {
             "sizes": {
                 "atlas": imageEngine.atlas_size,
@@ -207,10 +202,8 @@ def get_manifest(imageEngine, atlas_data,
     # for e in embed_params:
     #     manifest.update({e: kwargs[e]})
 
-    path = get_path("manifests", "manifest")
-    write_json(path, manifest)
-    path = get_path(None, "manifest", add_hash=False, **no_gzip_kwargs)
-    write_json(path, manifest)
+    write_json(data_dir/"manifests/manifest.json", manifest)
+    write_json(data_dir/"/manifest.json", manifest)
 
     imagelist = {
         "cell_sizes": sizes,
@@ -221,4 +214,4 @@ def get_manifest(imageEngine, atlas_data,
         },
     }
 
-    write_json(manifest["imagelist"], imagelist)
+    write_json(data_dir / "imagelist.json", imagelist)

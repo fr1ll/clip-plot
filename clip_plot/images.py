@@ -13,23 +13,22 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 from tqdm.auto import tqdm
-from PIL import Image as pil_image, ImageFile
 
-from .utils import clean_filename, timestamp, FILE_NAME
+from .utils import timestamp, FILE_NAME
 from .metadata import get_metadata_list
 
 
 # imports when switching to PIL-only resizing
-from PIL import Image, ImageOps
+from PIL import Image
 from pathlib import Path
 
 # %% ../nbs/03_images.ipynb 5
-def load_image(image_path:str, format:str="RGB")->pil_image:
+def load_image(image_path:str, format:str="RGB")->Image.Image:
     '''load an image and convert to desired format'''
-    return pil_image.open(image_path).convert(format)
+    return Image.open(image_path).convert(format)
 
 # %% ../nbs/03_images.ipynb 8
-def resize_to_max_side(img:pil_image, n:int=128):
+def resize_to_max_side(img: Image.Image, n:int=128):
     '''
     resize to a maximum side length
     '''
@@ -43,7 +42,7 @@ def resize_to_max_side(img:pil_image, n:int=128):
     return img.resize(size, reducing_gap=2.0)
 
 # %% ../nbs/03_images.ipynb 9
-def resize_to_height(img:pil_image, height:int=128):
+def resize_to_height(img: Image.Image, height:int=128):
     '''
     resize to an exact height
     '''
@@ -56,7 +55,7 @@ def resize_to_height(img:pil_image, height:int=128):
     return img.resize(size, reducing_gap=2.0)
 
 # %% ../nbs/03_images.ipynb 11
-def autocontrast(img: pil_image) -> pil_image:
+def autocontrast(img: Image.Image) -> Image.Image:
     '''autocontrast lifted from keras library
     added lightness normalization'''
     x = np.asarray(img, dtype=float)
@@ -70,7 +69,7 @@ def autocontrast(img: pil_image) -> pil_image:
     ## return to average lightness of input image
     mean_shift = x.mean() - mean_before
     x = np.clip(x - mean_shift, 0, 255)
-    return pil_image.fromarray(x.astype("uint8"))
+    return Image.fromarray(x.astype("uint8"))
 
 # %% ../nbs/03_images.ipynb 15
 def create_atlases_and_thumbs(imageEngine, plot_id, use_cache:bool=False):
@@ -79,13 +78,13 @@ def create_atlases_and_thumbs(imageEngine, plot_id, use_cache:bool=False):
     print(timestamp(), "Copying images to output directory")
 
     # create directories
-    atlas_dir = Path(imageEngine.out_dir) / "atlases" / str(plot_id)
+    atlas_dir = Path(imageEngine.data_dir) / "atlases" / str(plot_id)
     atlas_dir.mkdir(exist_ok=True, parents=True)
 
-    thumbs_dir = Path(imageEngine.out_dir) / "thumbs"
+    thumbs_dir = Path(imageEngine.data_dir) / "thumbs"
     thumbs_dir.mkdir(exist_ok=True)
 
-    orig_dir = Path(imageEngine.out_dir) / "originals"
+    orig_dir = Path(imageEngine.data_dir) / "originals"
     orig_dir.mkdir(exist_ok=True)
 
     # initialize some atlas values
@@ -120,9 +119,9 @@ def create_atlases_and_thumbs(imageEngine, plot_id, use_cache:bool=False):
             n_atlases+=1
             x,y=0,0 # start a new atlas
         if x == 0 and y == 0:
-            atlas=pil_image.new(mode="RGB", size=atlas_size)
+            atlas=Image.new(mode="RGB", size=atlas_size)
         atlas.paste(cell, (x,y))
-        
+
         # store in dict
         positions.append({
             "idx": n_atlases,
@@ -137,7 +136,7 @@ def create_atlases_and_thumbs(imageEngine, plot_id, use_cache:bool=False):
 # %% ../nbs/03_images.ipynb 16
 def get_image_paths(images:str) -> list[Path]:
     """Called once to provide a list of image paths.
-    
+
     args:
         images (str): directory location of images.
 
@@ -150,7 +149,7 @@ def get_image_paths(images:str) -> list[Path]:
     # allow images to be input as list, i.e. from tables input
     if isinstance(images, list):
         image_paths = images
-   
+
     # handle case where images flag points to a glob of images
     if not image_paths:
         image_paths = glob(images, recursive=True)
@@ -174,7 +173,7 @@ class ValidImage:
         if self._original is None:
             self._original = load_image(self.path.as_posix())
         return self._original
-    
+
     @property
     def unique_name(self):
         """Save as name when copying image."""
@@ -201,7 +200,7 @@ class ValidImage:
             return False, f"Skipping {self.path} because it contains 0 height or width"
         # remove images that have 0 height or width when resized
         try:
-            resized = resize_to_height(self.original, height=lod_cell_height)
+            _ = resize_to_height(self.original, height=lod_cell_height)
         except ValueError:
             return False, f"Skipping {self.path} because it contains 0 height or width when resized"
         except OSError:
@@ -228,7 +227,7 @@ class ImageFactoryBase(ABC):
 
     Notes:
         Class and their children are required to provide the following properties:
-            out_dir
+            data_dir
             shuffle
             atlas_size
             cell_size
@@ -243,15 +242,15 @@ class ImageFactoryBase(ABC):
         'lod_cell_height': 128, # (int, default = 128)
     }
 
-    def __init__(self, out_dir: str) -> None:
+    def __init__(self, data_dir: str) -> None:
         """Initialize ImageEngine instance
 
         Args:
-            out_dir (str): output directory of data
+            data_dir (str): output directory of data
 
         """
         # Required initialized properties
-        self.out_dir = out_dir
+        self.data_dir = data_dir
         self.count = 0  # Total number of images
         self.meta_headers = [] # Headers in metadata
         self.metadata = [] # list of metadata
@@ -266,12 +265,12 @@ class ImageFactoryBase(ABC):
     def __iter__(self):
         # Yield an ValidImage instance
         pass
-    
+
     @abstractmethod
     def __getitem__(self, index):
         # Return index's ValidImage instance
         pass
-    
+
 
 class ImageFactory(ImageFactoryBase):
     # Default internal values
@@ -280,14 +279,14 @@ class ImageFactory(ImageFactoryBase):
         'seed': "", # (int): Seed for random generator
         'max_images': False, # (Union[False,int]): Maximum number of images
     })
-    
-    def __init__(self, img_path, out_dir, meta_dir, options={}) -> None:
-        super().__init__(out_dir)
+
+    def __init__(self, img_path, data_dir, meta_dir, options={}) -> None:
+        super().__init__(data_dir)
         self.img_path = img_path
         self.meta_dir = meta_dir
         self.filenames = []
         self.image_paths = []
-        
+    
         # Load options
         for option, default in self.DEFAULT_OPTIONS.items():
             setattr(self, option, options.get(option, default))
@@ -304,7 +303,7 @@ class ImageFactory(ImageFactoryBase):
                 meta = self.metadata[index]
             else:
                 meta = None
-    
+
             return ValidImage(self.image_paths[index], meta)
 
     def filter_images(self):
@@ -317,10 +316,10 @@ class ImageFactory(ImageFactoryBase):
             oblong
 
         -Compare against metadata
-        
+    
         Args:
             images (str): Directory location of images.
-            out_dir (str): Output directory.
+            data_dir (str): Output directory.
             shuffle (Optional[bool], default = False): Shuffle image order
             seed (int): Seed for random generator
             max_images (Union[bool,int]): Maximum number of images
@@ -356,7 +355,7 @@ class ImageFactory(ImageFactoryBase):
             raise Exception(
                 """Image filenames should be unique, but the following 
                 filenames are duplicated\n{}""".format("\n".join(duplicates)))
-        
+
         # optionally shuffle the image_paths
         if self.shuffle:
             print(timestamp(), "Shuffling input images")
@@ -397,8 +396,8 @@ class ImageFactory(ImageFactoryBase):
         # handle user metadata: retain only records with image and metadata
         metalist, self.meta_headers = get_metadata_list(meta_dir=self.meta_dir)
         metaDict = {Path(i.get(FILE_NAME, "")).name: i for i in metalist}
-        meta_bn = set(metaDict.keys())
-        img_bn = set(p.name for p in image_paths)
+        meta_bn = metaDict.keys()
+        img_bn = {p.name for p in image_paths}
 
         # identify images with metadata and those without metadata
         meta_present = img_bn.intersection(meta_bn)
@@ -414,10 +413,10 @@ class ImageFactory(ImageFactoryBase):
             if len(meta_missing) > 10:
                 print(timestamp(), " ...", len(meta_missing) - 10, "more")
 
-            if os.path.exists(self.out_dir) is False:
-                os.makedirs(self.out_dir)
+            if os.path.exists(self.data_dir) is False:
+                os.makedirs(self.data_dir)
 
-            missing_dir = os.path.join(self.out_dir,"missing-metadata.txt")
+            missing_dir = os.path.join(self.data_dir,"missing-metadata.txt")
             with open(missing_dir, "w") as out:
                 out.write("\n".join(meta_missing))
 
@@ -441,11 +440,11 @@ class ImageFactory(ImageFactoryBase):
     @staticmethod
     def stream_images(image_paths: list[Path], metadata: list[dict] | None = None) -> ValidImage:
         """Read in all images from args[0], a list of image paths
-        
+
         Args:
             image_paths (list[str]): list of image locations
             metadata (Optional[list[dist]]): metadata for each image
-        
+
         Returns:
             yields ValidImage instance
 
