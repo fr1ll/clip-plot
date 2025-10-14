@@ -103,7 +103,9 @@ def _project_images(imageEngine, embeds: np.ndarray | None = None, **kwargs):
     else:
         kwargs["vecs"] = embeds
 
-    get_manifest(imageEngine, atlas_data, **kwargs)
+    get_manifest(imageEngine, atlas_data,
+                 plot_id=kwargs["plot_id"], output_dir=kwargs["output_dir"],
+                 has_metadata=False)
     # write_images(imageEngine)
     print(timestamp(), "Done!")
 
@@ -117,9 +119,9 @@ def test_butterfly_duplicate(config):
     if Path(test_output_dir).exists():
         rmtree(test_output_dir)
 
-    config["images"] = test_images.as_posix()
-    config["output_dir"] = test_output_dir.as_posix()
-    config["meta_dir"] = meta_dir.as_posix()
+    config["images"] = test_images
+    config["output_dir"] = test_output_dir
+    config["meta_dir"] = meta_dir
     config["plot_id"] = "test_diff"
 
     return config
@@ -131,9 +133,9 @@ def test_butterfly_missing_meta(config):
     if Path(test_output_dir).exists():
         rmtree(test_output_dir)
 
-    config["images"] = test_images.as_posix()
-    config["output_dir"] = test_output_dir.as_posix()
-    config["meta_dir"] = meta_dir.as_posix()
+    config["images"] = test_images
+    config["output_dir"] = test_output_dir
+    config["meta_dir"] = meta_dir
     config["plot_id"] = "test_diff"
 
     return config
@@ -141,11 +143,11 @@ def test_butterfly_missing_meta(config):
 def test_no_meta_dir(config):
     test_images = copy_root_dir/"tests/smithsonian_butterflies_10/jpgs/*.jpg"
     test_output_dir = copy_root_dir/"tests/smithsonian_butterflies_10/output_test_temp"
-    if Path(test_output_dir).exists():
+    if test_output_dir.exists():
         rmtree(test_output_dir)
 
-    config["images"] = test_images.as_posix()
-    config["output_dir"] = test_output_dir.as_posix()
+    config["images"] = test_images
+    config["output_dir"] = test_output_dir
     config["plot_id"] = "test_diff"
 
     return config
@@ -244,6 +246,9 @@ def project_images_cli(images:Param(type=str,
                 # grab local variables as configuration dict
                 config = dict(locals())
 
+                # convert paths
+                if "output_dir" in config:
+                    config["output_dir"] = Path(config["output_dir"])
 
                 # some parameters exist in _DEFAULTS but not in the function signature
                 default_only_keys = set(_DEFAULTS.keys() - config.keys())
@@ -251,20 +256,21 @@ def project_images_cli(images:Param(type=str,
                 config.update(default_only)
 
                 options = {
-                        'shuffle': config['shuffle'], 
-                        'seed': config['seed'], 
-                        'max_images': config['max_images'], 
-                        'atlas_size': config['atlas_size'], 
-                        'cell_size': config['cell_size'], 
-                        'lod_cell_height': config['lod_cell_height'], 
-                        'validate': True, 
+                        'shuffle': config['shuffle'],
+                        'seed': config['seed'],
+                        'max_images': config['max_images'],
+                        'atlas_size': config['atlas_size'],
+                        'cell_size': config['cell_size'],
+                        'lod_cell_height': config['lod_cell_height'],
+                        'validate': True,
                 }
 
                 if not tables:
                         embeds = None
                         table = None
                 else:
-                        if images is not None: raise ValueError("Provide either tables or images parameter, not both.")
+                        if images is not None:
+                                raise ValueError("Provide either tables or images parameter, not both.")
                         print(timestamp(), "Loading tables")
                         table = glob_to_tables(tables)
                         config["images"] = list(table.image_path.values)
@@ -272,7 +278,7 @@ def project_images_cli(images:Param(type=str,
                         print(timestamp(), "Loading embeddings from disk")
                         embeds = np.array([np.load(e) for e in tqdm(table.embed_path)])
 
-                data_dir = os.path.join(config["output_dir"], "data")
+                data_dir = config["output_dir"]/ "data"
                 imageEngine = ImageFactory(config['images'], data_dir, config['meta_dir'], options)
 
                 # grab metadata from table if provided
@@ -314,9 +320,10 @@ def embed_images_cli(images:Param(type=str,
                         )="parquet"
                 ):
                 "Embed a folder of images and save embeddings as .npy file to disk"
+                output_dir = Path(output_dir)
 
                 # using Path.cwd() to handle ../ names -- not sure if this is superstitious
-                data_dir = Path.cwd() / Path(output_dir).resolve() / "data"
+                data_dir = Path.cwd() / output_dir.resolve() / "data"
 
                 imageEngine = ImageFactory(img_path=images, data_dir=data_dir, meta_dir=metadata)
 
