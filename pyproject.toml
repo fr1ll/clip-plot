@@ -22,6 +22,7 @@ dependencies = [
     "pydantic>=2.11.10",
     "pydantic-settings>=2.11.0",
     "typing-extensions>=4.15.0",
+    "click>=8.3.0",
 ]
 	
 [project.urls]
@@ -34,25 +35,9 @@ clipplot_from_images = "clip_plot.clip_plot:project_images_cli"
 clipplot_embed_images = "clip_plot.clip_plot:embed_images_cli"
 embed_to_tables = "clip_plot.embed_to_tables:embed_to_tables_cli"
 
-[project.optional-dependencies]
-cpu = [
-  "torch",
-  "torchvision",
-]
-cu128 = [
-  "torch",
-  "torchvision",
-]
-
 
 [tool.uv]
 package = true
-conflicts = [
-  [
-    { extra = "cpu" },
-    { extra = "cu128" },
-  ],
-]
 
 [dependency-groups]
 dev = [
@@ -72,22 +57,15 @@ bedmap = { workspace = true }
 rasterfairy = { url = "https://github.com/fr1ll/RasterFairy_WheelBuild/releases/download/v1.0.5a/rasterfairy-1.0.5a0-py3-none-any.whl" }
 pointgrid = { url = "https://github.com/fr1ll/pointgrid/releases/download/0.0.6/pointgrid-0.0.6-py3-none-any.whl"}
 torch = [
-  { index = "pytorch-cpu", extra = "cpu" },
-  { index = "pytorch-cu128", extra = "cu128" },
+  { index = "pytorch-cpu" },
 ]
 torchvision = [
-  { index = "pytorch-cpu", extra = "cpu" },
-  { index = "pytorch-cu128", extra = "cu128" },
+  { index = "pytorch-cpu" },
 ]
 
 [[tool.uv.index]]
 name = "pytorch-cpu"
 url = "https://download.pytorch.org/whl/cpu"
-explicit = true
-
-[[tool.uv.index]]
-name = "pytorch-cu128"
-url = "https://download.pytorch.org/whl/cu128"
 explicit = true
 
 [tool.uv.build-backend]
