@@ -9,7 +9,6 @@ import os
 import sys
 import json
 from typing import Any
-import gzip
 import datetime
 from shutil import copytree
 from urllib.parse import unquote
@@ -110,29 +109,13 @@ def datestring_to_date(datestring):
         return datestring
 
 # %% ../nbs/01_utils.ipynb 13
-def get_path(*args, **kwargs):
-    """Return the path to a JSON file with conditional gz extension
-    
-    Args:
-        sub_dir (str)
-        filename (str)
-        out_dir (str)
-        add_hash (Optional[bool])
-        plot_id (Optional[str]): Required if add_hash is True
-        gzip (Optional[bool])
-    
+def get_path(subdir: str, filename: str, *, out_dir: str):
+    """Return the path to a JSON file with conditional hash
     """
-    sub_dir, filename = args
-    if sub_dir:
-        out_dir = os.path.join(kwargs["out_dir"], sub_dir)
-    else:
-        out_dir =  kwargs["out_dir"]
-
-    path = os.path.join(out_dir, filename + ".json")
-    if kwargs.get("gzip", False):
-        path += ".gz"
-
-    return path
+    out = Path(out_dir)
+    if subdir:
+        out = out / subdir
+    return (out/ filename).with_suffix(".json").as_posix()
 
 # %% ../nbs/01_utils.ipynb 14
 def write_json(output_path: Path, object: Any):
@@ -158,18 +141,8 @@ def copytree_agnostic(a,b):
         copy_tree(a, b)
 
 # %% ../nbs/01_utils.ipynb 20
-def clean_filename(s, **kwargs):
+def clean_filename(s: str) -> str:
     """Given a string that points to a filename, return a clean filename
-    
-    Args:
-        s (str): filename path
-
-    Returns:
-        s (str): clean file name
-
-    Notes:
-        kwargs is not used at all
-    
     """
     s = unquote(os.path.basename(s))
     invalid_chars = '<>:;,"/\\|?*[]'
