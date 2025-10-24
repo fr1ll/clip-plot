@@ -276,22 +276,22 @@ class GeographicLayout(BaseMetaLayout):
         return None
 
 # %% ../nbs/05_layouts.ipynb 10
-def get_pointgrid_layout(path, label, **kwargs):
+def get_pointgrid_layout(path, label, *, out_dir: str):
     """Gridify the positions in `path` and return the path to this new layout
     Args:
         path (str)
         label (str)
     """
     print(timestamp(), "Creating {label} pointgrid")
-    out_path = get_path("layouts", label + "-jittered", **kwargs)
+    out_path = get_path("layouts", label + "-jittered", out_dir = out_dir)
 
-    arr = np.array(read_json(path, **kwargs))
+    arr = np.array(read_json(path))
     if arr.shape[-1] != 2:
         print(timestamp(), "Could not create pointgrid layout because data is not 2D")
         return None
 
     z = align_points_to_grid(arr, fill=0.01)
-    return write_layout(out_path, z, **kwargs)
+    return write_layout(out_path, z)
 
 
 # %% ../nbs/05_layouts.ipynb 11
@@ -308,26 +308,14 @@ def process_multi_layout_umap(v, imageEngine, **kwargs):
         n_neighbors
         min_dist
         images
-
-        Subfunctions
-            get_path()
-                *sub_dir (str)
-                *filename (str)
-                **out_dir (str)
-                **add_hash (Optional[bool])
-                **plot_id (Optional[str]): Required if add_hash is True
-
-            get_pointgrid_layout()
-                path (str)
-                label (str)
     """
     print(timestamp(), "Creating multi-umap layout")
     params = []
     for n_neighbors, min_dist in itertools.product(
         kwargs["n_neighbors"], kwargs["min_dist"]
     ):
-        filename = "umap-n_neighbors_{}-min_dist_{}".format(n_neighbors, min_dist)
-        out_path = get_path("layouts", filename, **kwargs)
+        filename = f"umap-n_neighbors_{n_neighbors}-min_dist_{min_dist}"
+        out_path = get_path("layouts", filename, out_dir=kwargs["out_dir"])
         params.append(
             {
                 "n_neighbors": n_neighbors,
@@ -350,10 +338,10 @@ def process_multi_layout_umap(v, imageEngine, **kwargs):
     if "label" in imageEngine.meta_headers:
         labels = [img.metadata.get("label", None) for img in imageEngine]
         # if the user provided labels, integerize them
-        if any([i for i in labels]):
+        if any(i for i in labels):
             d = defaultdict(lambda: len(d))
             for i in labels:
-                if i == None:
+                if i is None:
                     y.append(-1)
                 else:
                     y.append(d[i])
@@ -390,7 +378,7 @@ def process_multi_layout_umap(v, imageEngine, **kwargs):
                 "min_dist": i["min_dist"],
                 "layout": i["out_path"],
                 "jittered": get_pointgrid_layout(
-                    i["out_path"], i[FILE_NAME], **kwargs
+                    i["out_path"], i[FILE_NAME], out_dir = kwargs["out_dir"]
                 ),
             }
         )

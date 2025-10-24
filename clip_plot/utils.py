@@ -34,20 +34,11 @@ def round_floats(obj, digits=5):
     return [[round(float(j), digits) for j in i] for i in obj]
 
 # %% ../nbs/01_utils.ipynb 7
-def is_number(s):
-    """Return a boolean indicating if a string is a number
-    
-    Args:
-        s (Any); Value to be checked
-
-    Returns:
-        bool
-    
-    """
+def is_number(s: str) -> bool:
     try:
         int(s)
         return True
-    except:
+    except ValueError:
         return False
 
 # %% ../nbs/01_utils.ipynb 9
@@ -68,7 +59,7 @@ def round_date(date, unit):
     if not isinstance(date, datetime.datetime):
         return "no_date"
     formatted = date.strftime("%d %B %Y -- %X")
-    if unit in set(["seconds", "minutes", "hours"]):
+    if unit in {"seconds", "minutes", "hours"}:
         date = formatted.split("--")[1].strip()
         if unit == "seconds":
             date = date
@@ -76,7 +67,7 @@ def round_date(date, unit):
             date = ":".join(d.split(":")[:-1]) + ":00"
         elif unit == "hours":
             date = date.split(":")[0] + ":00:00"
-    elif unit in set(["days", "months", "years", "decades", "centuries"]):
+    elif unit in {"days", "months", "years", "decades", "centuries"}:
         date = formatted.split("--")[0].strip()
         if unit == "days":
             date = date
@@ -130,7 +121,6 @@ def write_json(output_path: Path, object: Any):
 def read_json(path: Path) -> dict:
     with path.open("r") as f:
         return json.load(f)
-
 
 # %% ../nbs/01_utils.ipynb 17
 def copytree_agnostic(a,b):
