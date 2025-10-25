@@ -46,16 +46,16 @@ def timestamp():
     return str(datetime.datetime.now()) + ":"
 
 # %% ../nbs/01_utils.ipynb 11
-def get_json_path(out_dir: Path, subdir: str | None,
+def get_json_path(output_dir: Path, subdir: str | None,
                   plot_id: str | None, filename: str) -> Path:
     """
     Combine path and add json extension
     """
     if subdir:
-        out_dir = out_dir / subdir
+        output_dir = output_dir / subdir
     if plot_id:
         filename = f"{filename}-{plot_id}"
-    return (out_dir/ filename).with_suffix(".json")
+    return (output_dir/ filename).with_suffix(".json")
 
 # %% ../nbs/01_utils.ipynb 12
 def write_json(output_path: Path, object: Any):
