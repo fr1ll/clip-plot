@@ -60,10 +60,9 @@ class BaseLayout(ABC):
     _ROUND = True
     _SUBDIR = "layouts"
     _FILENAME = ""
-    _LABEL_FILENAME = ""
     _ADD_HASH = True
 
-    def __init__(self, plot_id, out_dir):
+    def __init__(self, plot_id: str, out_dir: Path):
         self.plot_id = plot_id
         self.out_dir = out_dir
 
@@ -87,7 +86,7 @@ class AlphabeticLayout(BaseMetaLayout):
         Get the x,y positions of images in a grid projection
         """
         print(timestamp(), "Creating grid layout")
-        out_path = self.get_json_path()
+        out_path = get_json_path(self.out_dir, self._SUBDIR, self._FILENAME, self.plot_id)
         n = math.ceil(self.imageEngine.count ** (1 / 2))
         l = []  # positions
         for i in range(self.imageEngine.count):
@@ -106,7 +105,6 @@ class CategoricalLayout(BaseMetaLayout):
         "margin": 2  # No example of different value
     }
     _FILENAME = "categorical"
-    _LABEL_FILENAME = "categorical-labels"
 
     def get_layout(self):
         """
@@ -124,8 +122,8 @@ class CategoricalLayout(BaseMetaLayout):
 
         print(timestamp(), "Creating categorical layout")
         # determine the out path and return from cache if possible
-        out_path = get_json_path()
-        labels_out_path = get_json_path("categorical-labels")
+        layout_out_path = get_json_path(self.out_dir, self._SUBDIR, self._FILENAME, self.plot_id)
+        labels_out_path = get_json_path(self.out_dir, self._SUBDIR, "categorical-labels", self.plot_id)
 
         # accumulate d[category] = [indices of points with category]
         categories = [img.metadata.get("category", None) for img in self.imageEngine]
@@ -168,12 +166,12 @@ class CategoricalLayout(BaseMetaLayout):
         text_anchors = sorted_points[-len(text_anchors) :]
         sorted_points = sorted_points[: -len(text_anchors)]
         z = round_floats(sorted_points.tolist())
-        write_json(out_path, z)
+        write_json(layout_out_path, z)
         write_json(labels_out_path,
             {"positions": round_floats(text_anchors.tolist()),
             "labels": [i["key"] for i in keys_and_counts],},
             )
-        return {"layout":out_path, "labels": labels_out_path}
+        return {"layout": layout_out_path, "labels": labels_out_path}
     
 class CustomLayout(BaseMetaLayout):
     _FILENAME = "custom"
@@ -182,7 +180,7 @@ class CustomLayout(BaseMetaLayout):
         """
         Return a 2D array of image positions corresponding to x,y coordinates in metadata
         """
-        out_path = self.get_json_path()
+        out_path = get_json_path(self.out_dir, self._SUBDIR, self._FILENAME, self.plot_id)
         if not self.imageEngine.metadata:
             return
         found_coords = False
@@ -252,12 +250,12 @@ def process_multi_layout_umap(v, imageEngine, umap_spec: UmapSpec, out_dir: Path
         umap_spec.n_neighbors, umap_spec.min_dist
     ):
         filename = f"umap-n_neighbors_{n_neighbors}-min_dist_{min_dist}"
-        out_path = get_json_path("layouts", filename, out_dir=out_dir)
+        out_path = get_json_path(out_dir, "layouts", filename, plot_id)
         params.append(
             {
                 "n_neighbors": n_neighbors,
                 "min_dist": min_dist,
-                FILE_NAME: filename,
+                "filename": filename,
                 "out_path": out_path,
             }
         )
@@ -329,7 +327,7 @@ def get_umap_model(umap_spec: UmapSpec, seed: int | None = None) -> UMAP:
     return UMAP(
         n_neighbors=umap_spec.n_neighbors[0],
         min_dist=umap_spec.min_dist[0],
-        n_components=umap_spec.n_components,
+        n_components=2,
         metric=umap_spec.metric,
         random_state=seed,
         transform_seed=seed,
@@ -342,11 +340,9 @@ def get_rasterfairy_layout(**kwargs):
     Args:
         umap: np.ndarray shape (2, n) or maybe (n, 2) not sure
 
-            write_layout()
-
     """
     print(timestamp(), "Creating rasterfairy layout")
-    out_path = get_json_path("layouts", "rasterfairy", **kwargs)
+    out_path = get_json_path(kwargs["out_dir"], "layouts", "rasterfairy", kwargs["plot_id"])
     umap = np.array(read_json(Path(kwargs["umap"]["variants"][0]["layout"])))
     if umap.shape[-1] != 2:
         print(timestamp(), "Could not create rasterfairy layout because data is not 2D")
@@ -450,7 +446,7 @@ def get_hotspots(imageEngine, layouts={}, use_high_dimensional_vectors=True, n_p
         max_clusters
 
     """
-    print(timestamp(), f"Clustering data with {cluster_method}")
+    print(timestamp(), f"Clustering data with HDBSCAN")
     if use_high_dimensional_vectors:
         vecs = kwargs["vecs"]
     else:
@@ -489,7 +485,8 @@ def get_hotspots(imageEngine, layouts={}, use_high_dimensional_vectors=True, n_p
 
     # save the hotspots to disk and return the path to the saved json
     print(timestamp(), "Found", len(clusters), "hotspots")
-    return write_json(get_json_path("hotspots", "hotspot", **kwargs), clusters, **kwargs)
+    return write_json(get_json_path(kwargs["out_dir"], "hotspots", "hotspot", kwargs["plot_id"]),
+                      clusters, **kwargs)
 
 
 def get_cluster_model(**kwargs):
@@ -554,7 +551,6 @@ def get_layouts(imageEngine, **kwargs):
 
     alphabetic_layout = AlphabeticLayout(kwargs['plot_id'], imageEngine, options)
     categorical_layout = CategoricalLayout(kwargs['plot_id'], imageEngine, options)
-    date_layout = DateLayout(kwargs['plot_id'], imageEngine, options)
     custom_layout= CustomLayout(kwargs['plot_id'], imageEngine, options)
     umap = get_umap_layout(imageEngine, **kwargs)
     layouts = {
