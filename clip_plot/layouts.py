@@ -3,39 +3,32 @@
 # %% auto 0
 __all__ = ['write_layout', 'BaseLayout', 'BaseMetaLayout', 'AlphabeticLayout', 'Box', 'get_categorical_boxes',
            'get_categorical_points', 'CategoricalLayout', 'CustomLayout', 'get_pointgrid_layout',
-           'get_rasterfairy_layout', 'get_umap_layout_or_layouts', 'process_multi_layout_umap', 'get_single_umap_model',
-           'get_hotspots', 'get_cluster_model', 'get_heightmap', 'get_layouts']
+           'get_rasterfairy_layout', 'get_umap_layout_or_layouts', 'get_single_umap_model', 'get_heightmap',
+           'get_layouts']
 
 # %% ../nbs/05_layouts.ipynb 2
-from .utils import timestamp, get_json_path, write_json, read_json, round_floats, FILE_NAME
+from .utils import timestamp, get_json_path, write_json, read_json, round_floats
 from .configuration import UmapSpec
 from .images import ImageFactory
 
 from abc import ABC, abstractmethod
-import os
 from typing import Any
 import math
 import itertools
 from collections import defaultdict
 from pathlib import Path
-
-import numpy as np
-
 import operator
-import multiprocessing
 
 # TODO: Change math references to numpy
 
-from hdbscan import HDBSCAN
-from umap import UMAP, AlignedUMAP
-
-from sklearn.preprocessing import minmax_scale
+import numpy as np
 from scipy.stats import gaussian_kde
-
+import matplotlib.pyplot as plt
+from umap import UMAP, AlignedUMAP
+from sklearn.preprocessing import minmax_scale
 import rasterfairy
 from rasterfairy import coonswarp
 from pointgrid import align_points_to_grid
-import matplotlib.pyplot as plt
 
 # %% ../nbs/05_layouts.ipynb 7
 def write_layout(path: Path, obj: Any, scale: bool = True, round: bool = True):
@@ -324,15 +317,7 @@ def get_rasterfairy_layout(output_dir: Path, plot_id: str, umap_json_path: Path)
     return write_layout(out_path, pos)
 
 # %% ../nbs/05_layouts.ipynb 14
-def get_umap_layout_or_layouts(vecs: np.ndarray, imageEngine, umap_spec: UmapSpec,
-                    output_dir, plot_id) -> callable:
-    """wraps process_multi_layout_umap
-    """
-    return process_multi_layout_umap(vecs, imageEngine, umap_spec,
-                                     output_dir, plot_id)
-
-
-def process_multi_layout_umap(v: np.ndarray, imageEngine, umap_spec: UmapSpec,
+def get_umap_layout_or_layouts(v: np.ndarray, imageEngine, umap_spec: UmapSpec,
                               output_dir: Path, plot_id: str) -> dict[str, list]:
     """Create a multi-layout UMAP projection
     Args:
@@ -437,73 +422,8 @@ def get_single_umap_model(umap_spec: UmapSpec, seed: int | None = None) -> UMAP:
         config.update({"transform_seed": seed})
     return UMAP(**config)
 
-# %% ../nbs/05_layouts.ipynb 16
-def get_hotspots(imageEngine, vecs: np.ndarray,
-                 output_dir: Path, plot_id: str,
-                 min_cluster_size: int = 15, max_clusters: int = 15,
-                ):
-    """Return the stable clusters from the condensed tree of connected components from the density graph
-
-    Args:
-        layouts (Optional[dict] = {}) 
-        use_high_dimensional_vectors (Optional[bool] = True) 
-        n_preproc_dims
-        vecs
-        umap = Used if use_high_dimensional_vectors is False
-        max_clusters
-
-    """
-    print(timestamp(), "Clustering data with HDBSCAN")
-    model = get_cluster_model(min_cluster_size)
-    z = model.fit(vecs)
-
-    # create a map from cluster label to image indices in cluster
-    d = defaultdict(lambda: defaultdict(list))
-    for idx, i in enumerate(z.labels_):
-        if i != -1:
-            d[i]["images"].append(idx)
-            d[i]["img"] = imageEngine[idx].filename
-            d[i]["layout"] = "inception_vectors"
-
-    # remove massive clusters
-    deletable = []
-    for i in d:
-        # find percent of images in cluster
-        image_percent = len(d[i]["images"]) / len(vecs)
-        # determine if image or area percent is too large
-        if image_percent > 0.5:
-            deletable.append(i)
-    for i in deletable:
-        del d[i]
-
-    # sort the clusers by size and then label the clusters
-    clusters = d.values()
-    clusters = sorted(clusters, key=lambda i: len(i["images"]), reverse=True)
-    for idx, i in enumerate(clusters):
-        i["label"] = f"Cluster {idx + 1}"
-
-    # slice off the first `max_clusters`
-    clusters = clusters[: max_clusters]
-
-    # save the hotspots to disk and return the path to the saved json
-    print(timestamp(), "Found", len(clusters), "hotspots")
-    return write_json(get_json_path(output_dir, "hotspots", "hotspot", plot_id),
-                      clusters)
-
-
-def get_cluster_model(min_cluster_size: int = 15):
-    """Return model with .fit() method that can be used to cluster input vectors
-    """
-    return HDBSCAN(
-        core_dist_n_jobs=multiprocessing.cpu_count(),
-        min_cluster_size=min_cluster_size,
-        cluster_selection_epsilon=0.01,
-        min_samples=1,
-        approx_min_span_tree=False,
-    )
-
-
-def get_heightmap(json_path: Path, label: str, **kwargs):
+# %% ../nbs/05_layouts.ipynb 15
+def get_heightmap(json_path: Path, label: str, output_dir: Path):
     """Create a heightmap using the distribution of points stored at `path`
     Args:
         path
@@ -530,23 +450,22 @@ def get_heightmap(json_path: Path, label: str, **kwargs):
     plt.pcolormesh(xi, yi, zi.reshape(xi.shape), shading="gouraud", cmap=plt.cm.gray)
     plt.axis("off")
     # save the plot
-    output_dir = os.path.join(kwargs["output_dir"], "heightmaps")
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-    out_path = os.path.join(output_dir, label + "-heightmap.png")
+    hmap_dir = output_dir/ "heightmaps"
+    hmap_dir.mkdir(parents=True, exist_ok=True)
+    out_path = hmap_dir / f"{label}-heightmap.png"
     plt.savefig(out_path, pad_inches=0)
 
-
-# %% ../nbs/05_layouts.ipynb 17
-def get_layouts(imageEngine: ImageFactory, output_dir: Path,
-                plot_id: str, umap_spec: UmapSpec,
-                **kwargs):
+# %% ../nbs/05_layouts.ipynb 16
+def get_layouts(imageEngine: ImageFactory, hidden_vectors: np.ndarray,
+                output_dir: Path, plot_id: str,
+                umap_spec: UmapSpec,
+                ):
     """Get the image positions in each projection"""
 
     alphabetic_layout = AlphabeticLayout(plot_id, imageEngine)
     categorical_layout = CategoricalLayout(plot_id, imageEngine)
     custom_layout = CustomLayout(plot_id, imageEngine)
-    umap_layouts_dict = get_umap_layout_or_layouts(imageEngine.vectors, imageEngine, umap_spec,
+    umap_layouts_dict = get_umap_layout_or_layouts(hidden_vectors, imageEngine, umap_spec,
                                                 output_dir, plot_id)
     layouts = {
         "umap": umap_layouts_dict,

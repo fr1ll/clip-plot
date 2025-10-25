@@ -2,7 +2,7 @@
 
 # %% auto 0
 __all__ = ['load_image', 'resize_to_max_side', 'resize_to_height', 'autocontrast', 'create_atlases_and_thumbs', 'get_image_paths',
-           'ValidImage', 'ImageFactoryBase', 'ImageFactory']
+           'get_metadata_list', 'ValidImage', 'ImageFactoryBase', 'ImageFactory']
 
 # %% ../nbs/03_images.ipynb 3
 import os
@@ -10,17 +10,13 @@ import copy
 from glob import glob
 import random
 from abc import ABC, abstractmethod
+from pathlib import Path
 
 import numpy as np
 from tqdm.auto import tqdm
+from PIL import Image
 
 from .utils import timestamp, FILE_NAME
-from .metadata import get_metadata_list
-
-
-# imports when switching to PIL-only resizing
-from PIL import Image
-from pathlib import Path
 
 # %% ../nbs/03_images.ipynb 5
 def load_image(image_path:str, format:str="RGB")->Image.Image:
@@ -160,7 +156,53 @@ def get_image_paths(images:str) -> list[Path]:
 
     return [Path(im) for im in image_paths]
 
-# %% ../nbs/03_images.ipynb 17
+# %% ../nbs/03_images.ipynb 18
+def get_metadata_list(meta_dir: str) -> list[dict] | list[str]:
+    """Return a list of objects with image metadata.
+
+    Will create 'tags' key if 'category' is in metadata
+    but not 'tags'.
+
+    Args:
+        metadata (str, default = None): Metadata location
+
+    Returns:
+        l (List[dict]): List of metadata
+
+    Notes:
+        No check for 'filename' is performed
+
+    Todo:
+        Think about separating .csv and json functionality.
+        Can we use pandas numpy to process csv?
+    """
+    # handle csv metadata
+    metaList = []
+    if meta_dir.endswith(".csv"):
+        with open(meta_dir) as f:
+            reader = csv.reader(f)
+            headers = [i.lower() for i in next(reader)]
+            for i in reader:
+                metaList.append(
+                    {
+                        headers[j]: i[j] if len(i) > j and i[j] else ""
+                        for j, _ in enumerate(headers)
+                    }
+                )
+    
+    # handle json metadata
+    else:
+        for i in glob(meta_dir, recursive=True):
+            with open(i) as f:
+                metaList.append(json.load(f))
+
+    # if the user provided a category but not a tag, use the category as the tag
+    for metaDict in metaList:
+        if "category" in metaDict and ("tags" in metaDict) is False:
+            metaDict.update({"tags": metaDict["category"]})
+    return metaList, headers
+
+# %% ../nbs/03_images.ipynb 19
 class ValidImage:
     def __init__(self, img_path: Path, metadata: dict | None = None):
         self.path = img_path
@@ -211,7 +253,7 @@ class ValidImage:
 
         return True, ""
 
-# %% ../nbs/03_images.ipynb 19
+# %% ../nbs/03_images.ipynb 21
 class ImageFactoryBase(ABC):
     """Class encapsulates functionality required to access images,
     including compiling metadata.

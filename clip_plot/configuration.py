@@ -5,7 +5,7 @@ __all__ = ['Paths', 'UmapSpec', 'ClusterSpec', 'Cfg']
 
 # %% ../nbs/09_configuration.ipynb 2
 from typing import Literal, Any
-from typing_extensions import Self
+from typing_extensions import Self 
 from pathlib import Path
 from importlib.metadata import version
 from uuid import uuid4
@@ -18,7 +18,6 @@ from pydantic import (
 from pydantic_settings import (
     BaseSettings,
     SettingsConfigDict,
-    CliMutuallyExclusiveGroup,
     TomlConfigSettingsSource,
     CliApp,
     CliSuppress
@@ -75,7 +74,6 @@ class ClusterSpec(BaseModel):
     n_clusters: CliSuppress[int] = Field(12)
     max_clusters: CliSuppress[int] = Field(10)
     min_cluster_size: CliSuppress[int] = Field(20)
-    cluster_preproc_dims: CliSuppress[int] = Field(-1)
 
 # %% ../nbs/09_configuration.ipynb 6
 class Cfg(BaseSettings):
