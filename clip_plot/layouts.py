@@ -8,7 +8,8 @@ __all__ = ['cuml_ready', 'cluster_method', 'write_layout', 'BaseLayout', 'BaseMe
            'get_layouts']
 
 # %% ../nbs/05_layouts.ipynb 2
-from .utils import timestamp, get_path, write_json, read_json, round_floats, FILE_NAME
+from .utils import timestamp, get_json_path, write_json, read_json, round_floats, FILE_NAME
+from .configuration import UmapSpec
 
 import os
 from typing import Any
@@ -88,14 +89,6 @@ class BaseLayout(ABC):
         # Get or create layout
         pass
 
-    def get_path(self, filename=None):
-        if filename is None:
-            filename = self._FILENAME
-        pathDict = {
-            "out_dir": self.out_dir}
-
-        return get_path(self._SUBDIR, filename, **pathDict)
-
 
 class BaseMetaLayout(BaseLayout):
     def __init__(self, plot_id, imageEngine, options={}) -> None:
@@ -111,7 +104,7 @@ class AlphabeticLayout(BaseMetaLayout):
         Get the x,y positions of images in a grid projection
         """
         print(timestamp(), "Creating grid layout")
-        out_path = self.get_path()
+        out_path = self.get_json_path()
         n = math.ceil(self.imageEngine.count ** (1 / 2))
         l = []  # positions
         for i in range(self.imageEngine.count):
@@ -148,12 +141,12 @@ class CategoricalLayout(BaseMetaLayout):
 
         print(timestamp(), "Creating categorical layout")
         # determine the out path and return from cache if possible
-        out_path = self.get_path()
-        labels_out_path = self.get_path("categorical-labels")
+        out_path = get_json_path()
+        labels_out_path = get_json_path("categorical-labels")
 
         # accumulate d[category] = [indices of points with category]
         categories = [img.metadata.get("category", None) for img in self.imageEngine]
-        if not any(categories) or len(set(categories) - set([None])) == 1:
+        if not any(categories) or len(set(categories) - {None}) == 1:
             return False
         d = defaultdict(list)
         for idx, i in enumerate(categories):
@@ -206,7 +199,7 @@ class CustomLayout(BaseMetaLayout):
         """
         Return a 2D array of image positions corresponding to x,y coordinates in metadata
         """
-        out_path = self.get_path()
+        out_path = self.get_json_path()
         if not self.imageEngine.metadata:
             return
         found_coords = False
@@ -254,7 +247,7 @@ class GeographicLayout(BaseMetaLayout):
         if "lat" not in self.imageEngine.meta_headers or "lng" not in self.imageEngine.meta_headers:
             return False
 
-        out_path = self.get_path()
+        out_path = get_json_path()
         l = []
         coords = False
         for img in self.imageEngine:
@@ -268,11 +261,6 @@ class GeographicLayout(BaseMetaLayout):
             print(timestamp(), "Creating geographic layout")
             write_layout(out_path, l, scale=False)
             return {"layout": out_path}
-        elif self.geojson:
-            print(
-                timestamp(),
-                "GeoJSON is only processed if you also provide lat/lng coordinates for your images in a metadata file!",
-            )
         return None
 
 # %% ../nbs/05_layouts.ipynb 10
@@ -283,7 +271,7 @@ def get_pointgrid_layout(path, label, *, out_dir: str):
         label (str)
     """
     print(timestamp(), "Creating {label} pointgrid")
-    out_path = get_path("layouts", label + "-jittered", out_dir = out_dir)
+    out_path = get_json_path("layouts", label + "-jittered", out_dir = out_dir)
 
     arr = np.array(read_json(path))
     if arr.shape[-1] != 2:
@@ -295,13 +283,13 @@ def get_pointgrid_layout(path, label, *, out_dir: str):
 
 
 # %% ../nbs/05_layouts.ipynb 11
-def get_umap_layout(imageEngine, **kwargs):
+def get_umap_layout(vecs: np.ndarray, imageEngine, umap_spec: UmapSpec):
     """wraps process_multi_layout_umap
     """
-    return process_multi_layout_umap(kwargs["vecs"], imageEngine, **kwargs)
+    return process_multi_layout_umap(vecs, imageEngine, umap_spec)
 
 
-def process_multi_layout_umap(v, imageEngine, **kwargs):
+def process_multi_layout_umap(v, imageEngine, umap_spec: UmapSpec, out_dir: Path):
     """Create a multi-layout UMAP projection
     Args:
         v (array like object)
@@ -312,10 +300,10 @@ def process_multi_layout_umap(v, imageEngine, **kwargs):
     print(timestamp(), "Creating multi-umap layout")
     params = []
     for n_neighbors, min_dist in itertools.product(
-        kwargs["n_neighbors"], kwargs["min_dist"]
+        umap_spec.n_neighbors, umap_spec.min_dist
     ):
         filename = f"umap-n_neighbors_{n_neighbors}-min_dist_{min_dist}"
-        out_path = get_path("layouts", filename, out_dir=kwargs["out_dir"])
+        out_path = get_json_path("layouts", filename, out_dir=out_dir)
         params.append(
             {
                 "n_neighbors": n_neighbors,
@@ -354,7 +342,7 @@ def process_multi_layout_umap(v, imageEngine, **kwargs):
 
         # Fit the model on the data
         if singleLayout is True: # Single layout
-            model = get_umap_model(**kwargs)
+            model = get_umap_model(umap_spec)
             z = model.fit(v, y=y if np.any(y) else None).embedding_
             write_layout(params[0]["out_path"], z, **kwargs)
 
@@ -386,16 +374,16 @@ def process_multi_layout_umap(v, imageEngine, **kwargs):
         "variants": l,
     }
 
-def get_umap_model(**kwargs):
+def get_umap_model(umap_spec: UmapSpec, seed: int | None = None) -> UMAP:
     """
     """
     return UMAP(
-        n_neighbors=kwargs["n_neighbors"][0],
-        min_dist=kwargs["min_dist"][0],
-        n_components=kwargs["n_components"],
-        metric=kwargs["metric"],
-        random_state=kwargs["seed"],
-        transform_seed=kwargs["seed"],
+        n_neighbors=umap_spec.n_neighbors[0],
+        min_dist=umap_spec.min_dist[0],
+        n_components=umap_spec.n_components,
+        metric=umap_spec.metric,
+        random_state=seed,
+        transform_seed=seed,
     )
 
 # %% ../nbs/05_layouts.ipynb 12
@@ -405,18 +393,11 @@ def get_rasterfairy_layout(**kwargs):
     Args:
         umap: np.ndarray shape (2, n) or maybe (n, 2) not sure
 
-        subfunctions
-            get_path()
-                *sub_dir (str)
-                *filename (str)
-                **out_dir (str)
-                **add_hash (Optional[bool])
-                **plot_id (Optional[str]): Required if add_hash is True
             write_layout()
 
     """
     print(timestamp(), "Creating rasterfairy layout")
-    out_path = get_path("layouts", "rasterfairy", **kwargs)
+    out_path = get_json_path("layouts", "rasterfairy", **kwargs)
     umap = np.array(read_json(Path(kwargs["umap"]["variants"][0]["layout"])))
     if umap.shape[-1] != 2:
         print(timestamp(), "Could not create rasterfairy layout because data is not 2D")
@@ -580,7 +561,7 @@ def get_hotspots(imageEngine, layouts={}, use_high_dimensional_vectors=True, n_p
 
     # save the hotspots to disk and return the path to the saved json
     print(timestamp(), "Found", len(clusters), "hotspots")
-    return write_json(get_path("hotspots", "hotspot", **kwargs), clusters, **kwargs)
+    return write_json(get_json_path("hotspots", "hotspot", **kwargs), clusters, **kwargs)
 
 
 def get_cluster_model(**kwargs):
