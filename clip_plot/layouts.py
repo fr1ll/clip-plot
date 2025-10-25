@@ -218,7 +218,8 @@ def get_pointgrid_layout(path, label, *, out_dir: str):
         label (str)
     """
     print(timestamp(), "Creating {label} pointgrid")
-    out_path = get_json_path("layouts", label + "-jittered", out_dir = out_dir)
+    out_path = get_json_path("layouts", label + "-jittered",
+                             out_dir=out_dir, plot_id=plot_id)
 
     arr = np.array(read_json(path))
     if arr.shape[-1] != 2:
@@ -399,7 +400,6 @@ def get_categorical_boxes(group_counts, margin=2):
         i.x = max(row_members) + margin if row_members else margin
     return boxes
 
-
 def get_categorical_points(arr, unit_size=None):
     """Given an array of Box() objects, return a 2D distribution with shape (n_cells, 2)"""
     points_arr = []
@@ -420,7 +420,6 @@ def get_categorical_points(arr, unit_size=None):
                 ]
             )
     return np.array(points_arr)
-
 
 class Box:
     """Store the width, height, and x, y coords of a box"""
@@ -540,18 +539,12 @@ def get_heightmap(path, label, **kwargs):
 
 
 # %% ../nbs/05_layouts.ipynb 16
-##
-# Layouts
-##
-
-
 def get_layouts(imageEngine, **kwargs):
     """Get the image positions in each projection"""
-    options =  {"geojson": kwargs["geojson"]}
 
-    alphabetic_layout = AlphabeticLayout(kwargs['plot_id'], imageEngine, options)
-    categorical_layout = CategoricalLayout(kwargs['plot_id'], imageEngine, options)
-    custom_layout= CustomLayout(kwargs['plot_id'], imageEngine, options)
+    alphabetic_layout = AlphabeticLayout(kwargs['plot_id'], imageEngine)
+    categorical_layout = CategoricalLayout(kwargs['plot_id'], imageEngine)
+    custom_layout= CustomLayout(kwargs['plot_id'], imageEngine)
     umap = get_umap_layout(imageEngine, **kwargs)
     layouts = {
         "umap": umap,
@@ -562,7 +555,6 @@ def get_layouts(imageEngine, **kwargs):
             "layout": get_rasterfairy_layout(umap=umap, **kwargs),
         },
         "categorical": categorical_layout.get_layout(),
-        "date": date_layout.get_layout(),
         "custom": custom_layout.get_layout(),
     }
     return layouts
