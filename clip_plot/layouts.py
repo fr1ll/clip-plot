@@ -2,13 +2,14 @@
 
 # %% auto 0
 __all__ = ['write_layout', 'BaseLayout', 'BaseMetaLayout', 'AlphabeticLayout', 'CategoricalLayout', 'CustomLayout',
-           'get_pointgrid_layout', 'get_umap_layout', 'process_multi_layout_umap', 'get_umap_model',
+           'get_pointgrid_layout', 'get_umap_layout_or_layouts', 'process_multi_layout_umap', 'get_single_umap_model',
            'get_rasterfairy_layout', 'get_categorical_boxes', 'get_categorical_points', 'Box', 'get_hotspots',
            'get_cluster_model', 'get_heightmap', 'get_layouts']
 
 # %% ../nbs/05_layouts.ipynb 2
 from .utils import timestamp, get_json_path, write_json, read_json, round_floats, FILE_NAME
 from .configuration import UmapSpec
+from .images import ImageFactory
 
 from abc import ABC, abstractmethod
 import os
@@ -72,7 +73,7 @@ class BaseLayout(ABC):
 
 
 class BaseMetaLayout(BaseLayout):
-    def __init__(self, plot_id, imageEngine, options={}) -> None:
+    def __init__(self, plot_id, imageEngine) -> None:
         super().__init__(plot_id, imageEngine.out_dir)
         self.imageEngine = imageEngine
 
@@ -229,13 +230,15 @@ def get_pointgrid_layout(input_path: Path, out_dir: Path, label, plot_id: str):
 
 
 # %% ../nbs/05_layouts.ipynb 10
-def get_umap_layout(vecs: np.ndarray, imageEngine, umap_spec: UmapSpec):
+def get_umap_layout_or_layouts(vecs: np.ndarray, imageEngine, umap_spec: UmapSpec,
+                    out_dir, plot_id):
     """wraps process_multi_layout_umap
     """
-    return process_multi_layout_umap(vecs, imageEngine, umap_spec)
+    return process_multi_layout_umap(vecs, imageEngine, umap_spec,
+                                     out_dir, plot_id)
 
 
-def process_multi_layout_umap(v, imageEngine, umap_spec: UmapSpec,
+def process_multi_layout_umap(v: np.ndarray, imageEngine, umap_spec: UmapSpec,
                               out_dir: Path, plot_id: str):
     """Create a multi-layout UMAP projection
     Args:
@@ -245,13 +248,13 @@ def process_multi_layout_umap(v, imageEngine, umap_spec: UmapSpec,
         images
     """
     print(timestamp(), "Creating multi-umap layout")
-    params = []
+    umap_variants = []
     for n_neighbors, min_dist in itertools.product(
         umap_spec.n_neighbors, umap_spec.min_dist
     ):
         filename = f"umap-n_neighbors_{n_neighbors}-min_dist_{min_dist}"
         out_path = get_json_path(out_dir, "layouts", filename, plot_id)
-        params.append(
+        umap_variants.append(
             {
                 "n_neighbors": n_neighbors,
                 "min_dist": min_dist,
@@ -260,26 +263,26 @@ def process_multi_layout_umap(v, imageEngine, umap_spec: UmapSpec,
             }
         )
 
-    singleLayout = len(params) == 1
+    singleLayout = len(umap_variants) == 1
 
     # map each image's index to itself and create one copy of that map for each layout
     relations_dict = {idx: idx for idx, _ in enumerate(v)}
 
-    # determine the subset of params that have already been computed
-    uncomputed_params = [i for i in params if not os.path.exists(i["out_path"])]
+    # determine the subset of umap_variants that have already been computed
+    uncomputed_variants = [v for v in umap_variants if not v["out_path"].exists()]
 
     # Use labels for fitting if available
     y = []
     if "label" in imageEngine.meta_headers:
         labels = [img.metadata.get("label", None) for img in imageEngine]
         # if the user provided labels, integerize them
-        if any(i for i in labels):
+        if any(label for label in labels):
             d = defaultdict(lambda: len(d))
-            for i in labels:
-                if i is None:
+            for label in labels:
+                if label is None:
                     y.append(-1)
                 else:
-                    y.append(d[i])
+                    y.append(d[label])
             """
             Currently there is no way to have a particular image with the missing field for 
             "label". For scenarios with metadata, If an image is not matched, it is excluded from
@@ -289,31 +292,32 @@ def process_multi_layout_umap(v, imageEngine, umap_spec: UmapSpec,
 
         # Fit the model on the data
         if singleLayout is True: # Single layout
-            model = get_umap_model(umap_spec)
+            model = get_single_umap_model(umap_spec)
             z = model.fit(v, y=y if np.any(y) else None).embedding_
-            write_layout(params[0]["out_path"], z, **kwargs)
+            write_layout(umap_variants[0]["out_path"], z)
 
         else:  # Multiple layouts
             model = AlignedUMAP(
-                n_neighbors=[i["n_neighbors"] for i in uncomputed_params],
-                min_dist=[i["min_dist"] for i in uncomputed_params],
+                n_neighbors=[v["n_neighbors"] for v in uncomputed_variants], # type: ignore
+                min_dist=[v["min_dist"] for v in uncomputed_variants], # type: ignore
             )
             z = model.fit(
-                [v for _ in params], y=[y if np.any(y) else None for _ in params], relations=[relations_dict for _ in params[1:]]
+                [v for _ in umap_variants], y=[y if np.any(y) else None for _ in umap_variants], relations=[relations_dict for _ in umap_variants[1:]]
             )
-            for idx, i in enumerate(params):
-                write_layout(i["out_path"], z.embeddings_[idx], **kwargs)
+            for i, v in enumerate(umap_variants):
+                write_layout(v["out_path"], z.embeddings_[i])
 
     # load the list of layout variants
     l = []
-    for i in params:
+    for v in umap_variants:
         l.append(
             {
-                "n_neighbors": i["n_neighbors"],
-                "min_dist": i["min_dist"],
-                "layout": i["out_path"],
+                "n_neighbors": v["n_neighbors"],
+                "min_dist": v["min_dist"],
+                "layout": v["out_path"],
                 "jittered": get_pointgrid_layout(
-                    i["out_path"], i[FILE_NAME], out_dir = kwargs["out_dir"]
+                    input_path=v["out_path"], out_dir=out_dir,
+                    label=label, plot_id=plot_id
                 ),
             }
         )
@@ -321,24 +325,25 @@ def process_multi_layout_umap(v, imageEngine, umap_spec: UmapSpec,
         "variants": l,
     }
 
-def get_umap_model(umap_spec: UmapSpec, seed: int | None = None) -> UMAP:
+
+def get_single_umap_model(umap_spec: UmapSpec, seed: int | None = None) -> UMAP:
     """
+    unpack params list and handle UMAP not letting transform_seed be None
     """
-    return UMAP(
-        n_neighbors=umap_spec.n_neighbors[0],
-        min_dist=umap_spec.min_dist[0],
-        n_components=2,
-        metric=umap_spec.metric,
-        random_state=seed,
-        transform_seed=seed,
-    )
+    config ={
+        "n_neighbors" : umap_spec.n_neighbors[0],
+        "min_dist" : umap_spec.min_dist[0],
+        "n_components" : 2,
+        "metric" : umap_spec.metric,
+        "random_state" : seed,
+    }
+    if seed:
+        config.update({"transform_seed": seed})
+    return UMAP(**config)
 
 # %% ../nbs/05_layouts.ipynb 11
 def get_rasterfairy_layout(out_dir: Path, plot_id: str, umap_json_path: Path):
-    """Get the x, y position of images passed through a rasterfairy projection
-
-    Args:
-        umap: np.ndarray shape (2, n) or maybe (n, 2) not sure
+    """Create regular grid layout that keeps umap XYs close to each other
     """
     print(timestamp(), "Creating rasterfairy layout")
     out_path = get_json_path(out_dir, "layouts", "rasterfairy", plot_id)
@@ -529,20 +534,23 @@ def get_heightmap(path, label, **kwargs):
 
 
 # %% ../nbs/05_layouts.ipynb 16
-def get_layouts(imageEngine, **kwargs):
+def get_layouts(imageEngine: ImageFactory, output_dir: Path,
+                plot_id: str, umap_spec: UmapSpec,
+                **kwargs):
     """Get the image positions in each projection"""
 
-    alphabetic_layout = AlphabeticLayout(kwargs['plot_id'], imageEngine)
-    categorical_layout = CategoricalLayout(kwargs['plot_id'], imageEngine)
-    custom_layout= CustomLayout(kwargs['plot_id'], imageEngine)
-    umap = get_umap_layout(imageEngine, **kwargs)
+    alphabetic_layout = AlphabeticLayout(plot_id, imageEngine)
+    categorical_layout = CategoricalLayout(plot_id, imageEngine)
+    custom_layout = CustomLayout(plot_id, imageEngine)
+    umap_json_path = get_umap_layout_or_layouts(imageEngine.vectors, imageEngine, umap_spec,
+                                                output_dir, plot_id)
     layouts = {
-        "umap": umap,
+        "umap": umap_json_path,
         "alphabetic": {
             "layout": alphabetic_layout.get_layout(),
         },
         "grid": {
-            "layout": get_rasterfairy_layout(umap=umap, **kwargs),
+            "layout": get_rasterfairy_layout(umap_json_path=umap, **kwargs),
         },
         "categorical": categorical_layout.get_layout(),
         "custom": custom_layout.get_layout(),
