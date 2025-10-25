@@ -13,7 +13,6 @@ from .configuration import UmapSpec
 from abc import ABC, abstractmethod
 import os
 from typing import Any
-import json
 import math
 import itertools
 from collections import defaultdict
@@ -100,10 +99,8 @@ class AlphabeticLayout(BaseMetaLayout):
 
 
 class CategoricalLayout(BaseMetaLayout):
-    DEFAULT_OPTIONS = {
-        "null_category": "Other", # No example of different value
-        "margin": 2  # No example of different value
-    }
+    _NULL_CATEGORY = "Other"
+    _MARGIN = 2
     _FILENAME = "categorical"
 
     def get_layout(self):
@@ -137,7 +134,7 @@ class CategoricalLayout(BaseMetaLayout):
         keys_and_counts = [{"key": i, "count": len(d[i])} for i in d]
         keys_and_counts.sort(key=operator.itemgetter("count"), reverse=True)
         # get the box layout then subdivide into discrete points
-        boxes = get_categorical_boxes([i["count"] for i in keys_and_counts], margin=self.margin)
+        boxes = get_categorical_boxes([i["count"] for i in keys_and_counts], margin=self._MARGIN)
         points = get_categorical_points(boxes)
         # sort the points into the order of the observations in the metadata
         counts = {i["key"]: 0 for i in keys_and_counts}
@@ -146,12 +143,12 @@ class CategoricalLayout(BaseMetaLayout):
             offsets[i["key"]] += sum([j["count"] for j in keys_and_counts[:idx]])
         sorted_points = []
         for img in self.imageEngine:
-            category = img.metadata.get("category", self.null_category)
+            category = img.metadata.get("category", self._NULL_CATEGORY)
             sorted_points.append(points[offsets[category] + counts[category]])
             counts[category] += 1
         sorted_points = np.array(sorted_points)
         # add to the sorted points the anchors for the text labels for each group
-        text_anchors = np.array([[i.x, i.y - self.margin / 2] for i in boxes])
+        text_anchors = np.array([[i.x, i.y - self._MARGIN / 2] for i in boxes])
         # add the anchors to the points - these will be removed after the points are projected
         sorted_points = np.vstack([sorted_points, text_anchors])
         # scale -1:1 using the largest axis as the scaling metric
@@ -211,17 +208,18 @@ class CustomLayout(BaseMetaLayout):
 
 
 # %% ../nbs/05_layouts.ipynb 9
-def get_pointgrid_layout(path, label, *, out_dir: str):
+def get_pointgrid_layout(input_path: Path, out_dir: Path, label, plot_id: str):
     """Gridify the positions in `path` and return the path to this new layout
     Args:
         path (str)
         label (str)
     """
     print(timestamp(), "Creating {label} pointgrid")
-    out_path = get_json_path("layouts", label + "-jittered",
-                             out_dir=out_dir, plot_id=plot_id)
+    out_path = get_json_path(out_dir=out_dir, subdir="layouts",
+                             filename=f"{label}-jittered",
+                             plot_id=plot_id)
 
-    arr = np.array(read_json(path))
+    arr = np.array(read_json(input_path))
     if arr.shape[-1] != 2:
         print(timestamp(), "Could not create pointgrid layout because data is not 2D")
         return None
@@ -237,7 +235,8 @@ def get_umap_layout(vecs: np.ndarray, imageEngine, umap_spec: UmapSpec):
     return process_multi_layout_umap(vecs, imageEngine, umap_spec)
 
 
-def process_multi_layout_umap(v, imageEngine, umap_spec: UmapSpec, out_dir: Path):
+def process_multi_layout_umap(v, imageEngine, umap_spec: UmapSpec,
+                              out_dir: Path, plot_id: str):
     """Create a multi-layout UMAP projection
     Args:
         v (array like object)
@@ -335,16 +334,15 @@ def get_umap_model(umap_spec: UmapSpec, seed: int | None = None) -> UMAP:
     )
 
 # %% ../nbs/05_layouts.ipynb 11
-def get_rasterfairy_layout(**kwargs):
+def get_rasterfairy_layout(out_dir: Path, plot_id: str, umap_json_path: Path):
     """Get the x, y position of images passed through a rasterfairy projection
 
     Args:
         umap: np.ndarray shape (2, n) or maybe (n, 2) not sure
-
     """
     print(timestamp(), "Creating rasterfairy layout")
-    out_path = get_json_path(kwargs["out_dir"], "layouts", "rasterfairy", kwargs["plot_id"])
-    umap = np.array(read_json(Path(kwargs["umap"]["variants"][0]["layout"])))
+    out_path = get_json_path(out_dir, "layouts", "rasterfairy", plot_id)
+    umap = np.array(read_json(umap_json_path))
     if umap.shape[-1] != 2:
         print(timestamp(), "Could not create rasterfairy layout because data is not 2D")
         return None
@@ -359,7 +357,7 @@ def get_rasterfairy_layout(**kwargs):
     except Exception as exc:
         print(timestamp(), "Coonswarp rectification could not be performed", exc)
     pos = rasterfairy.transformPointCloud2D(umap)[0]
-    return write_layout(out_path, pos, **kwargs)
+    return write_layout(out_path, pos)
 
 # %% ../nbs/05_layouts.ipynb 13
 def get_categorical_boxes(group_counts, margin=2):
@@ -432,8 +430,10 @@ class Box:
         self.y = None if len(args) < 5 else args[4]
 
 # %% ../nbs/05_layouts.ipynb 15
-def get_hotspots(imageEngine, layouts={}, use_high_dimensional_vectors=True, n_preproc_dims=-1,
-                 **kwargs):
+def get_hotspots(imageEngine, vecs: np.ndarray,
+                 out_dir: Path, plot_id: str,
+                 min_cluster_size: int = 15, max_clusters: int = 15,
+                ):
     """Return the stable clusters from the condensed tree of connected components from the density graph
 
     Args:
@@ -446,12 +446,7 @@ def get_hotspots(imageEngine, layouts={}, use_high_dimensional_vectors=True, n_p
 
     """
     print(timestamp(), f"Clustering data with HDBSCAN")
-    if use_high_dimensional_vectors:
-        vecs = kwargs["vecs"]
-    else:
-        vecs = read_json(layouts["umap"]["variants"][0]["layout"], **kwargs)
-
-    model = get_cluster_model(**kwargs)
+    model = get_cluster_model(min_cluster_size)
     z = model.fit(vecs)
 
     # create a map from cluster label to image indices in cluster
@@ -477,32 +472,27 @@ def get_hotspots(imageEngine, layouts={}, use_high_dimensional_vectors=True, n_p
     clusters = d.values()
     clusters = sorted(clusters, key=lambda i: len(i["images"]), reverse=True)
     for idx, i in enumerate(clusters):
-        i["label"] = "Cluster {}".format(idx + 1)
+        i["label"] = f"Cluster {idx + 1}"
 
     # slice off the first `max_clusters`
-    clusters = clusters[: kwargs["max_clusters"]]
+    clusters = clusters[: max_clusters]
 
     # save the hotspots to disk and return the path to the saved json
     print(timestamp(), "Found", len(clusters), "hotspots")
-    return write_json(get_json_path(kwargs["out_dir"], "hotspots", "hotspot", kwargs["plot_id"]),
-                      clusters, **kwargs)
+    return write_json(get_json_path(out_dir, "hotspots", "hotspot", plot_id),
+                      clusters)
 
 
-def get_cluster_model(**kwargs):
-    """Return a model with .fit() method that can be used to cluster input vectors
-    
-    Args:
-        min_cluster_size
-
+def get_cluster_model(min_cluster_size: int = 15):
+    """Return model with .fit() method that can be used to cluster input vectors
     """
-    config = {
-        "core_dist_n_jobs": multiprocessing.cpu_count(),
-        "min_cluster_size": kwargs["min_cluster_size"],
-        "cluster_selection_epsilon": 0.01,
-        "min_samples": 1,
-        "approx_min_span_tree": False,
-    }
-    return HDBSCAN(**config)
+    return HDBSCAN(
+        core_dist_n_jobs=multiprocessing.cpu_count(),
+        min_cluster_size=min_cluster_size,
+        cluster_selection_epsilon=0.01,
+        min_samples=1,
+        approx_min_span_tree=False,
+    )
 
 
 def get_heightmap(path, label, **kwargs):
