@@ -289,7 +289,7 @@ def get_pointgrid_layout(input_path: Path, output_dir: Path, label, plot_id: str
         print(timestamp(), "Could not create pointgrid layout because data is not 2D")
         return None
 
-    z = align_points_to_grid(arr, fill=0.01)
+    z = align_points_to_grid(arr, fill=0.05)
     return write_layout(out_path, z)
 
 

@@ -7,8 +7,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 # %% auto 0
-__all__ = ['PILLoadTruncated', 'copy_root_dir', 'project_images', 'embed_images', 'test_butterfly_duplicate',
-           'test_butterfly_missing_meta', 'test_no_meta_dir', 'project_images_cli', 'embed_images_cli']
+__all__ = ['PILLoadTruncated', 'project_images', 'embed_images', 'project_images_cli', 'embed_images_cli']
 
 # %% ../nbs/00_clip_plot.ipynb 4
 # print separately that we're loading dependencies, as this can take a while
@@ -16,13 +15,12 @@ __all__ = ['PILLoadTruncated', 'copy_root_dir', 'project_images', 'embed_images'
 from .utils import timestamp
 print(timestamp(), "Beginning to load dependencies")
 
-
 # %% ../nbs/00_clip_plot.ipynb 5
 from fastcore.all import call_parse, in_ipython, Param, store_true
 from tqdm.auto import tqdm
 
 from .from_tables import glob_to_tables, table_to_meta
-from .web_config import get_clip_plot_root, copy_web_assets
+from .web_config import copy_web_assets
 from .embeddings import get_embeddings, write_embeddings
 from .metadata import get_manifest, write_metadata
 from .images import create_atlases_and_thumbs, ImageFactory
@@ -32,7 +30,6 @@ from shutil import rmtree
 from pathlib import Path
 import uuid
 import sys
-import os
 import pandas as pd
 import numpy as np
 
@@ -40,42 +37,32 @@ import numpy as np
 _DEFAULTS = {
     "images": None,
     "tables": None,
-    "meta_dir": None,
+    "metadatas": None,
     "output_dir": "output",
     "max_images": None,
-    "use_cache": True,
-    "cluster_preproc_dims": -1,
     "min_cluster_size": 20,
     "max_clusters": 10,
     "atlas_size": 2048,
     "cell_size": 32,
     "lod_cell_height": 128, # Why is not in parser?
-    "embed_model": "timm/convnext_tiny.dinov3_lvd1689m",
+    "model": "timm/convnext_tiny.dinov3_lvd1689m",
     "n_neighbors": [15],
     "min_dist": [0.01],
-    "umap_on_full_dims": False,
-    "n_components": 2,
     "metric": "correlation",
-    "pointgrid_fill": 0.05,
     "min_size": 100,
-    "min_score": 0.3,
-    "min_vertices": 18,
     "plot_id": str(uuid.uuid1()),
-    "seed": 24,
+    "seed": 42,
     "n_clusters": 12,
-    "geojson": None,
 }
 
 # handle truncated images in PIL (managed by Pillow)
 PILLoadTruncated  = True
 
-"""
-NB: Keras Image class objects return image.size as w,h
-    Numpy array representations of images return image.shape as h,w,c
-"""
+## Keras Image class objects return image.size as w,h
+## Numpy array representations of images return image.shape as h,w,c
 
 # %% ../nbs/00_clip_plot.ipynb 11
-def _project_images(imageEngine, embeds: np.ndarray | None = None, **kwargs):
+def _project_images(imageEngine, hidden_vectors: np.ndarray | None = None, **kwargs):
     """
     Main method for embedding user images, projecting to 2D, and creating visualization
     It would be nice to list out the image processing steps before getting started
@@ -98,62 +85,16 @@ def _project_images(imageEngine, embeds: np.ndarray | None = None, **kwargs):
 
     kwargs["atlas_dir"], atlas_data = create_atlases_and_thumbs(imageEngine, kwargs["plot_id"], kwargs["use_cache"])
 
-    if embeds is None:
-        kwargs["vecs"] = get_embeddings(imageEngine, model_name=kwargs["embed_model"])
-    else:
-        kwargs["vecs"] = embeds
+    if hidden_vectors is None:
+        hidden_vectors = get_embeddings(imageEngine, model_name=kwargs["model"])
 
-    get_manifest(imageEngine, atlas_data,
+    get_manifest(imageEngine, atlas_data, hidden_vectors,
                  plot_id=kwargs["plot_id"], output_dir=kwargs["output_dir"],
-                 has_metadata=False)
+                 )
     # write_images(imageEngine)
     print(timestamp(), "Done!")
 
-# %% ../nbs/00_clip_plot.ipynb 13
-copy_root_dir = get_clip_plot_root()
-
-def test_butterfly_duplicate(config):
-    test_images = copy_root_dir/"tests/smithsonian_butterflies_10/jpgs_duplicates/**/*.jpg"
-    test_output_dir = copy_root_dir/"tests/smithsonian_butterflies_10/output_test_temp"
-    meta_dir = copy_root_dir/"tests/smithsonian_butterflies_10/meta_data/good_meta.csv"
-    if Path(test_output_dir).exists():
-        rmtree(test_output_dir)
-
-    config["images"] = test_images
-    config["output_dir"] = test_output_dir
-    config["meta_dir"] = meta_dir
-    config["plot_id"] = "test_diff"
-
-    return config
-
-def test_butterfly_missing_meta(config):
-    test_images = copy_root_dir/"tests/smithsonian_butterflies_10/jpgs/*.jpg"
-    test_output_dir = copy_root_dir/"tests/smithsonian_butterflies_10/output_test_temp"
-    meta_dir = copy_root_dir/"tests/smithsonian_butterflies_10/meta_data/meta_missing_entry.csv"
-    if Path(test_output_dir).exists():
-        rmtree(test_output_dir)
-
-    config["images"] = test_images
-    config["output_dir"] = test_output_dir
-    config["meta_dir"] = meta_dir
-    config["plot_id"] = "test_diff"
-
-    return config
-
-def test_no_meta_dir(config):
-    test_images = copy_root_dir/"tests/smithsonian_butterflies_10/jpgs/*.jpg"
-    test_output_dir = copy_root_dir/"tests/smithsonian_butterflies_10/output_test_temp"
-    if test_output_dir.exists():
-        rmtree(test_output_dir)
-
-    config["images"] = test_images
-    config["output_dir"] = test_output_dir
-    config["plot_id"] = "test_diff"
-
-    return config
-
-
-# %% ../nbs/00_clip_plot.ipynb 15
+# %% ../nbs/00_clip_plot.ipynb 12
 @call_parse
 def project_images_cli(images:Param(type=str,
                         help="path or glob of images to process"
@@ -163,7 +104,7 @@ def project_images_cli(images:Param(type=str,
                         )=None,
                 metadata:Param(type=str,
                         help="path to a csv or glob of JSON files with image metadata (see readme for format)"
-                        )=_DEFAULTS["meta_dir"],
+                        )=_DEFAULTS["metadatas"],
                 tagline:Param(type=str,
                         help="tagline for image web page"
                         )="Images arranged by visual similarity",
@@ -173,13 +114,6 @@ def project_images_cli(images:Param(type=str,
                 max_images:Param(type=int,
                         help="maximum number of images to process"
                         )=_DEFAULTS["max_images"],
-                use_cache:Param(type=store_true,
-                        help="given inputs identical to prior inputs, load outputs from cache"
-                        )=_DEFAULTS["use_cache"],
-                cluster_preproc_dims:Param(type=int,
-                        help="number of dims to reduce to prior to clustering. -1 means don't reduce",
-                        required=False
-                        )=_DEFAULTS["cluster_preproc_dims"],
                 min_cluster_size:Param(type=int,
                         help="the minimum number of images in a cluster",
                         required=False
@@ -196,10 +130,10 @@ def project_images_cli(images:Param(type=str,
                         help="the size of atlas cells in px",
                         required=False
                         )=_DEFAULTS["cell_size"],
-                embed_model:Param(type=str,
+                model:Param(type=str,
                         help="pre-trained model from timm library to use to create embedding",
                         required=False
-                        )=_DEFAULTS["embed_model"],
+                        )=_DEFAULTS["model"],
                 n_neighbors:Param(type=int,
                         nargs="+",
                         help="the n_neighbors arguments for UMAP"
@@ -208,21 +142,9 @@ def project_images_cli(images:Param(type=str,
                         nargs="+",
                         help="the min_dist arguments for UMAP"
                         )=_DEFAULTS["min_dist"],
-                umap_on_full_dims:Param(type=store_true,
-                        help="skip PCA (faster dimensionality reduction) prior to UMAP"
-                        )=_DEFAULTS["umap_on_full_dims"],
-                n_components:Param(type=int,
-                        help="the n_components argument for UMAP"
-                        )=_DEFAULTS["n_components"],
                 metric:Param(type=str,
                         help="the metric argument for umap"
                         )=_DEFAULTS["metric"],
-                pointgrid_fill:Param(type=float,
-                        help="float 0:1 that determines sparsity of jittered distributions (lower means more sparse)"
-                        )=_DEFAULTS["pointgrid_fill"],
-                copy_web_only:Param(type=store_true,
-                        help="update ./output/assets without reprocessing data"
-                        )=False,
                 min_size:Param(type=float,
                         help="min size of cropped images"
                         )=_DEFAULTS["min_size"],
@@ -234,12 +156,6 @@ def project_images_cli(images:Param(type=str,
                         )=_DEFAULTS["plot_id"],
                 seed:Param(type=int, help="seed for random processes"
                            )=_DEFAULTS["seed"],
-                n_clusters:Param(type=int,
-                        help="number of clusters if using kmeans"
-                        )=_DEFAULTS["n_clusters"],
-                geojson:Param(type=str,
-                        help="path to a GeoJSON file with shapes to be rendered on a map"
-                        )=_DEFAULTS["geojson"]
                 ):
                 "Convert a folder of images into a clip-plot visualization"
 
@@ -265,21 +181,21 @@ def project_images_cli(images:Param(type=str,
                         'validate': True,
                 }
 
-                if not tables:
-                        embeds = None
-                        table = None
-                else:
-                        if images is not None:
-                                raise ValueError("Provide either tables or images parameter, not both.")
+                if tables and images:
+                        raise ValueError("Provide either tables or images parameter, not both.")
+                if tables:
                         print(timestamp(), "Loading tables")
                         table = glob_to_tables(tables)
                         config["images"] = list(table.image_path.values)
                         images = config["images"]
                         print(timestamp(), "Loading embeddings from disk")
-                        embeds = np.array([np.load(e) for e in tqdm(table.embed_path)])
+                        hidden_vectors = np.array([np.load(e) for e in tqdm(table.embed_path)])
+                else:
+                        hidden_vectors = None
+                        table = None
 
                 data_dir = config["output_dir"]/ "data"
-                imageEngine = ImageFactory(config['images'], data_dir, config['meta_dir'], options)
+                imageEngine = ImageFactory(images, data_dir, metadata, options)
 
                 # grab metadata from table if provided
                 if table is not None:
@@ -287,28 +203,28 @@ def project_images_cli(images:Param(type=str,
 
                 print(f"Config to project images: {str(config)}")
 
-                _project_images(imageEngine, embeds, **config)
+                _project_images(imageEngine, hidden_vectors, **config)
 
-# %% ../nbs/00_clip_plot.ipynb 16
+# %% ../nbs/00_clip_plot.ipynb 13
 # awful workaround because I think call_parse only works with sys.argv (cli)
 project_images = project_images_cli.__wrapped__
 
-# %% ../nbs/00_clip_plot.ipynb 18
+# %% ../nbs/00_clip_plot.ipynb 15
 @call_parse
 def embed_images_cli(images:Param(type=str,
                         help="path or glob of images to process"
                         )=_DEFAULTS["images"],
-                embed_model:Param(type=str,
+                model:Param(type=str,
                         help="pre-trained model from timm library to use to create embedding",
                         required=False
-                        )=_DEFAULTS["embed_model"],
+                        )=_DEFAULTS["model"],
                 output_dir:Param(type=str,
                         help="the directory to which outputs will be saved",
                         required=False
                         )=_DEFAULTS["output_dir"],
                 metadata:Param(type=str,
                         help="path to a csv or glob of JSON files with image metadata (see readme for format)"
-                        )=_DEFAULTS["meta_dir"],
+                        )=_DEFAULTS["metadatas"],
                 table_id:Param(type=str,
                         help="identifier for table that links embeddings to images and (optionally) metadata",
                         required=False
@@ -325,14 +241,14 @@ def embed_images_cli(images:Param(type=str,
                 # using Path.cwd() to handle ../ names -- not sure if this is superstitious
                 data_dir = Path.cwd() / output_dir.resolve() / "data"
 
-                imageEngine = ImageFactory(img_path=images, data_dir=data_dir, meta_dir=metadata)
+                imageEngine = ImageFactory(img_path=images, data_dir=data_dir, metadatas=metadata)
 
-                embeddings = get_embeddings(imageEngine, model_name=embed_model)
+                embeddings = get_embeddings(imageEngine, model_name=model)
 
                 def _model_shortname(n: str) -> str:
                         return "__".join(n.split("/")[-2:])
 
-                embs_dir = data_dir/f"embeddings_{_model_shortname(embed_model)}"
+                embs_dir = data_dir/f"embeddings_{_model_shortname(model)}"
                 embs_dir.mkdir(parents=True, exist_ok=True)
                 emb_paths = write_embeddings(embeddings, imageEngine.filenames, embs_dir)
 
@@ -361,6 +277,6 @@ def embed_images_cli(images:Param(type=str,
                         df.to_csv(data_dir / f"EmbedImages__{table_id}.csv", index=False)
                 else: df.to_parquet(data_dir / f"EmbedImages__{table_id}.parquet", index=False)
 
-# %% ../nbs/00_clip_plot.ipynb 19
+# %% ../nbs/00_clip_plot.ipynb 16
 # awful workaround because I think call_parse only works with sys.argv (cli)
 embed_images = embed_images_cli.__wrapped__
