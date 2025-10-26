@@ -20,10 +20,11 @@ from fastcore.all import call_parse, in_ipython, Param, store_true
 from tqdm.auto import tqdm
 
 from .from_tables import glob_to_tables, table_to_meta
-from .web_config import copy_web_assets
+from .web_config import copy_web_assets, get_clip_plot_root
 from .embeddings import get_embeddings, write_embeddings
 from .metadata import get_manifest, write_metadata
 from .images import create_atlases_and_thumbs, ImageFactory
+from .configuration import UmapSpec, ClusterSpec, ViewerHairball
 
 # %% ../nbs/00_clip_plot.ipynb 6
 from shutil import rmtree
@@ -62,34 +63,37 @@ PILLoadTruncated  = True
 ## Numpy array representations of images return image.shape as h,w,c
 
 # %% ../nbs/00_clip_plot.ipynb 11
-def _project_images(imageEngine, hidden_vectors: np.ndarray | None = None, **kwargs):
+def _project_images(imageEngine,
+                    output_dir: Path,
+                    plot_id: str,
+                    model: str,
+                    umap_spec: UmapSpec,
+                    cluster_spec: ClusterSpec,
+                    viewer_spec: ViewerHairball,
+                    hidden_vectors: np.ndarray | None,
+):
     """
     Main method for embedding user images, projecting to 2D, and creating visualization
     It would be nice to list out the image processing steps before getting started
     """
-    if not isinstance(kwargs["n_neighbors"], list):
-        kwargs.update({"n_neighbors": list(kwargs["n_neighbors"])})
-    if not isinstance(kwargs["min_dist"], list):
-        kwargs.update({"n_neighbors": list(kwargs["n_neighbors"])})
+
 
     print(timestamp(), "Starting image processing pipeline.")
 
-    copy_web_assets(output_dir=kwargs['output_dir'],
-                    tagline=kwargs['tagline'], logo=kwargs["logo"])
-    if kwargs["copy_web_only"]:
-        print(timestamp(), "Done!")
-        sys.exit()
+    copy_web_assets(output_dir=output_dir,
+                    tagline=viewer_spec.tagline, logo=viewer_spec.logo)
 
-    np.random.seed(kwargs["seed"])
+    np.random.seed(ViewerHairball.seed)
     write_metadata(imageEngine)
 
-    kwargs["atlas_dir"], atlas_data = create_atlases_and_thumbs(imageEngine, kwargs["plot_id"], kwargs["use_cache"])
+    _, atlas_data = create_atlases_and_thumbs(imageEngine, plot_id)
 
     if hidden_vectors is None:
-        hidden_vectors = get_embeddings(imageEngine, model_name=kwargs["model"])
+        hidden_vectors = get_embeddings(imageEngine, model_name=model)
 
     get_manifest(imageEngine, atlas_data, hidden_vectors,
-                 plot_id=kwargs["plot_id"], output_dir=kwargs["output_dir"],
+                 plot_id=plot_id, output_dir=output_dir,
+                 umap_spec=umap_spec, cluster_spec=cluster_spec
                  )
     # write_images(imageEngine)
     print(timestamp(), "Done!")
@@ -157,7 +161,7 @@ def project_images_cli(images:Param(type=str,
                 seed:Param(type=int, help="seed for random processes"
                            )=_DEFAULTS["seed"],
                 ):
-                "Convert a folder of images into a clip-plot visualization"
+                """Convert a folder of images into a clip-plot visualization"""
 
                 # grab local variables as configuration dict
                 config = dict(locals())
@@ -203,7 +207,13 @@ def project_images_cli(images:Param(type=str,
 
                 print(f"Config to project images: {str(config)}")
 
-                _project_images(imageEngine, hidden_vectors, **config)
+                _project_images(imageEngine, output_dir = config["output_dir"],
+                                plot_id=config["plot_id"],
+                                model=config["model"],
+                                cluster_spec=cluster_spec,
+                                umap_spec=umap_spec,
+                                hidden_vectors=hidden_vectors
+                                )
 
 # %% ../nbs/00_clip_plot.ipynb 13
 # awful workaround because I think call_parse only works with sys.argv (cli)

@@ -6,12 +6,15 @@ __all__ = ['load_image', 'resize_to_max_side', 'resize_to_height', 'autocontrast
 
 # %% ../nbs/03_images.ipynb 3
 import os
+import json
 import copy
 from glob import glob
+from collections.abc import Generator
 import random
 from abc import ABC, abstractmethod
 from pathlib import Path
 
+import pandas as pd
 import numpy as np
 from tqdm.auto import tqdm
 from PIL import Image
@@ -68,19 +71,19 @@ def autocontrast(img: Image.Image) -> Image.Image:
     return Image.fromarray(x.astype("uint8"))
 
 # %% ../nbs/03_images.ipynb 15
-def create_atlases_and_thumbs(imageEngine, plot_id, use_cache:bool=False):
+def create_atlases_and_thumbs(imageEngine: ImageFactory, plot_id: str, use_cache: bool = False):
     '''create folder with atlases in data dir'''
 
     print(timestamp(), "Copying images to output directory")
 
     # create directories
-    atlas_dir = Path(imageEngine.data_dir) / "atlases" / str(plot_id)
+    atlas_dir = imageEngine.data_dir / "atlases" / str(plot_id)
     atlas_dir.mkdir(exist_ok=True, parents=True)
 
-    thumbs_dir = Path(imageEngine.data_dir) / "thumbs"
+    thumbs_dir = imageEngine.data_dir / "thumbs"
     thumbs_dir.mkdir(exist_ok=True)
 
-    orig_dir = Path(imageEngine.data_dir) / "originals"
+    orig_dir = imageEngine.data_dir / "originals"
     orig_dir.mkdir(exist_ok=True)
 
     # initialize some atlas values
@@ -130,34 +133,22 @@ def create_atlases_and_thumbs(imageEngine, plot_id, use_cache:bool=False):
     return atlas_dir.as_posix(), positions
 
 # %% ../nbs/03_images.ipynb 16
-def get_image_paths(images:str) -> list[Path]:
-    """Called once to provide a list of image paths.
-
-    args:
-        images (str): directory location of images.
-
-    returns:
-        image_paths list(str): list of image paths.
+def get_image_paths(images: str | list) -> list[Path]:
     """
-
-    image_paths = None
-
-    # allow images to be input as list, i.e. from tables input
+    Called once to provide a list of image paths
+    """
     if isinstance(images, list):
-        image_paths = images
+        image_paths = [Path(im) for im in images]
+    elif isinstance(images, str):
+        image_paths = [Path(im) for im in glob(images, recursive=True)]
 
-    # handle case where images flag points to a glob of images
-    if not image_paths:
-        image_paths = glob(images, recursive=True)
-
-    # handle case user provided no images
-    if not image_paths:
+    if len(image_paths) == 0:
         raise FileNotFoundError("Error: No input images were found. Please check your --images glob")
+    else:
+        return image_paths
 
-    return [Path(im) for im in image_paths]
-
-# %% ../nbs/03_images.ipynb 18
-def get_metadata_list(meta_dir: str) -> list[dict] | list[str]:
+# %% ../nbs/03_images.ipynb 19
+def get_metadata_list(meta_dir: str) -> tuple[list[dict] , list[str]]:
     """Return a list of objects with image metadata.
 
     Will create 'tags' key if 'category' is in metadata
@@ -202,7 +193,7 @@ def get_metadata_list(meta_dir: str) -> list[dict] | list[str]:
             metaDict.update({"tags": metaDict["category"]})
     return metaList, headers
 
-# %% ../nbs/03_images.ipynb 19
+# %% ../nbs/03_images.ipynb 20
 class ValidImage:
     def __init__(self, img_path: Path, metadata: dict | None = None):
         self.path = img_path
@@ -253,7 +244,7 @@ class ValidImage:
 
         return True, ""
 
-# %% ../nbs/03_images.ipynb 21
+# %% ../nbs/03_images.ipynb 22
 class ImageFactoryBase(ABC):
     """Class encapsulates functionality required to access images,
     including compiling metadata.
@@ -265,7 +256,7 @@ class ImageFactoryBase(ABC):
         - Providing property values
 
     Image factory needs to be able to provide an Image instance
-        - The image instance needs to be have it's metadata (if applicable)
+        - The image instance needs to be have its metadata (if applicable)
 
     Notes:
         Class and their children are required to provide the following properties:
@@ -274,7 +265,7 @@ class ImageFactoryBase(ABC):
             atlas_size
             cell_size
             lod_cell_height
-    """        
+    """
 
     # Required property values
     DEFAULT_OPTIONS = {
@@ -284,7 +275,7 @@ class ImageFactoryBase(ABC):
         'lod_cell_height': 128, # (int, default = 128)
     }
 
-    def __init__(self, data_dir: str) -> None:
+    def __init__(self, data_dir: Path) -> None:
         """Initialize ImageEngine instance
 
         Args:
@@ -322,13 +313,13 @@ class ImageFactory(ImageFactoryBase):
         'max_images': False, # (Union[False,int]): Maximum number of images
     })
 
-    def __init__(self, img_path, data_dir, meta_dir, options={}) -> None:
+    def __init__(self, img_path, data_dir: Path, meta_dir, options={}) -> None:
         super().__init__(data_dir)
         self.img_path = img_path
         self.meta_dir = meta_dir
         self.filenames = []
         self.image_paths = []
-    
+
         # Load options
         for option, default in self.DEFAULT_OPTIONS.items():
             setattr(self, option, options.get(option, default))
@@ -336,8 +327,7 @@ class ImageFactory(ImageFactoryBase):
         self.filter_images()
 
     def __iter__(self):
-        for img in self.stream_images(self.image_paths, self.metadata):
-            yield img
+        yield from self.stream_images(self.image_paths, self.metadata)
 
     def __getitem__(self, index):
         if index < len(self.image_paths):
@@ -358,7 +348,7 @@ class ImageFactory(ImageFactoryBase):
             oblong
 
         -Compare against metadata
-    
+
         Args:
             images (str): Directory location of images.
             data_dir (str): Output directory.
@@ -415,13 +405,11 @@ class ImageFactory(ImageFactoryBase):
 
         print(timestamp(), "Validating input images")
         for img in tqdm(self.stream_images(image_paths, []), total=len(image_paths)):
-            valid, msg = img.valid(lod_cell_height=self.lod_cell_height, oblong_ratio=oblong_ratio) 
+            valid, msg = img.valid(lod_cell_height=self.lod_cell_height, oblong_ratio=oblong_ratio)
             if valid is True:
                 filtered_image_paths += [img.path]
             else:
                 print(timestamp(), msg)
-
-
 
         # if there are no remaining images, throw an error
         if len(filtered_image_paths) == 0:
@@ -455,8 +443,7 @@ class ImageFactory(ImageFactoryBase):
             if len(meta_missing) > 10:
                 print(timestamp(), " ...", len(meta_missing) - 10, "more")
 
-            if os.path.exists(self.data_dir) is False:
-                os.makedirs(self.data_dir)
+            self.data_dir.mkdir(exist_ok=True, parents=True)
 
             missing_dir = os.path.join(self.data_dir,"missing-metadata.txt")
             with open(missing_dir, "w") as out:
@@ -480,12 +467,13 @@ class ImageFactory(ImageFactoryBase):
 
 
     @staticmethod
-    def stream_images(image_paths: list[Path], metadata: list[dict] | None = None) -> ValidImage:
+    def stream_images(image_paths: list[Path], metadata: list[dict] | None = None
+                      ) -> Generator[ValidImage | None, None, None]:
         """Read in all images from args[0], a list of image paths
 
         Args:
             image_paths (list[str]): list of image locations
-            metadata (Optional[list[dist]]): metadata for each image
+            metadata (Optional[list[dict]]): metadata for each image
 
         Returns:
             yields ValidImage instance
@@ -502,3 +490,4 @@ class ImageFactory(ImageFactoryBase):
                 yield ValidImage(p, meta)
             except Exception as exc:
                 print(timestamp(), f"Image {p} could not be processed -- {exc}")
+                yield None
