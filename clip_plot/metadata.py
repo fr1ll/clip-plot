@@ -154,11 +154,6 @@ def get_manifest(imageEngine, atlas_data,
         "creation_date": datetime.today().strftime("%d-%B-%Y-%H:%M:%S"),
     }
 
-    # # store parameters that will impact embedding
-    # embed_params = ["embed_model", "n_neighbors", "min_dist", "metric", "max_clusters", "min_cluster_size"]
-    # for e in embed_params:
-    #     manifest.update({e: kwargs[e]})
-
     write_json(data_dir/"manifests/manifest.json", manifest)
     write_json(data_dir/"/manifest.json", manifest)
 

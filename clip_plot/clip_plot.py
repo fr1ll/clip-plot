@@ -285,7 +285,8 @@ def embed_images_cli(images:Param(type=str,
 
                 if table_format == "csv":
                         df.to_csv(data_dir / f"EmbedImages__{table_id}.csv", index=False)
-                else: df.to_parquet(data_dir / f"EmbedImages__{table_id}.parquet", index=False)
+                else:
+                        df.to_parquet(data_dir / f"EmbedImages__{table_id}.parquet", index=False)
 
 # %% ../nbs/00_clip_plot.ipynb 16
 # awful workaround because I think call_parse only works with sys.argv (cli)

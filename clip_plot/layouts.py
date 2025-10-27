@@ -18,6 +18,7 @@ import itertools
 from collections import defaultdict
 from pathlib import Path
 import operator
+from dataclasses import dataclass
 
 # TODO: Change math references to numpy
 
@@ -92,16 +93,13 @@ class AlphabeticLayout(BaseMetaLayout):
         return out_path
 
 # %% ../nbs/05_layouts.ipynb 9
+@dataclass
 class Box:
-    """Store the width, height, and x, y coords of a box"""
-
-    def __init__(self, *args):
-        self.cells = args[0]
-        self.w = args[1]
-        self.h = args[2]
-        self.x = None if len(args) < 4 else args[3]
-        self.y = None if len(args) < 5 else args[4]
-
+        n_cells: int
+        width: int
+        height: int
+        x: int | None
+        y: int | None
 
 def get_categorical_boxes(group_counts: list[int], margin=2):
     """
@@ -116,48 +114,48 @@ def get_categorical_boxes(group_counts: list[int], margin=2):
         w = h = math.ceil(i ** (1 / 2))
         boxes.append(Box(i, w, h, None, None))
     # find the position along x axis where we want to create a break
-    wrap = math.floor(sum([i.cells for i in boxes]) ** (1 / 2)) - (2 * margin)
+    wrap = math.floor(sum([b.n_cells for b in boxes]) ** (1 / 2)) - (2 * margin)
     # find the valid positions on the y axis
     y = margin
     y_spots = []
-    for i in boxes:
-        if (y + i.h + margin) <= wrap:
+    for box in boxes:
+        if (y + box.height + margin) <= wrap:
             y_spots.append(y)
-            y += i.h + margin
+            y += box.height + margin
         else:
             y_spots.append(y)
             break
     # get a list of lists where sublists contain elements at the same y position
     y_spot_index = 0
-    for i in boxes:
+    for box in boxes:
         # find the y position
         y = y_spots[y_spot_index]
         # find members with this y position
-        row_members = [j.x + j.w for j in boxes if j.y == y]
+        row_members = [b.x + b.width for b in boxes if b.y == y]
         # assign the y position
-        i.y = y
+        box.y = y
         y_spot_index = (y_spot_index + 1) % len(y_spots)
         # assign the x position
-        i.x = max(row_members) + margin if row_members else margin
+        box.x = max(row_members) + margin if row_members else margin
     return boxes
 
-def get_categorical_points(arr: np.ndarray, unit_size=None):
+def get_categorical_points(boxes: np.ndarray, unit_size=None):
     """Given an array of Box() objects, return a 2D distribution with shape (n_cells, 2)"""
     points_arr = []
-    for i in arr:
-        area = i.w * i.h
-        per_unit = (area / i.cells) ** (1 / 2)
-        x_units = math.ceil(i.w / per_unit)
-        y_units = math.ceil(i.h / per_unit)
+    for box in boxes:
+        area = box.w * box.h
+        per_unit = (area / box.n_cells) ** (1 / 2)
+        x_units = math.ceil(box.w / per_unit)
+        y_units = math.ceil(box.h / per_unit)
         if not unit_size:
-            unit_size = min(i.w / x_units, i.h / y_units)
-        for j in range(i.cells):
+            unit_size = min(box.w / x_units, box.h / y_units)
+        for j in range(box.n_cells):
             x = j % x_units
             y = j // x_units
             points_arr.append(
                 [
-                    i.x + x * unit_size,
-                    i.y + y * unit_size,
+                    box.x + x * unit_size,
+                    box.y + y * unit_size,
                 ]
             )
     return np.array(points_arr)
