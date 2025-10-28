@@ -40,7 +40,7 @@ class Paths(BaseModel):
 
     @field_validator("images", "tables", "metadata", mode="before")
     @classmethod
-    def expand_paths(cls, value: Any, info: ValidationInfo) -> Any:
+    def expand_paths(cls, value: str | list | Path | None, info: ValidationInfo) -> Any:
         if value is None:
             return None
         if isinstance(value, list) and len(value) == 1:
@@ -49,12 +49,12 @@ class Paths(BaseModel):
             return value
         if "*" in str(value):
             return [Path(p) for p in glob(str(value), recursive=True)]
-        elif Path(value).is_dir():
+        elif Path(str(value)).is_dir():
             if info.field_name == "images":
                 exts = {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.tif'}
             else:
                 exts = {'.json', '.csv', '.parquet'}
-            return [p for p in Path(value).rglob('*') if p.suffix.lower() in exts]
+            return [p for p in Path(str(value)).rglob('*') if p.suffix.lower() in exts]
 
     @model_validator(mode='after')
     def check_table_vs_meta(self) -> Self:
