@@ -211,9 +211,9 @@ class ImageFactory:
     data_dir: Path
     metadata_paths: list[Path] | None = None
     count: int = 0  # Total number of images
-    meta_headers: list[str] = [] # Headers in metadata
-    metadata: list[dict] = [] # list of metadata
-    filenames: list[str] = []
+    meta_headers: list[str] = field(default_factory=list) # Headers in metadata
+    metadata: list[dict] = field(default_factory=list) # list of metadata
+    filenames: list[str] = field(default_factory=list)
 
     shuffle: bool = False
     atlas_size: int = 2048
