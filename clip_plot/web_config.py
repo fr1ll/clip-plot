@@ -40,7 +40,7 @@ def byo_logo(web_dir: Path, logo_path: Path):
                                })
 
 # %% ../nbs/06_web_config.ipynb 8
-def copy_web_assets(output_dir: Path, tagline: str | None, logo: str | None) -> None:
+def copy_web_assets(output_dir: Path, tagline: str | None, logo: Path | None) -> None:
     """
     Copy the /web directory from the clipplot source to the users cwd.
     Copies version number into assets.
@@ -58,6 +58,6 @@ def copy_web_assets(output_dir: Path, tagline: str | None, logo: str | None) -> 
         replace_web_strings(dest, {"Image Fields in a Local Collection": tagline})
 
     if logo:
-        logo_path = Path.cwd() / Path(logo).resolve()
-        byo_logo(dest, logo_path)
+        logo_resolved = Path.cwd() / logo.resolve()
+        byo_logo(dest, logo_resolved)
 

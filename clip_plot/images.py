@@ -195,7 +195,7 @@ class ValidImage:
 @dataclass
 class ImageFactory:
     """
-    Class encapsulates functionality required to access images,
+    Access images,
     including compiling metadata.
 
     Factory is responsible for:

@@ -7,7 +7,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 # %% auto 0
-__all__ = ['PILLoadTruncated', 'project_images', 'embed_images', 'project_images_cli', 'embed_images_cli']
+__all__ = ['PILLoadTruncated', 'project_images', 'embed_images', 'embed_images_cli']
 
 # %% ../nbs/00_clip_plot.ipynb 4
 # print separately that we're loading dependencies, as this can take a while
@@ -16,21 +16,20 @@ from .utils import timestamp
 print(timestamp(), "Beginning to load dependencies")
 
 # %% ../nbs/00_clip_plot.ipynb 5
-from fastcore.all import call_parse, in_ipython, Param, store_true
+from fastcore.all import call_parse, in_ipython, Param
 from tqdm.auto import tqdm
 
-from .from_tables import glob_to_tables, table_to_meta
+from .from_tables import cat_tables, table_to_meta
 from .web_config import copy_web_assets, get_clip_plot_root
 from .embeddings import get_embeddings, write_embeddings
 from .metadata import get_manifest, write_metadata
 from .images import create_atlases_and_thumbs, ImageFactory
-from .configuration import UmapSpec, ClusterSpec, ViewerHairball
+from .configuration import UmapSpec, ClusterSpec, ViewerOptions, ImageLoaderOptions
 
 # %% ../nbs/00_clip_plot.ipynb 6
 from shutil import rmtree
 from pathlib import Path
 import uuid
-import sys
 import pandas as pd
 import numpy as np
 
@@ -69,7 +68,7 @@ def _project_images(imageEngine,
                     model: str,
                     umap_spec: UmapSpec,
                     cluster_spec: ClusterSpec,
-                    viewer_spec: ViewerHairball,
+                    viewer_opts: ViewerOptions,
                     hidden_vectors: np.ndarray | None,
 ):
     """
@@ -81,9 +80,8 @@ def _project_images(imageEngine,
     print(timestamp(), "Starting image processing pipeline.")
 
     copy_web_assets(output_dir=output_dir,
-                    tagline=viewer_spec.tagline, logo=viewer_spec.logo)
+                    tagline=viewer_opts.tagline, logo=viewer_opts.logo)
 
-    np.random.seed(ViewerHairball.seed)
     write_metadata(imageEngine)
 
     _, atlas_data = create_atlases_and_thumbs(imageEngine, plot_id)
@@ -99,120 +97,50 @@ def _project_images(imageEngine,
     print(timestamp(), "Done!")
 
 # %% ../nbs/00_clip_plot.ipynb 12
-@call_parse
-def project_images_cli(images:Param(type=str,
-                        help="path or glob of images to process"
-                        )=_DEFAULTS["images"],
-                tables:Param(type=str,
-                        help="path or glob of tables with image_path and embed_path columns (and optionally metadata)"
-                        )=None,
-                metadata:Param(type=str,
-                        help="path to a csv or glob of JSON files with image metadata (see readme for format)"
-                        )=_DEFAULTS["metadatas"],
-                tagline:Param(type=str,
-                        help="tagline for image web page"
-                        )="Images arranged by visual similarity",
-                logo:Param(type=str,
-                        help="path to a small, squarish logo -- SVG is best"
-                        )=None,
-                max_images:Param(type=int,
-                        help="maximum number of images to process"
-                        )=_DEFAULTS["max_images"],
-                min_cluster_size:Param(type=int,
-                        help="the minimum number of images in a cluster",
-                        required=False
-                        )=_DEFAULTS["min_cluster_size"],
-                max_clusters:Param(type=int,
-                        help="the maximum number of clusters to return",
-                        required=False
-                        )=_DEFAULTS["max_clusters"],
-                output_dir:Param(type=str,
-                        help="the directory to which outputs will be saved",
-                        required=False
-                        )=_DEFAULTS["output_dir"],
-                cell_size:Param(type=int,
-                        help="the size of atlas cells in px",
-                        required=False
-                        )=_DEFAULTS["cell_size"],
-                model:Param(type=str,
-                        help="pre-trained model from timm library to use to create embedding",
-                        required=False
-                        )=_DEFAULTS["model"],
-                n_neighbors:Param(type=int,
-                        nargs="+",
-                        help="the n_neighbors arguments for UMAP"
-                        )=_DEFAULTS["n_neighbors"],
-                min_dist:Param(type=float,
-                        nargs="+",
-                        help="the min_dist arguments for UMAP"
-                        )=_DEFAULTS["min_dist"],
-                metric:Param(type=str,
-                        help="the metric argument for umap"
-                        )=_DEFAULTS["metric"],
-                min_size:Param(type=float,
-                        help="min size of cropped images"
-                        )=_DEFAULTS["min_size"],
-                shuffle:Param(type=store_true,
-                        help="shuffle the input images before data processing begins"
-                        )=False,
-                plot_id:Param(type=str,
-                        help="unique id for a plot; useful for resuming processing on a started plot"
-                        )=_DEFAULTS["plot_id"],
-                seed:Param(type=int, help="seed for random processes"
-                           )=_DEFAULTS["seed"],
+def project_images_pipeline(output_dir: Path,
+                            images: list[Path] | None = None,
+                            tables: list[Path] | None = None,
+                            metadata: list[Path] | None = None,
+                            image_path_col: str | None = None,
+                            embed_path_col: str | None = None,
+                            image_opts: ImageLoaderOptions,
+                            viewer_opts: ViewerOptions,
+                            umap_spec: UmapSpec,
+                            cluster_spec: ClusterSpec
                 ):
                 """Convert a folder of images into a clip-plot visualization"""
-
-                # grab local variables as configuration dict
-                config = dict(locals())
-
-                # convert paths
-                if "output_dir" in config:
-                    config["output_dir"] = Path(config["output_dir"])
-
-                # some parameters exist in _DEFAULTS but not in the function signature
-                default_only_keys = set(_DEFAULTS.keys() - config.keys())
-                default_only = {k:_DEFAULTS[k] for k in default_only_keys}
-                config.update(default_only)
-
-                options = {
-                        'shuffle': config['shuffle'],
-                        'seed': config['seed'],
-                        'max_images': config['max_images'],
-                        'atlas_size': config['atlas_size'],
-                        'cell_size': config['cell_size'],
-                        'lod_cell_height': config['lod_cell_height'],
-                        'validate': True,
-                }
 
                 if tables and images:
                         raise ValueError("Provide either tables or images parameter, not both.")
                 if tables:
                         print(timestamp(), "Loading tables")
-                        table = glob_to_tables(tables)
-                        config["images"] = list(table.image_path.values)
-                        images = config["images"]
+                        table = cat_tables(tables)
+                        images = list(table[image_path_col].values)
                         print(timestamp(), "Loading embeddings from disk")
-                        hidden_vectors = np.array([np.load(e) for e in tqdm(table.embed_path)])
+                        hidden_vectors = np.array([np.load(e) for e in tqdm(table[embed_path_col])])
                 else:
                         hidden_vectors = None
                         table = None
 
-                data_dir = config["output_dir"]/ "data"
-                imageEngine = ImageFactory(images, data_dir, metadata, options)
+                data_dir = output_dir / "data"
+                imageEngine = ImageFactory(images, data_dir, metadata,
+                                           **image_opts.model_dump(),)
 
                 # grab metadata from table if provided
                 if table is not None:
                         imageEngine.meta_headers, imageEngine.metadata = table_to_meta(table)
 
-                print(f"Config to project images: {str(config)}")
+                print(f"Config to project images: {str(im_opts.model_dump())}")
 
-                _project_images(imageEngine, output_dir = config["output_dir"],
-                                plot_id=config["plot_id"],
-                                model=config["model"],
+                np.random.seed(image_opts.seed) 
+
+                _project_images(imageEngine, output_dir = output_dir,
+                                plot_id,
+                                model=model,
                                 cluster_spec=cluster_spec,
                                 umap_spec=umap_spec,
-                                hidden_vectors=hidden_vectors
+                                hidden_vectors=hidden_vectors,
+                                viewer_opts=viewer_opts
                                 )
 
 # %% ../nbs/00_clip_plot.ipynb 13
