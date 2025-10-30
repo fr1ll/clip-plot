@@ -238,35 +238,18 @@ class ImageFactory:
             return ValidImage(self.image_paths[index], meta)
 
     def filter_images(self):
-        """Main method for filtering images given user metadata (if provided)
+        """
+        Filtering images, using user metadata (if provided)
 
-        -Validate image:
-            Loading (done by stream_images and Images)
-            Size
-            resizing
-            oblong
-
-        -Compare against metadata
-
-        Args:
-            images (str): Directory location of images.
-            data_dir (str): Output directory.
-            shuffle (Optional[bool], default = False): Shuffle image order
-            seed (int): Seed for random generator
-            max_images (Union[bool,int]): Maximum number of images
-            atlas_size (int, default = 2048)
-            cell_size (int, default = 32)
-            lod_cell_height (int, default = 128)
-            meta_dir (str): Directory of image metadata
+        -Validate image: loads, size, resizing, oblongness
 
         Returns:
-            images (list[str])
+            images (list[Path])
             metadata (list[dict])
 
         Notes:
             Assumes 'filename' is provided in metadata
             Convoluted compiling of metadata
-            Should All Validation should belong to Image class?
             Need to split function
         """
         # validate that input image names are unique
@@ -278,8 +261,7 @@ class ImageFactory:
         if duplicates:
             dups_to_print = "\n".join(duplicates)
             raise Exception(
-                f"""Image filenames should be unique, but the following 
-                filenames are duplicated\n{dups_to_print}""")
+                f"Image filenames should be unique. These are duplicated:\n{dups_to_print}")
 
         # optionally shuffle the image_paths
         if self.shuffle:
@@ -408,6 +390,7 @@ def create_atlases_and_thumbs(imageEngine: ImageFactory, plot_id: str, use_cache
     n_atlases, x, y = 0,0,0
     positions = []
     atlas_size = (imageEngine.atlas_size, imageEngine.atlas_size)
+    atlas = Image.new(mode="RGB", size=atlas_size)
 
     for img in tqdm(imageEngine, total=imageEngine.count):
 
@@ -430,13 +413,14 @@ def create_atlases_and_thumbs(imageEngine: ImageFactory, plot_id: str, use_cache
         cell = autocontrast(cell)
 
         if (x+cell.width) > atlas_size[0]: # end of a row
-            y+=cell.height; x=0
+            y+=cell.height
+            x=0
         if (y+cell.height) > atlas_size[0]: # end of first column
             atlas.save(atlas_dir/f"atlas-{n_atlases}.jpg")
-            n_atlases+=1
+            n_atlases += 1
             x,y=0,0 # start a new atlas
         if x == 0 and y == 0:
-            atlas=Image.new(mode="RGB", size=atlas_size)
+            atlas = Image.new(mode="RGB", size=atlas_size)
         atlas.paste(cell, (x,y))
 
         # store in dict
@@ -448,4 +432,5 @@ def create_atlases_and_thumbs(imageEngine: ImageFactory, plot_id: str, use_cache
 
     if not (x == 0 and y == 0): # if last atlas wasn't already written
         atlas.save(atlas_dir/f"atlas-{n_atlases}.jpg")
+
     return atlas_dir.as_posix(), positions

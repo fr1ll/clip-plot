@@ -35,7 +35,8 @@ class Paths(BaseModel):
     table_id: str = Field(default_factory=lambda: str(uuid4()), description="identifier for table output")
     output_dir: Path = Field((Path()/"clipplot_output").resolve(),
             description="Directory for output data files and viewer")
-    table_format: Literal["parquet", "csv"] = Field("parquet", description="Format for table, `csv` or `parquet`")
+    table_format: Literal["parquet", "csv"] = Field("parquet",
+                                                    description="Format for output table, `csv` or `parquet`")
 
 
     @field_validator("images", "tables", "metadata", mode="before")
@@ -85,7 +86,6 @@ class ViewerHairball(BaseSettings):
     logo: CliSuppress[None | Path] = Field(None, description="Path to custom logo")
     tagline: CliSuppress[None | str] = Field(None, description="Custom tagline for viewer")
     atlas_size: CliSuppress[int] = Field(4096, description="Size for atlases")
-
 
 # %% ../nbs/09_configuration.ipynb 7
 class Cfg(BaseSettings):
