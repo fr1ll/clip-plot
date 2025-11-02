@@ -80,7 +80,7 @@ def project_images_pipeline(output_dir: Path,
                 if tables and images:
                         raise ValueError("Provide either tables or images parameter, not both.")
                 if not tables and not images:
-                        raise ValueError("Must provide tables or images")
+                        raise ValueError("No images found from either tables or images input.")
                 if tables:
                         print(timestamp(), "Loading tables")
                         table = cat_tables(tables)

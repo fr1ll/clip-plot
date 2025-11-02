@@ -4,6 +4,6 @@ project:
 website:
   title: "clip-plot"
   site-url: "https://fr1ll.github.io/clip-plot"
-  description: "Interactively explore image embeddings. Based on PixPlot. Also leverages timm to create embeddings."
+  description: ""Visual-similarity-space viewer for images""
   repo-branch: main
   repo-url: "https://github.com/fr1ll/clip-plot"
