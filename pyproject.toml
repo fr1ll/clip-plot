@@ -1,6 +1,6 @@
 [project]
 name="clip-plot"
-version = "0.1.1a9"
+version = "0.1.2"
 description = "Visual-similarity-space viewer for images"
 readme = "README.md"
 license = "MIT"
@@ -35,7 +35,6 @@ clipplot_from_images = "clip_plot.clip_plot:project_images_cli"
 clipplot_embed_images = "clip_plot.clip_plot:embed_images_cli"
 embed_to_tables = "clip_plot.embed_to_tables:embed_to_tables_cli"
 
-
 [tool.uv]
 package = true
 
@@ -68,10 +67,15 @@ name = "pytorch-cpu"
 url = "https://download.pytorch.org/whl/cpu"
 explicit = true
 
+[build-system]
+requires = ["uv_build>=0.9.6,<0.10.0"]
+build-backend = "uv_build"
+
 [tool.uv.build-backend]
 module-name = "clip_plot"
-module-root = ""
-data = ["clip_plot/web"]
+module-root = "src"
+data = ["src/clip_plot/web"]
+
 
 [tool.ruff]
 line-length = 120
@@ -82,9 +86,166 @@ output-format = "concise"  # Works better for CI
 select = ["E", "F", "W", "I", "PD", "PERF", "UP", "C4"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["bedmap"]
+known-first-party = ["jlp"]
 
-[tool.ruff.lint.per-file-ignores]
-# Ignore `E402` (import violations) in all `*.ipynb` files.
-# Reason: nbdev typically does nbdev_export at the end of notebooks
-"*.ipynb" = ["E402"]
+[tool.coverage.run]
+source = ["src", "tests"]
+relative_files = true
+# Enabling multiprocessing concurrency allows subprocesses to "just work".
+concurrency = ["multiprocessing", "thread"]
+# The `no-data-collected` warning triggers if no tests are selected, which just adds to terminal noise.
+disable_warnings = ["no-data-collected", ]
+
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+# Anything under 100% code coverage means you can be lazy for a few features, then you're back to trying to keep it
+# higher than the threshold. So IMHO set the `fail_under` threshold to `100`, or don't bother with it. The coverage
+# exclusion rules provide some sane definitions of untestable code, and allow developer overrides.
+fail_under = 100
+exclude_lines = [
+    # Allow developers to manually specify untestable code.
+    "pragma: no cover",
+    # Can't test type checking code.
+    "if TYPE_CHECKING:",
+    "@overload",
+    "^\\s+\\.\\.\\.\\s*$",
+    # Allow conditional imports to remain untested.
+    "except ImportError",
+    # Allow defensive assertions to remain untested.
+    "raise NotImplementedError",
+    "raise AssertionError",
+    "assert False",
+    # Allow "uncatchable everything went wrong" errors to remain untested.
+    "raise RuntimeError",
+    # Allow debugging code to remain untested.
+    "def __repr__",
+]
+
+[tool.mypy]
+mypy_path = "src"
+strict = true
+# We deploy to linux, so need to allow things like unix domain sockets.
+platform = "linux"
+# Allow namespace packages to work.
+explicit_package_bases = true
+# Better reporting.
+show_column_numbers = true
+# This doesn't harm strictness, and allows reuse of variable names, which is nice. :)
+allow_redefinition = true
+
+# Ignore missing imports for 3rd-party libraries that don't publish type information.
+[[tool.mypy.overrides]]
+module = [
+    "fastcore.*",
+    "nbdev.*",
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["docs", "tests"]
+# The "classic" output plays nicer with CI.
+console_output_style = "classic"
+# The native traceback style is less noisy. YMMV.
+# Support doctests.
+addopts = "--show-capture stdout --tb native --doctest-glob='*.rst' --doctest-modules --import-mode=importlib"
+
+[tool.deptry]
+exclude = [
+    # Default exclusions
+    "node_modules",
+    "venv",
+    ".venv",
+    ".direnv",
+    "tests",
+    ".git",
+    # Additional exclusions
+    ".zen",
+    ".ruffcache",
+    ".github",
+    "scratch",
+    "nbs"  # We will run separate checks for notebooks
+]
+
+[tool.deptry.per_rule_ignores]
+DEP002 = [
+    "setuptools",
+]
+
+DEP004 = [
+]
+
+
+[tool.poe]
+verbosity = 0
+
+[tool.poe.tasks]
+# Hidden subtasks for Poe. Tasks starting with "_" cannot be executed directly, just used as part of other tasks
+# nbdev related tasks
+_nb_check_format = "uv run ruff format nbs --check"
+_nb_clean = "uv run nbdev_clean"
+_nb_format = "uv run ruff format nbs"
+_nb_test = "uv run nbdev_test"
+_nb_export = "uv run nbdev_export"
+_nb_readme = "uv run nbdev_readme"
+# Pytest
+_pytest = "uv run pytest"
+# Linting
+_ruff = "uv run ruff check --output-format=concise"
+_check_format = "uv run ruff format --diff"
+_mypy = "uv run mypy ."
+# Formatting
+_format = "uv run ruff format"
+# UV tasks
+_sync = "uv sync --all-extras"
+# deptry
+_deptry = "uv run deptry ."
+
+[tool.poe.tasks.check]
+    help = "Run all the checks for file formatting, linting, typing, and dependency validation"
+    sequence = [
+        "_nb_check_format",
+        "_check_format",
+        "_ruff",
+        "_deptry",
+        "_mypy"
+    ]
+
+[tool.poe.tasks.clean]
+  help = "Remove temporary files generated during build process"
+  cmd  = """
+    # multiline commands including comments work too!
+    rm -rf .coverage
+           .mypy_cache
+           .pytest_cache
+           ./**/__pycache__
+           _proc
+           .ruff_cache
+  """
+
+[tool.poe.tasks.format]
+    help = "Reformat all notebooks and python files"
+    sequence = [
+        "_nb_format",
+        "_format"
+    ]
+
+[tool.poe.tasks.sync]
+    help = "Full package synchronisation: runs notebook cleaning and formatting, exports library and readme files, regenerates lockfile and update virtual environment"
+    sequence = [
+        "_nb_clean",
+        "_nb_format",
+        "_nb_readme",
+        "_nb_export",
+        "_format",
+        "_sync",
+        "clean"
+    ]
+
+[tool.poe.tasks.test]
+    help = "Run testsuite, including both notebook tests and pytest"
+    sequence = [
+        "_nb_test", 
+        "_pytest"
+    ]
