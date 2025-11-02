@@ -7,7 +7,6 @@ __all__ = ['write_metadata', 'get_manifest']
 from math import ceil
 from datetime import datetime
 from collections import defaultdict
-from pprint import pprint
 from pathlib import Path
 
 import numpy as np
@@ -153,11 +152,6 @@ def get_manifest(imageEngine, atlas_data,
         },
         "creation_date": datetime.today().strftime("%d-%B-%Y-%H:%M:%S"),
     }
-
-    print("="*20)
-    pprint(manifest)
-    print("="*20)
-
 
     write_json(data_dir/"manifests/manifest.json", manifest)
     write_json(data_dir/"manifest.json", manifest)

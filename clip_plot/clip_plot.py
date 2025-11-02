@@ -23,7 +23,6 @@ from .configuration import UmapSpec, ClusterSpec, ViewerOptions, ImageLoaderOpti
 # %% ../nbs/00_clip_plot.ipynb 5
 from shutil import rmtree
 from pathlib import Path
-import uuid
 import pandas as pd
 import numpy as np
 
@@ -41,7 +40,6 @@ def _project_images(imageEngine,
     Main method for embedding user images, projecting to 2D, and creating visualization
     It would be nice to list out the image processing steps before getting started
     """
-
 
     print(timestamp(), "Starting image processing pipeline.")
 
