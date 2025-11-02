@@ -29,7 +29,7 @@ def get_cluster_model(min_cluster_size: int = 15):
 
 # %% ../nbs/12_hotspots.ipynb 4
 def get_hotspots(imageEngine: ImageFactory, vecs: np.ndarray,
-                 output_dir: Path, plot_id: str,
+                 data_dir: Path, plot_id: str,
                  cluster_spec: ClusterSpec,
                 ):
     """Return the stable clusters from the condensed tree of connected components from the density graph
@@ -77,5 +77,5 @@ def get_hotspots(imageEngine: ImageFactory, vecs: np.ndarray,
 
     # save the hotspots to disk and return the path to the saved json
     print(timestamp(), "Found", len(clusters), "hotspots")
-    return write_json(get_json_path(output_dir, "hotspots", "hotspot", plot_id),
+    return write_json(get_json_path(data_dir, "hotspots", "hotspot", plot_id),
                       clusters)

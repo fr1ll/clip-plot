@@ -6,13 +6,13 @@ __all__ = ['load_image', 'resize_to_max_side', 'resize_to_height', 'autocontrast
 
 # %% ../nbs/03_images.ipynb 3
 import os
+import csv
 import json
 import copy
 from dataclasses import dataclass, field
 from glob import glob
 from collections.abc import Generator
 import random
-from abc import ABC, abstractmethod
 from pathlib import Path
 
 import pandas as pd
@@ -241,7 +241,7 @@ class ImageFactory:
         """
         Filtering images, using user metadata (if provided)
 
-        -Validate image: loads, size, resizing, oblongness
+        -Validate image: loads, resizing, oblongness
 
         Returns:
             images (list[Path])

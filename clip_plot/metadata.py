@@ -7,7 +7,7 @@ __all__ = ['write_metadata', 'get_manifest']
 from math import ceil
 from datetime import datetime
 from collections import defaultdict
-
+from pprint import pprint
 from pathlib import Path
 
 import numpy as np
@@ -103,11 +103,11 @@ def get_manifest(imageEngine, atlas_data,
         pos[i["idx"]].append([i["x"], i["y"]])
 
     # obtain the paths to each layout's JSON positions
-    layouts = get_layouts(imageEngine, hidden_vectors, output_dir, plot_id, umap_spec)
+    layouts = get_layouts(imageEngine, hidden_vectors, data_dir, plot_id, umap_spec)
     # create a heightmap for the umap layout
     if "umap" in layouts and layouts["umap"]:
         get_heightmap(json_path=layouts["umap"]["variants"][0]["layout"],
-                      label="umap", output_dir=output_dir)
+                      label="umap", data_dir=data_dir)
 
     # specify point size scalars
     point_sizes = {}
@@ -138,11 +138,11 @@ def get_manifest(imageEngine, atlas_data,
         "atlas_dir": (data_dir/"atlases").as_posix(),
         "metadata": has_metadata,
         "default_hotspots": get_hotspots(imageEngine, hidden_vectors,
-                                         output_dir, plot_id,
+                                         data_dir, plot_id,
                                          cluster_spec=cluster_spec,
                                         #  layouts=layouts,
                                          ),
-        "custom_hotspots": data_dir/"hotspots/user_hotspots.json",
+        "custom_hotspots": (data_dir/"hotspots/user_hotspots.json").as_posix(),
         "gzipped": False,
         "config": {
             "sizes": {
@@ -154,8 +154,13 @@ def get_manifest(imageEngine, atlas_data,
         "creation_date": datetime.today().strftime("%d-%B-%Y-%H:%M:%S"),
     }
 
+    print("="*20)
+    pprint(manifest)
+    print("="*20)
+
+
     write_json(data_dir/"manifests/manifest.json", manifest)
-    write_json(data_dir/"/manifest.json", manifest)
+    write_json(data_dir/"manifest.json", manifest)
 
     imagelist = {
         "cell_sizes": sizes,

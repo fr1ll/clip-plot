@@ -46,25 +46,33 @@ def timestamp():
     return str(datetime.datetime.now()) + ":"
 
 # %% ../nbs/01_utils.ipynb 11
-def get_json_path(output_dir: Path, subdir: str | None,
+def get_json_path(data_dir: Path, subdir: str | None,
                   plot_id: str | None, filename: str) -> Path:
     """
     Combine path and add json extension
     """
     if subdir:
-        output_dir = output_dir / subdir
+        data_dir = data_dir / subdir
     if plot_id:
         filename = f"{filename}-{plot_id}"
-    return (output_dir/ filename).with_suffix(".json")
+    return (data_dir/ filename).with_suffix(".json")
 
 # %% ../nbs/01_utils.ipynb 12
 def write_json(output_path: Path, object: Any):
     """
     Write json object `obj` to disk and return the path to that file
     """
+    #| export
+
+    def _convert_paths(obj):
+        if isinstance(obj, Path):
+            return str(obj)
+        # let json handle other types
+        raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
+
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("w", encoding="utf-8") as out:
-        json.dump(object, out, indent=4)
+        json.dump(object, out, default=_convert_paths, indent=2)
 
 # %% ../nbs/01_utils.ipynb 13
 def read_json(path: Path) -> dict:

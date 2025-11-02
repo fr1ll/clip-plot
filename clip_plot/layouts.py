@@ -56,9 +56,9 @@ class BaseLayout(ABC):
     _FILENAME = ""
     _ADD_HASH = True
 
-    def __init__(self, plot_id: str, output_dir: Path):
+    def __init__(self, plot_id: str, data_dir: Path):
         self.plot_id = plot_id
-        self.output_dir = output_dir
+        self.data_dir = data_dir
 
     @abstractmethod
     def get_layout(self):
@@ -68,7 +68,7 @@ class BaseLayout(ABC):
 
 class BaseMetaLayout(BaseLayout):
     def __init__(self, plot_id, imageEngine) -> None:
-        super().__init__(plot_id, imageEngine.output_dir)
+        super().__init__(plot_id, imageEngine.data_dir)
         self.imageEngine = imageEngine
 
 class AlphabeticLayout(BaseMetaLayout):
@@ -80,7 +80,7 @@ class AlphabeticLayout(BaseMetaLayout):
         Get the x,y positions of images in a grid projection
         """
         print(timestamp(), "Creating grid layout")
-        out_path = get_json_path(self.output_dir, self._SUBDIR, self._FILENAME, self.plot_id)
+        out_path = get_json_path(self.data_dir, self._SUBDIR, self._FILENAME, self.plot_id)
         n = math.ceil(self.imageEngine.count ** (1 / 2))
         l = []  # positions
         for i in range(self.imageEngine.count):
@@ -143,12 +143,12 @@ def get_categorical_points(boxes: np.ndarray, unit_size=None):
     """Given an array of Box() objects, return a 2D distribution with shape (n_cells, 2)"""
     points_arr = []
     for box in boxes:
-        area = box.w * box.h
+        area = box.width * box.height
         per_unit = (area / box.n_cells) ** (1 / 2)
-        x_units = math.ceil(box.w / per_unit)
-        y_units = math.ceil(box.h / per_unit)
+        x_units = math.ceil(box.width / per_unit)
+        y_units = math.ceil(box.height / per_unit)
         if not unit_size:
-            unit_size = min(box.w / x_units, box.h / y_units)
+            unit_size = min(box.width / x_units, box.height / y_units)
         for j in range(box.n_cells):
             x = j % x_units
             y = j // x_units
@@ -182,8 +182,8 @@ class CategoricalLayout(BaseMetaLayout):
 
         print(timestamp(), "Creating categorical layout")
         # determine the out path and return from cache if possible
-        layout_out_path = get_json_path(self.output_dir, self._SUBDIR, self._FILENAME, self.plot_id)
-        labels_out_path = get_json_path(self.output_dir, self._SUBDIR, "categorical-labels", self.plot_id)
+        layout_out_path = get_json_path(self.data_dir, self._SUBDIR, self._FILENAME, self.plot_id)
+        labels_out_path = get_json_path(self.data_dir, self._SUBDIR, "categorical-labels", self.plot_id)
 
         # accumulate d[category] = [indices of points with category]
         categories = [img.metadata.get("category", None) for img in self.imageEngine]
@@ -231,7 +231,8 @@ class CategoricalLayout(BaseMetaLayout):
             {"positions": round_floats(text_anchors.tolist()),
             "labels": [i["key"] for i in keys_and_counts],},
             )
-        return {"layout": layout_out_path, "labels": labels_out_path}
+        return {"layout": layout_out_path,
+                "labels": labels_out_path}
 
 # %% ../nbs/05_layouts.ipynb 11
 class CustomLayout(BaseMetaLayout):
@@ -241,7 +242,7 @@ class CustomLayout(BaseMetaLayout):
         """
         Return a 2D array of image positions corresponding to x,y coordinates in metadata
         """
-        out_path = get_json_path(self.output_dir, self._SUBDIR, self._FILENAME, self.plot_id)
+        out_path = get_json_path(self.data_dir, self._SUBDIR, self._FILENAME, self.plot_id)
         if not self.imageEngine.metadata:
             return
         found_coords = False
@@ -271,14 +272,14 @@ class CustomLayout(BaseMetaLayout):
         return {"layout": out_path}
 
 # %% ../nbs/05_layouts.ipynb 12
-def get_pointgrid_layout(input_path: Path, output_dir: Path, label, plot_id: str):
+def get_pointgrid_layout(input_path: Path, data_dir: Path, label, plot_id: str):
     """Gridify the positions in `path` and return the path to this new layout
     Args:
         path (str)
         label (str)
     """
     print(timestamp(), "Creating {label} pointgrid")
-    out_path = get_json_path(output_dir=output_dir, subdir="layouts",
+    out_path = get_json_path(data_dir=data_dir, subdir="layouts",
                              filename=f"{label}-jittered",
                              plot_id=plot_id)
 
@@ -292,11 +293,11 @@ def get_pointgrid_layout(input_path: Path, output_dir: Path, label, plot_id: str
 
 
 # %% ../nbs/05_layouts.ipynb 13
-def get_rasterfairy_layout(output_dir: Path, plot_id: str, umap_json_path: Path):
+def get_rasterfairy_layout(data_dir: Path, plot_id: str, umap_json_path: Path):
     """Create regular grid layout that keeps umap XYs close to each other
     """
     print(timestamp(), "Creating rasterfairy layout")
-    out_path = get_json_path(output_dir, "layouts", "rasterfairy", plot_id)
+    out_path = get_json_path(data_dir, "layouts", "rasterfairy", plot_id)
     umap = np.array(read_json(umap_json_path))
     if umap.shape[-1] != 2:
         print(timestamp(), f"Couldn't create rasterfairy layout. Data shape is {umap.shape}, needs to be 2D.")
@@ -316,7 +317,7 @@ def get_rasterfairy_layout(output_dir: Path, plot_id: str, umap_json_path: Path)
 
 # %% ../nbs/05_layouts.ipynb 14
 def get_umap_layout_or_layouts(v: np.ndarray, imageEngine, umap_spec: UmapSpec,
-                              output_dir: Path, plot_id: str) -> dict[str, list]:
+                              data_dir: Path, plot_id: str) -> dict[str, list]:
     """Create a multi-layout UMAP projection
     Args:
         v (array like object)
@@ -330,7 +331,7 @@ def get_umap_layout_or_layouts(v: np.ndarray, imageEngine, umap_spec: UmapSpec,
         umap_spec.n_neighbors, umap_spec.min_dist
     ):
         filename = f"umap-n_neighbors_{n_neighbors}-min_dist_{min_dist}"
-        out_path = get_json_path(output_dir, "layouts", filename, plot_id)
+        out_path = get_json_path(data_dir, "layouts", filename, plot_id)
         umap_variants.append(
             {
                 "n_neighbors": n_neighbors,
@@ -391,12 +392,12 @@ def get_umap_layout_or_layouts(v: np.ndarray, imageEngine, umap_spec: UmapSpec,
                         "min_dist": v["min_dist"],
                         "layout": v["out_path"],
                         "jittered": get_pointgrid_layout(
-                            input_path=v["out_path"], output_dir=output_dir,
+                            input_path=v["out_path"], data_dir=data_dir,
                             label=v["filename"], # what does label do?
                             plot_id=plot_id
                         ),
                         # "grid": get_rasterfairy_layout(
-                        #     umap_json_path=v["out_path"], output_dir=output_dir,
+                        #     umap_json_path=v["out_path"], data_dir=data_dir,
                         #     plot_id=plot_id
                         # )
                     }
@@ -421,12 +422,12 @@ def get_single_umap_model(umap_spec: UmapSpec, seed: int | None = None) -> UMAP:
     return UMAP(**config)
 
 # %% ../nbs/05_layouts.ipynb 15
-def get_heightmap(json_path: Path, label: str, output_dir: Path):
+def get_heightmap(json_path: Path, label: str, data_dir: Path):
     """Create a heightmap using the distribution of points stored at `path`
     Args:
         path
         label
-        output_dir
+        data_dir
     """
 
     X = read_json(json_path)
@@ -448,14 +449,14 @@ def get_heightmap(json_path: Path, label: str, output_dir: Path):
     plt.pcolormesh(xi, yi, zi.reshape(xi.shape), shading="gouraud", cmap=plt.cm.gray)
     plt.axis("off")
     # save the plot
-    hmap_dir = output_dir/ "heightmaps"
+    hmap_dir = data_dir/ "heightmaps"
     hmap_dir.mkdir(parents=True, exist_ok=True)
     out_path = hmap_dir / f"{label}-heightmap.png"
     plt.savefig(out_path, pad_inches=0)
 
 # %% ../nbs/05_layouts.ipynb 16
 def get_layouts(imageEngine: ImageFactory, hidden_vectors: np.ndarray,
-                output_dir: Path, plot_id: str,
+                data_dir: Path, plot_id: str,
                 umap_spec: UmapSpec,
                 ):
     """Get the image positions in each projection"""
@@ -464,7 +465,7 @@ def get_layouts(imageEngine: ImageFactory, hidden_vectors: np.ndarray,
     categorical_layout = CategoricalLayout(plot_id, imageEngine)
     custom_layout = CustomLayout(plot_id, imageEngine)
     umap_layouts_dict = get_umap_layout_or_layouts(hidden_vectors, imageEngine, umap_spec,
-                                                output_dir, plot_id)
+                                                data_dir, plot_id)
     layouts = {
         "umap": umap_layouts_dict,
         "alphabetic": {
@@ -473,7 +474,7 @@ def get_layouts(imageEngine: ImageFactory, hidden_vectors: np.ndarray,
         "grid": {
             "layout": get_rasterfairy_layout(
                               umap_json_path=umap_layouts_dict["variants"][0]["layout"],
-                              output_dir=output_dir, plot_id=plot_id
+                              data_dir=data_dir, plot_id=plot_id
                               ),
         },
         "categorical": categorical_layout.get_layout(),
