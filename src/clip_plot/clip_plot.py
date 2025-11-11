@@ -73,7 +73,6 @@ def project_images_pipeline(output_dir: Path,
                             metadata: list[Path] | None = None,
                             image_path_col: str | None = None,
                             embed_path_col: str | None = None,
-
                 ):
                 """Convert a folder of images into a clip-plot visualization"""
 
@@ -121,7 +120,7 @@ def embed_images_pipeline(images: list[Path],
                      table_format: str,
                      table_id: str,
                 ):
-                "Embed a folder of images and save embeddings as .npy file to disk"
+                """Embed a folder of images, save embeddings as .npy file to disk"""
                 output_dir = Path(output_dir)
 
                 # using Path.cwd() to handle ../ names -- not sure if this is superstitious
@@ -131,10 +130,9 @@ def embed_images_pipeline(images: list[Path],
 
                 embeddings = get_embeddings(imageEngine, model_name=model)
 
-                def _model_shortname(n: str) -> str:
-                        return "__".join(n.split("/")[-2:])
+                _model_shortname = "__".join(model.split("/")[-2:])
 
-                embs_dir = data_dir/f"embeddings_{_model_shortname(model)}"
+                embs_dir = data_dir/f"embeddings_{_model_shortname}"
                 embs_dir.mkdir(parents=True, exist_ok=True)
                 emb_paths = write_embeddings(embeddings, imageEngine.filenames, embs_dir)
 
