@@ -33,15 +33,6 @@ def get_hotspots(imageEngine: ImageFactory, vecs: np.ndarray,
                  cluster_spec: ClusterSpec,
                 ):
     """Return the stable clusters from the condensed tree of connected components from the density graph
-
-    Args:
-        layouts (Optional[dict] = {}) 
-        use_high_dimensional_vectors (Optional[bool] = True) 
-        n_preproc_dims
-        vecs
-        umap = Used if use_high_dimensional_vectors is False
-        max_clusters
-
     """
     print(timestamp(), "Clustering data with HDBSCAN")
     model = get_cluster_model(cluster_spec.min_cluster_size)
@@ -77,5 +68,6 @@ def get_hotspots(imageEngine: ImageFactory, vecs: np.ndarray,
 
     # save the hotspots to disk and return the path to the saved json
     print(timestamp(), "Found", len(clusters), "hotspots")
-    return write_json(get_json_path(data_dir, "hotspots", "hotspot", plot_id),
-                      clusters)
+    json_path = get_json_path(data_dir, "hotspots", "hotspot", plot_id)
+    write_json(json_path, clusters)
+    return json_path

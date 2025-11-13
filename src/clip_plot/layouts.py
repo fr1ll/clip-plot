@@ -20,8 +20,6 @@ from pathlib import Path
 import operator
 from dataclasses import dataclass
 
-# TODO: Change math references to numpy
-
 import numpy as np
 from scipy.stats import gaussian_kde
 import matplotlib.pyplot as plt
@@ -106,7 +104,7 @@ def get_categorical_boxes(group_counts: list[int], margin=2):
     @arg [int] group_counts: counts of the number of images in each
       distinct level within the metadata's categories
     @kwarg int margin: space between boxes in the 2D layout
-    @returns [Box] an array of Box() objects; one per level in `group_counts`
+    @returns [Box] an array of Box() objects, one per level in `group_counts`
     """
     group_counts = sorted(group_counts, reverse=True)
     boxes = []
@@ -171,11 +169,6 @@ class CategoricalLayout(BaseMetaLayout):
         Return a numpy array with shape (n_points, 2) with the point
         positions of observations in box regions determined by
         each point's category metadata attribute (if applicable)
-
-        Args:
-            null_category (Optional[str]='Other')
-            margin (Optional[int]=2)
-            metadata
         """
         if "category" not in self.imageEngine.meta_headers:
             return False
@@ -274,9 +267,6 @@ class CustomLayout(BaseMetaLayout):
 # %% ../../nbs/05_layouts.ipynb 12
 def get_pointgrid_layout(input_path: Path, data_dir: Path, label, plot_id: str):
     """Gridify the positions in `path` and return the path to this new layout
-    Args:
-        path (str)
-        label (str)
     """
     print(timestamp(), "Creating {label} pointgrid")
     out_path = get_json_path(data_dir=data_dir, subdir="layouts",
@@ -289,7 +279,8 @@ def get_pointgrid_layout(input_path: Path, data_dir: Path, label, plot_id: str):
         return None
 
     z = align_points_to_grid(arr, fill=0.05)
-    return write_layout(out_path, z)
+    write_layout(out_path, z)
+    return out_path
 
 
 # %% ../../nbs/05_layouts.ipynb 13
@@ -313,17 +304,13 @@ def get_rasterfairy_layout(data_dir: Path, plot_id: str, umap_json_path: Path):
     except Exception as exc:
         print(timestamp(), "Coonswarp rectification could not be performed", exc)
     pos = rasterfairy.transformPointCloud2D(umap)[0]
-    return write_layout(out_path, pos)
+    write_layout(out_path, pos)
+    return out_path
 
 # %% ../../nbs/05_layouts.ipynb 14
-def get_umap_layout_or_layouts(v: np.ndarray, imageEngine, umap_spec: UmapSpec,
+def get_umap_layout_or_layouts(v: np.ndarray, imageEngine: ImageFactory, umap_spec: UmapSpec,
                               data_dir: Path, plot_id: str) -> dict[str, list]:
     """Create a multi-layout UMAP projection
-    Args:
-        v (array like object)
-        n_neighbors
-        min_dist
-        images
     """
     print(timestamp(), "Creating multi-umap layout")
     umap_variants = []
@@ -423,11 +410,8 @@ def get_single_umap_model(umap_spec: UmapSpec, seed: int | None = None) -> UMAP:
 
 # %% ../../nbs/05_layouts.ipynb 15
 def get_heightmap(json_path: Path, label: str, data_dir: Path):
-    """Create a heightmap using the distribution of points stored at `path`
-    Args:
-        path
-        label
-        data_dir
+    """
+    Create a heightmap using the distribution of points stored at `path`
     """
 
     X = read_json(json_path)
