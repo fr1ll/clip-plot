@@ -55,7 +55,7 @@ def get_json_path(data_dir: Path, subdir: str | None,
         data_dir = data_dir / subdir
     if plot_id:
         filename = f"{filename}-{plot_id}"
-    return (data_dir/ filename).with_suffix(".json")
+    return (data_dir/filename).with_suffix(".json")
 
 # %% ../../nbs/01_utils.ipynb 12
 def write_json(output_path: Path, object: Any):
