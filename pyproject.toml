@@ -1,6 +1,6 @@
 [project]
 name="clip-plot"
-version = "0.1.4"
+version = "0.1.4a1"
 description = "Visual-similarity-space viewer for images"
 readme = "README.md"
 license = "MIT"
@@ -15,8 +15,6 @@ dependencies = [
     "pointgrid",
     "rasterfairy",
     "timm",
-    "torch",
-    "torchvision==0.24.1+cpu",
     "transformers",
     "umap-learn",
     "pydantic>=2.11.10",
