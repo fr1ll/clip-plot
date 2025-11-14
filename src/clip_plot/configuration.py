@@ -67,10 +67,20 @@ class Paths(BaseModel):
 
 # %% ../../nbs/09_configuration.ipynb 4
 class UmapSpec(BaseModel):
-    n_neighbors: list[int] = Field([15], description="Number of neighbors in UMAP")
-    min_dist: list[float] = Field([0.1], description="Minimum distance in UMAP")
+    n_neighbors: int | list[int] = Field([15], description="Number of neighbors in UMAP")
+    min_dist: float | list[float] = Field([0.1], description="Minimum distance in UMAP")
     metric: CliSuppress[str] = Field("correlation", description="Metric argument for UMAP")
-    umap_on_full_dims: CliSuppress[bool] = Field(True)
+    reducer: Literal["umap", "localmap", "pacmap"] = Field("umap", description="Dimensionality reduction algorithm.")
+
+    @field_validator("n_neighbors", "min_dist", mode="before")
+    @classmethod
+    def to_list(cls, value: str | list | int | float) -> list:
+        if isinstance(value, list):
+            return value
+        elif isinstance(value, tuple) or isinstance(value, set):
+            return list(value)
+        else:
+            return [value]
 
 # %% ../../nbs/09_configuration.ipynb 5
 class ClusterSpec(BaseModel):
