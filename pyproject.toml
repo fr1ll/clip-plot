@@ -15,8 +15,6 @@ dependencies = [
     "pointgrid",
     "rasterfairy",
     "timm",
-    "torch",
-    "torchvision==0.24.1+cpu",
     "transformers",
     "umap-learn",
     "pydantic>=2.11.10",
@@ -37,6 +35,12 @@ embed_to_tables = "clip_plot.embed_to_tables:embed_to_tables_cli"
 
 [tool.uv]
 package = true
+conflicts = [
+  [
+    { extra = "cpu" },
+    { extra = "cu128" },
+  ],
+]
 
 [dependency-groups]
 dev = [
@@ -57,11 +61,12 @@ clip-plot = { workspace = true }
 rasterfairy = { url = "https://github.com/fr1ll/RasterFairy_WheelBuild/releases/download/v1.0.5a/rasterfairy-1.0.5a0-py3-none-any.whl" }
 pointgrid = { url = "https://github.com/fr1ll/pointgrid/releases/download/0.0.6/pointgrid-0.0.6-py3-none-any.whl"}
 torch = [
-  { index = "pytorch-cpu" },
+  { index = "pytorch-cpu", extra = "cpu" },
+  { index = "pytorch-cu128", extra = "cu128" },
 ]
 torchvision = [
-  { index = "pytorch-cpu" },
-
+  { index = "pytorch-cpu", extra = "cpu" },
+  { index = "pytorch-cu128", extra = "cu128" },
 ]
 
 [project.optional-dependencies]
