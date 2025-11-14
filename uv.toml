@@ -1,5 +1,0 @@
-# workaround because nbdev clobbers name=
-[[index]]
-name = "pytorch-cpu"
-url = "https://download.pytorch.org/whl/cpu"
-explicit = true

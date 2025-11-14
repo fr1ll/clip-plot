@@ -10,7 +10,6 @@ import pandas as pd
 import pyarrow.parquet as pq
 from pathlib import Path
 from glob import glob
-from typing import Tuple, List
 
 # %% ../../nbs/08_from_tables.ipynb 4
 def cat_tables(table_paths: list[Path]) -> pd.DataFrame:
@@ -40,11 +39,11 @@ def glob_to_tables(pattern: str) -> pd.DataFrame:
 
 
 # %% ../../nbs/08_from_tables.ipynb 8
-def table_to_meta(table: pd.DataFrame) -> Tuple[List, List]:
+def table_to_meta(table: pd.DataFrame) -> tuple[list, list]:
     '''convert table to metadata columns and list'''
     # viewer expects filename column
     table = table.rename(columns={"image_filename": "filename"})
-    meta_columns = set(table.columns) - set(["image_path", "embed_path"])
+    meta_columns = set(table.columns) - set("image_path", "hidden_vectors_path")
     # convert to list as pandas does not let you index with a set
     meta_columns = list(meta_columns)
     df_meta = table[meta_columns]

@@ -6,8 +6,7 @@ __all__ = ['get_clip_plot_root', 'replace_web_strings', 'byo_logo', 'copy_web_as
 # %% ../../nbs/06_web_config.ipynb 4
 from . import utils
 from .utils import get_version
-from fastcore.all import *
-import os
+from fastcore.all import in_ipython
 from pathlib import Path
 from shutil import copy
 
