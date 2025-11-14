@@ -27,12 +27,12 @@ import clip_plot # for version
 
 # %% ../../nbs/09_configuration.ipynb 3
 class Paths(BaseModel):
-    images: list[Path] = Field([], description="Path to folder, image dir, or glob")
+    images: list[Path] = Field(default_factory=list, description="Folder or glob that expands to input images")
     tables: list[Path] | None = Field(None,
-                               description="Glob of table(s) with image_path, embed_path cols")
+                               description="Path/folder/glob to table(s) with image_path, hidden_vector_path cols")
     metadata: list[Path] | None = Field(None,
-                               description="Glob of table(s) with image_path, embed_path cols")
-    table_id: str = Field(default_factory=lambda: str(uuid4()), description="identifier for table output")
+                               description="Path/folder/glob to table(s) with image_path cols")
+    table_id: str = Field(default_factory=lambda: str(uuid4()), description="Identifier for table output")
     output_dir: Path = Field((Path()/"clipplot_output").resolve(),
             description="Directory for output data files and viewer")
     table_format: Literal["parquet", "csv"] = Field("parquet",
@@ -56,6 +56,8 @@ class Paths(BaseModel):
             else:
                 exts = {'.json', '.csv', '.parquet'}
             return [p for p in Path(str(value)).rglob('*') if p.suffix.lower() in exts]
+        else:
+            return [Path(str(value))]
 
     @model_validator(mode='after')
     def check_table_vs_meta(self) -> Self:
