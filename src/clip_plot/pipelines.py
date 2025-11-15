@@ -30,11 +30,11 @@ import numpy as np
 def project_images_pipeline(output_dir: Path,
                             plot_id: str,
                             model: str,
-                            images: list[Path] | None,
                             viewer_opts: ViewerOptions,
                             umap_spec: UmapSpec,
                             cluster_spec: ClusterSpec,
                             image_opts: ImageLoaderOptions,
+                            images: list[Path] | None = None,
                             tables: list[Path] | None = None,
                             metadata: list[Path] | None = None,
                             image_path_col: str = "image_path",
@@ -106,9 +106,11 @@ def embed_images_pipeline(images: list[Path],
                 embs_dir.mkdir(parents=True, exist_ok=True)
                 emb_paths = write_embeddings(embeddings, imageEngine.filenames, embs_dir)
 
+                ## TODO: Pass embeddings directly into dataframe
+                ## rather than writing to disk
                 df = pd.DataFrame({"image_path": imageEngine.image_paths,
                                    "image_filename": imageEngine.filenames,
-                                   "embed_path": [str(e) for e in emb_paths]})
+                                   "hidden_vectors_path": [str(e) for e in emb_paths]})
 
                 if len(imageEngine.metadata) > 0:
                         df_meta = pd.DataFrame(imageEngine.metadata)
@@ -121,12 +123,13 @@ def embed_images_pipeline(images: list[Path],
 
                 ## standardize sort order of table
                 # put standard columns first if they exist in df
-                standard_cols = pd.Index(["image_path", "image_filename", "embed_path", "category", "tags", "x", "y"])
+                standard_cols = pd.Index(["image_path", "image_filename", "hidden_vectors_path",
+                                                   "category", "tags", "x", "y"])
                 cols_sorted = standard_cols.intersection(df.columns)
                 # append non-standard columns, sorted alphabetically
                 cols_sorted = cols_sorted.append(df.columns.difference(standard_cols).sort_values())
                 df = df[cols_sorted]
-                for col in ["image_path", "embed_path"]:
+                for col in ["image_path", "hidden_vectors_path"]:
                         df[col] = df[col].astype(str)
 
                 if table_format == "csv":

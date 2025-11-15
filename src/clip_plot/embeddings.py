@@ -57,8 +57,8 @@ def get_embeddings(ImageEngine,
 # %% ../../nbs/04_embeddings.ipynb 8
 def write_embeddings(embeddings : np.ndarray, names: list[str], dir: Path):
     """write out embeddings and return paths"""
-    paths = [(dir/n).resolve() for n in names]
+    paths = [(dir/n).with_suffix(".npy").resolve() for n in names]
     for p, e in zip(paths, embeddings):
-        np.save(p.with_suffix('.npy'), e)
-    return paths
+        np.save(p, e)
+    return paths, embeddings
 

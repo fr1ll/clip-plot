@@ -29,9 +29,8 @@ documentation = "https://github.com/fr1ll/clip-plot"
 homepage = "https://github.com/fr1ll/clip-plot"
 
 [project.scripts]
-clipplot_from_images = "clip_plot.clip_plot:project_images_cli"
-clipplot_embed_images = "clip_plot.clip_plot:embed_images_cli"
-embed_to_tables = "clip_plot.embed_to_tables:embed_to_tables_cli"
+clipplot_project_tables = "clip_plot.main:project_tables_cli"
+clipplot_embed_images = "clip_plot.main:embed_im_cli"
 
 [tool.uv]
 package = true

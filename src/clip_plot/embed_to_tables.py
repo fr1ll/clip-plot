@@ -48,7 +48,7 @@ def embed_to_tables_pipeline(
 
                 df = pd.DataFrame({"image_path": [p.as_posix() for p in imageEngine.image_paths],
                                    "image_filename": imageEngine.filenames,
-                                   "embed_path": [str(e) for e in emb_paths]})
+                                   "hidden_vectors_path": [str(e) for e in emb_paths]})
 
                 if len(imageEngine.metadata) > 0:
                         df_meta = pd.DataFrame(imageEngine.metadata)
@@ -61,7 +61,7 @@ def embed_to_tables_pipeline(
 
                 ## standardize sort order of table
                 # put standard columns first if they exist in df
-                standard_cols = pd.Index(["image_path", "image_filename", "embed_path", "category", "tags", "x", "y"])
+                standard_cols = pd.Index(["image_path", "image_filename", "hidden_vectors_path", "category", "tags", "x", "y"])
                 cols_sorted = standard_cols.intersection(df.columns)
                 # append non-standard columns, sorted alphabetically
                 cols_sorted = cols_sorted.append(df.columns.difference(standard_cols).sort_values())
