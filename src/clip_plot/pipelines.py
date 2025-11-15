@@ -104,7 +104,7 @@ def embed_images_pipeline(images: list[Path],
 
                 embs_dir = data_dir/f"embeddings_{_model_shortname}"
                 embs_dir.mkdir(parents=True, exist_ok=True)
-                emb_paths = write_embeddings(embeddings, imageEngine.filenames, embs_dir)
+                emb_paths, _ = write_embeddings(embeddings, imageEngine.filenames, embs_dir)
 
                 ## TODO: Pass embeddings directly into dataframe
                 ## rather than writing to disk
