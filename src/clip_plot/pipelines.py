@@ -48,10 +48,10 @@ def project_images_pipeline(output_dir: Path,
                 raise ValueError("No images found from either tables or images input.")
         if tables:
                 print(timestamp(), "Loading tables")
-                table = cat_tables(tables)
-                images = list(table[image_path_col].values)
+                table: pd.DataFrame | None = cat_tables(tables)
+                images: list[Path] = [Path(p) for p in table[image_path_col].to_numpy()]
                 print(timestamp(), "Loading embeddings from disk")
-                hidden_vectors = np.array([np.load(e) for e in tqdm(table[vectors_path_col])])
+                hidden_vectors: np.ndarray | None = np.array([np.load(e) for e in tqdm(table[vectors_path_col])])
         else:
                 hidden_vectors = None
                 table = None
