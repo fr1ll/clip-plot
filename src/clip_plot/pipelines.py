@@ -10,26 +10,22 @@ from .utils import timestamp
 print(timestamp(), "Beginning to load dependencies")
 
 # %% ../../nbs/13_pipelines.ipynb 4
+from pathlib import Path
+from shutil import rmtree
+
+import numpy as np
+import polars as pl
 from fastcore.all import in_ipython
-from tqdm.auto import tqdm
 
 from .configuration import Cfg, ClusterSpec, ImageLoaderOptions, UmapSpec, ViewerOptions
-from .embeddings import get_embeddings, write_embeddings
+from .embeddings import get_embeddings
 from .from_tables import cat_tables, table_to_meta
 from .images import ImageFactory, create_atlases_and_thumbs
 from .metadata import get_manifest, write_metadata
 from .web_config import copy_web_assets, get_clip_plot_root
 
 
-# %% ../../nbs/13_pipelines.ipynb 5
-from pathlib import Path
-from shutil import rmtree
-
-import numpy as np
-import polars as pl
-
-
-# %% ../../nbs/13_pipelines.ipynb 7
+# %% ../../nbs/13_pipelines.ipynb 6
 def project_images_pipeline(output_dir: Path,
                             plot_id: str,
                             model: str,
@@ -45,23 +41,31 @@ def project_images_pipeline(output_dir: Path,
         ):
         """Convert a folder of images into a clip-plot visualization"""
 
+        # TODO: use a dataframe instead
+        meta_names:list[str] = []
+        meta_vals: list[dict] | None = None
         if tables and images:
                 raise ValueError("Provide either tables or images parameter, not both.")
         if not tables and not images:
                 raise ValueError("No images found from either tables or images input.")
         if tables and not images:
                 print(timestamp(), "Loading tables")
-                table: pd.DataFrame | None = cat_tables(tables)
+                table: pl.DataFrame | None = cat_tables(tables)
                 images: list[Path] = [Path(p) for p in table[image_path_col].to_numpy()]
                 print(timestamp(), "Loading embeddings from disk")
                 hidden_vectors: np.ndarray | None = table[vectors_col].to_numpy()
-                imageEngine.meta_headers, imageEngine.metadata = table_to_meta(table)
+                meta_names, meta_vals= table_to_meta(table)
         elif not tables and images:
                 hidden_vectors = get_embeddings(images, model_name=model)
 
         data_dir = output_dir / "data"
         imageEngine = ImageFactory(images, data_dir, metadata,
                                         **image_opts.model_dump(),)
+
+        # TODO: simplify the mad tables/metadata possibilities
+        if meta_vals:
+                imageEngine.meta_headers = meta_names
+                imageEngine.metadata = meta_vals
 
         print(f"Config to project images: {str(image_opts.model_dump())}")
 
@@ -70,8 +74,9 @@ def project_images_pipeline(output_dir: Path,
 
         copy_web_assets(output_dir=output_dir,
                         tagline=viewer_opts.tagline, logo=viewer_opts.logo)
-        write_metadata(imageEngine)
+
         _, atlas_data = create_atlases_and_thumbs(imageEngine, plot_id)
+        write_metadata(imageEngine)
 
         get_manifest(imageEngine, atlas_data, hidden_vectors,
                         plot_id=plot_id, output_dir=output_dir,
@@ -80,7 +85,7 @@ def project_images_pipeline(output_dir: Path,
         # write_images(imageEngine)
         print(timestamp(), "Done!")
 
-# %% ../../nbs/13_pipelines.ipynb 9
+# %% ../../nbs/13_pipelines.ipynb 8
 def embed_images_pipeline(images: list[Path],
                      model: str,
                      metadata: list[Path] | None,
@@ -110,7 +115,8 @@ def embed_images_pipeline(images: list[Path],
                         df = df.join(df_meta.unique(subset=["image_filename"]), on="image_filename",
                                               how="left")
 
-                df = df.with_columns(pl.col("image_path").cast(pl.Utf8))
+                df = df.with_columns(pl.col("image_path").map_elements(
+                                     lambda x: x.as_posix(),  return_dtype=pl.Utf8))
 
                 ## standardize sort order of table
                 # put standard columns in a sensible order if they exist in df
@@ -122,8 +128,8 @@ def embed_images_pipeline(images: list[Path],
                 cols_sorted = cols_in_order + non_standard_cols
                 df = df.with_columns(cols_sorted)
 
-
+                (data_dir / "tables").mkdir(parents=True, exist_ok=True)
                 if table_format == "csv":
-                        df.write_csv(data_dir / f"EmbedImages__{table_id}.csv")
+                        df.write_csv(data_dir / f"tables/EmbedImages__{table_id}.csv")
                 else:
-                        df.write_parquet(data_dir / f"EmbedImages__{table_id}.parquet")
+                        df.write_parquet(data_dir / f"tables/EmbedImages__{table_id}.parquet")
