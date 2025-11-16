@@ -115,7 +115,7 @@ class Cfg(BaseSettings):
     view_opts: ViewerOptions = ViewerOptions()
     image_opts: ImageLoaderOptions = ImageLoaderOptions()
     image_path_col: str = Field("image_path", description="Name of column with paths to images")
-    vectors_path_col: str = Field("hidden_vectors_path", description="Name of column with paths to hidden vectors")
+    vectors_col: str = Field("hidden_vectors", description="Name of column with hidden vectors i.e. embeddings")
     # image_column: str = Field("image", description="Name of column with images")
     # vectors_column: str = Field("hidden_vectors", description="Name of column with hidden vectors")
 

@@ -6,13 +6,14 @@
 __all__ = ['cat_tables', 'glob_to_tables', 'table_to_meta']
 
 # %% ../../nbs/08_from_tables.ipynb 3
-import pandas as pd
-import pyarrow.parquet as pq
-from pathlib import Path
 from glob import glob
+from pathlib import Path
+
+import pandas as pd
+import polars as pl
 
 # %% ../../nbs/08_from_tables.ipynb 4
-def cat_tables(table_paths: list[Path]) -> pd.DataFrame:
+def cat_tables(table_paths: list[Path]) -> pl.DataFrame:
     '''
     read and concatenate tables from list of paths
     '''
@@ -20,11 +21,9 @@ def cat_tables(table_paths: list[Path]) -> pd.DataFrame:
     if extensions not in [{".csv"}, {".parquet"}]:
         raise ValueError(f"All tables must have same extension, either .csv or .parquet. Got: {extensions}")
     if extensions == {".csv"}:
-        dataset = [pd.read_csv(t) for t in table_paths]
-        return pd.concat(dataset, ignore_index=True)
+        return pl.concat((pl.read_csv(t) for t in table_paths), how="diagonal_relaxed")
     elif extensions == {".parquet"}:
-        dataset = pq.ParquetDataset(table_paths)
-        return dataset.read().to_pandas()
+        return pl.concat((pl.read_parquet(t) for t in table_paths), how="diagonal_relaxed")
 
 # %% ../../nbs/08_from_tables.ipynb 5
 def glob_to_tables(pattern: str) -> pd.DataFrame:
@@ -38,13 +37,13 @@ def glob_to_tables(pattern: str) -> pd.DataFrame:
     return cat_tables(table_paths)
 
 
-# %% ../../nbs/08_from_tables.ipynb 8
-def table_to_meta(table: pd.DataFrame) -> tuple[list, list]:
+# %% ../../nbs/08_from_tables.ipynb 7
+def table_to_meta(table: pl.DataFrame) -> tuple[list, list]:
     '''convert table to metadata columns and list'''
     # viewer expects filename column
-    table = table.rename(columns={"image_filename": "filename"})
-    meta_columns = set(table.columns) - set("image_path", "hidden_vectors_path")
+    table = table.rename({"image_filename": "filename"})
+    meta_columns = set(table.columns) - {"image_path", "hidden_vectors"}
     # convert to list as pandas does not let you index with a set
     meta_columns = list(meta_columns)
     df_meta = table[meta_columns]
-    return meta_columns, list(df_meta.to_dict(orient='index').values())
+    return meta_columns, df_meta.to_dicts()
