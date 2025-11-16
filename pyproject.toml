@@ -1,6 +1,6 @@
 [project]
 name="clip-plot"
-version = "0.1.4a1"
+version = "0.1.4a3"
 description = "Visual-similarity-space viewer for images"
 readme = "README.md"
 license = "MIT"
@@ -9,7 +9,6 @@ dependencies = [
     "fastcore>=1.8",
     "hdbscan",
     "matplotlib>=3.10.0",
-    "pandas>=2.2.3",
     "pillow>=11.1.0",
     "pyarrow",
     "pointgrid",
@@ -21,6 +20,7 @@ dependencies = [
     "pydantic-settings>=2.11.0",
     "typing-extensions>=4.15.0",
     "click>=8.3.0",
+    "polars>=1.35.2",
 ]
 	
 [project.urls]

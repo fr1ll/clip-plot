@@ -10,23 +10,22 @@ from .utils import timestamp
 print(timestamp(), "Beginning to load dependencies")
 
 # %% ../../nbs/13_pipelines.ipynb 4
-from fastcore.all import in_ipython
-from tqdm.auto import tqdm
-
-from .from_tables import cat_tables, table_to_meta
-from .web_config import copy_web_assets, get_clip_plot_root
-from .embeddings import get_embeddings, write_embeddings
-from .metadata import get_manifest, write_metadata
-from .images import create_atlases_and_thumbs, ImageFactory
-from .configuration import UmapSpec, ClusterSpec, ViewerOptions, ImageLoaderOptions, Cfg
-
-# %% ../../nbs/13_pipelines.ipynb 5
-from shutil import rmtree
 from pathlib import Path
-import pandas as pd
-import numpy as np
+from shutil import rmtree
 
-# %% ../../nbs/13_pipelines.ipynb 7
+import numpy as np
+import polars as pl
+from fastcore.all import in_ipython
+
+from .configuration import Cfg, ClusterSpec, ImageLoaderOptions, UmapSpec, ViewerOptions
+from .embeddings import get_embeddings
+from .from_tables import cat_tables, table_to_meta
+from .images import ImageFactory, create_atlases_and_thumbs
+from .metadata import get_manifest, write_metadata
+from .web_config import copy_web_assets, get_clip_plot_root
+
+
+# %% ../../nbs/13_pipelines.ipynb 6
 def project_images_pipeline(output_dir: Path,
                             plot_id: str,
                             model: str,
@@ -38,31 +37,35 @@ def project_images_pipeline(output_dir: Path,
                             tables: list[Path] | None = None,
                             metadata: list[Path] | None = None,
                             image_path_col: str = "image_path",
-                            vectors_path_col: str = "hidden_vectors_path",
+                            vectors_col: str = "hidden_vectors",
         ):
         """Convert a folder of images into a clip-plot visualization"""
 
+        # TODO: use a dataframe instead
+        meta_names:list[str] = []
+        meta_vals: list[dict] | None = None
         if tables and images:
                 raise ValueError("Provide either tables or images parameter, not both.")
         if not tables and not images:
                 raise ValueError("No images found from either tables or images input.")
-        if tables:
+        if tables and not images:
                 print(timestamp(), "Loading tables")
-                table: pd.DataFrame | None = cat_tables(tables)
+                table: pl.DataFrame | None = cat_tables(tables)
                 images: list[Path] = [Path(p) for p in table[image_path_col].to_numpy()]
                 print(timestamp(), "Loading embeddings from disk")
-                hidden_vectors: np.ndarray | None = np.array([np.load(e) for e in tqdm(table[vectors_path_col])])
-        else:
-                hidden_vectors = None
-                table = None
+                hidden_vectors: np.ndarray | None = table[vectors_col].to_numpy()
+                meta_names, meta_vals= table_to_meta(table)
+        elif not tables and images:
+                hidden_vectors = get_embeddings(images, model_name=model)
 
         data_dir = output_dir / "data"
         imageEngine = ImageFactory(images, data_dir, metadata,
                                         **image_opts.model_dump(),)
 
-        # grab metadata from table if provided
-        if table is not None:
-                imageEngine.meta_headers, imageEngine.metadata = table_to_meta(table)
+        # TODO: simplify the mad tables/metadata possibilities
+        if meta_vals:
+                imageEngine.meta_headers = meta_names
+                imageEngine.metadata = meta_vals
 
         print(f"Config to project images: {str(image_opts.model_dump())}")
 
@@ -71,11 +74,9 @@ def project_images_pipeline(output_dir: Path,
 
         copy_web_assets(output_dir=output_dir,
                         tagline=viewer_opts.tagline, logo=viewer_opts.logo)
-        write_metadata(imageEngine)
-        _, atlas_data = create_atlases_and_thumbs(imageEngine, plot_id)
 
-        if hidden_vectors is None:
-                hidden_vectors = get_embeddings(imageEngine, model_name=model)
+        _, atlas_data = create_atlases_and_thumbs(imageEngine, plot_id)
+        write_metadata(imageEngine)
 
         get_manifest(imageEngine, atlas_data, hidden_vectors,
                         plot_id=plot_id, output_dir=output_dir,
@@ -84,7 +85,7 @@ def project_images_pipeline(output_dir: Path,
         # write_images(imageEngine)
         print(timestamp(), "Done!")
 
-# %% ../../nbs/13_pipelines.ipynb 9
+# %% ../../nbs/13_pipelines.ipynb 8
 def embed_images_pipeline(images: list[Path],
                      model: str,
                      metadata: list[Path] | None,
@@ -98,41 +99,37 @@ def embed_images_pipeline(images: list[Path],
 
                 imageEngine = ImageFactory(image_paths=images, data_dir=data_dir, metadata_paths=metadata)
 
-                embeddings = get_embeddings(imageEngine, model_name=model)
-
-                _model_shortname = "--".join(model.split("/")[-2:])
-
-                embs_dir = data_dir/f"embeddings_{_model_shortname}"
-                embs_dir.mkdir(parents=True, exist_ok=True)
-                emb_paths, _ = write_embeddings(embeddings, imageEngine.filenames, embs_dir)
-
-                ## TODO: Pass embeddings directly into dataframe
-                ## rather than writing to disk
-                df = pd.DataFrame({"image_path": imageEngine.image_paths,
+                embeddings = get_embeddings(image_paths=images, model_name=model)
+                df = pl.DataFrame({"image_path": images,
                                    "image_filename": imageEngine.filenames,
-                                   "hidden_vectors_path": [str(e) for e in emb_paths]})
+                                   "hidden_vectors": embeddings,
+                })
 
                 if len(imageEngine.metadata) > 0:
-                        df_meta = pd.DataFrame(imageEngine.metadata)
-                        df_meta = df_meta.rename(columns={"filename": "image_filename"})
+                        df_meta = pl.DataFrame(imageEngine.metadata)
+                        df_meta = df_meta.rename({"filename": "image_filename"})
                         # drop "image_path" column if df_meta has it
                         if "image_path" in df_meta.columns:
-                                df_meta = df_meta.drop(columns=["image_path"])
+                                df_meta = df_meta.drop("image_path")
 
-                        df = df.merge(df_meta.drop_duplicates(["image_filename"]), on="image_filename")
+                        df = df.join(df_meta.unique(subset=["image_filename"]), on="image_filename",
+                                              how="left")
+
+                df = df.with_columns(pl.col("image_path").map_elements(
+                                     lambda x: x.as_posix(),  return_dtype=pl.Utf8))
 
                 ## standardize sort order of table
-                # put standard columns first if they exist in df
-                standard_cols = pd.Index(["image_path", "image_filename", "hidden_vectors_path",
-                                                   "category", "tags", "x", "y"])
-                cols_sorted = standard_cols.intersection(df.columns)
+                # put standard columns in a sensible order if they exist in df
+                standard_cols: set[str] = {"image_path", "image_filename", "hidden_vectors",
+                                                   "category", "tags", "x", "y"}
+                cols_in_order = list(standard_cols & set(df.columns))
                 # append non-standard columns, sorted alphabetically
-                cols_sorted = cols_sorted.append(df.columns.difference(standard_cols).sort_values())
-                df = df[cols_sorted]
-                for col in ["image_path", "hidden_vectors_path"]:
-                        df[col] = df[col].astype(str)
+                non_standard_cols: list[str] = sorted(set(df.columns) - standard_cols)
+                cols_sorted = cols_in_order + non_standard_cols
+                df = df.with_columns(cols_sorted)
 
+                (data_dir / "tables").mkdir(parents=True, exist_ok=True)
                 if table_format == "csv":
-                        df.to_csv(data_dir / f"EmbedImages__{table_id}.csv", index=False)
+                        df.write_csv(data_dir / f"tables/EmbedImages__{table_id}.csv")
                 else:
-                        df.to_parquet(data_dir / f"EmbedImages__{table_id}.parquet", index=False)
+                        df.write_parquet(data_dir / f"tables/EmbedImages__{table_id}.parquet")

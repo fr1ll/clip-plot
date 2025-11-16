@@ -7,27 +7,28 @@ __all__ = ['write_layout', 'BaseLayout', 'BaseMetaLayout', 'AlphabeticLayout', '
            'get_layouts']
 
 # %% ../../nbs/05_layouts.ipynb 2
-from .utils import timestamp, get_json_path, write_json, read_json, round_floats
+import itertools
+import math
+import operator
+from abc import ABC, abstractmethod
+from collections import defaultdict
+from collections.abc import Callable
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+import matplotlib.pyplot as plt
+import numpy as np
+import rasterfairy
+from pointgrid import align_points_to_grid
+from rasterfairy import coonswarp
+from scipy.stats import gaussian_kde
+from sklearn.preprocessing import minmax_scale
+
 from .configuration import UmapSpec
 from .images import ImageFactory
+from .utils import get_json_path, read_json, round_floats, timestamp, write_json
 
-from abc import ABC, abstractmethod
-from typing import Any
-import math
-import itertools
-from collections import defaultdict
-from pathlib import Path
-import operator
-from dataclasses import dataclass
-
-import numpy as np
-from scipy.stats import gaussian_kde
-import matplotlib.pyplot as plt
-from umap import UMAP, AlignedUMAP
-from sklearn.preprocessing import minmax_scale
-import rasterfairy
-from rasterfairy import coonswarp
-from pointgrid import align_points_to_grid
 
 # %% ../../nbs/05_layouts.ipynb 7
 def write_layout(path: Path, obj: Any, scale: bool = True, round: bool = True):
@@ -312,6 +313,8 @@ def get_umap_layout_or_layouts(v: np.ndarray, imageEngine: ImageFactory, umap_sp
                               data_dir: Path, plot_id: str) -> dict[str, list]:
     """Create a multi-layout UMAP projection
     """
+    print(timestamp(), "Importing UMAP libraries")
+    from umap import UMAP, AlignedUMAP
     print(timestamp(), "Creating multi-umap layout")
     umap_variants = []
     for n_neighbors, min_dist in itertools.product(
@@ -393,10 +396,11 @@ def get_umap_layout_or_layouts(v: np.ndarray, imageEngine: ImageFactory, umap_sp
     }
 
 
-def get_single_umap_model(umap_spec: UmapSpec, seed: int | None = None) -> UMAP:
+def get_single_umap_model(umap_spec: UmapSpec, seed: int | None = None) -> Callable:
     """
     unpack params list and handle UMAP not letting transform_seed be None
     """
+    from umap import UMAP # duplicated, will find already-imported UMAP
     config ={
         "n_neighbors" : umap_spec.n_neighbors[0],
         "min_dist" : umap_spec.min_dist[0],

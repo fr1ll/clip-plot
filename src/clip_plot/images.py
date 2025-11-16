@@ -16,6 +16,7 @@ import random
 from pathlib import Path
 
 import pandas as pd
+import polars as pl
 import numpy as np
 from tqdm.auto import tqdm
 from PIL import Image
@@ -87,12 +88,14 @@ def get_image_paths(images: str | list) -> list[Path]:
         return image_paths
 
 # %% ../../nbs/03_images.ipynb 17
-def load_metadata(metadata_paths: list[Path]) -> pd.DataFrame:
+def load_metadata(metadata_paths: list[Path]) -> pl.DataFrame:
     """load metadata from disk into a single dataframe"""
     if metadata_paths[0].suffix.lower() == ".csv":
-        return pd.concat(pd.read_csv(loc) for loc in metadata_paths)
+        return pl.concat((pl.read_csv(loc) for loc in metadata_paths),
+                         how="diagonal_relaxed")
     elif metadata_paths[0].suffix.lower() == ".json":
-        return pd.concat(pd.read_json(loc) for loc in metadata_paths)
+        return pl.concat((pl.read_json(loc) for loc in metadata_paths),
+                         how="diagonal_relaxed")
 
 # %% ../../nbs/03_images.ipynb 19
 def get_metadata_list(metadata_paths: list[Path]) -> tuple[list[dict] , list[str]]:

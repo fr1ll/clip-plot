@@ -48,17 +48,17 @@ def embed_images(imagepaths : list[Path],
     return np.array(embeddings)
 
 # %% ../../nbs/04_embeddings.ipynb 7
-def get_embeddings(ImageEngine,
+def get_embeddings(image_paths: list[Path],
                    model_name : str = "timm/convnext_tiny.dinov3_lvd1689m",
                    batch_size : int = 4
                    ) -> np.ndarray:
-    return embed_images(ImageEngine.image_paths, model_name=model_name, batch_size=batch_size)
+    return embed_images(image_paths, model_name=model_name, batch_size=batch_size)
 
 # %% ../../nbs/04_embeddings.ipynb 8
-def write_embeddings(embeddings : np.ndarray, names: list[str], dir: Path):
+def write_embeddings(embeddings : np.ndarray, names: list[str], dir: Path) -> list[Path]:
     """write out embeddings and return paths"""
     paths = [(dir/n).with_suffix(".npy").resolve() for n in names]
     for p, e in zip(paths, embeddings):
         np.save(p, e)
-    return paths, embeddings
+    return paths
 

@@ -1,0 +1,54 @@
+{
+  "version": "0.0.1",
+  "plot_id": "d5083d28-8100-47a7-90d7-a57e3ec8bb52",
+  "output_directory": "/home/wsanger/git/clip-plot/tests/smithsonian_butterflies_10/two-step-test",
+  "layouts": {
+    "umap": {
+      "variants": [
+        {
+          "n_neighbors": 15,
+          "min_dist": 0.1,
+          "layout": "/home/wsanger/git/clip-plot/tests/smithsonian_butterflies_10/two-step-test/data/layouts/d5083d28-8100-47a7-90d7-a57e3ec8bb52-umap-n_neighbors_15-min_dist_0.json",
+          "jittered": "/home/wsanger/git/clip-plot/tests/smithsonian_butterflies_10/two-step-test/data/layouts/umap-n_neighbors_15-min_dist_0.json"
+        }
+      ]
+    },
+    "alphabetic": {
+      "layout": "/home/wsanger/git/clip-plot/tests/smithsonian_butterflies_10/two-step-test/data/layouts/d5083d28-8100-47a7-90d7-a57e3ec8bb52-grid.json"
+    },
+    "grid": {
+      "layout": "/home/wsanger/git/clip-plot/tests/smithsonian_butterflies_10/two-step-test/data/layouts/d5083d28-8100-47a7-90d7-a57e3ec8bb52-rasterfairy.json"
+    },
+    "categorical": {
+      "layout": "/home/wsanger/git/clip-plot/tests/smithsonian_butterflies_10/two-step-test/data/layouts/d5083d28-8100-47a7-90d7-a57e3ec8bb52-categorical.json",
+      "labels": "/home/wsanger/git/clip-plot/tests/smithsonian_butterflies_10/two-step-test/data/layouts/d5083d28-8100-47a7-90d7-a57e3ec8bb52-categorical-labels.json"
+    },
+    "custom": {
+      "layout": "/home/wsanger/git/clip-plot/tests/smithsonian_butterflies_10/two-step-test/data/layouts/d5083d28-8100-47a7-90d7-a57e3ec8bb52-custom.json"
+    }
+  },
+  "initial_layout": "umap",
+  "point_sizes": {
+    "min": 0,
+    "grid": 0.25,
+    "max": 0.3,
+    "scatter": 0.05,
+    "initial": 0.05,
+    "categorical": 0.15,
+    "geographic": 0.00625
+  },
+  "imagelist": "/home/wsanger/git/clip-plot/tests/smithsonian_butterflies_10/two-step-test/data/imagelist.json",
+  "atlas_dir": "/home/wsanger/git/clip-plot/tests/smithsonian_butterflies_10/two-step-test/data/atlases/d5083d28-8100-47a7-90d7-a57e3ec8bb52",
+  "metadata": false,
+  "default_hotspots": "/home/wsanger/git/clip-plot/tests/smithsonian_butterflies_10/two-step-test/data/hotspots/d5083d28-8100-47a7-90d7-a57e3ec8bb52-hotspot.json",
+  "custom_hotspots": "/home/wsanger/git/clip-plot/tests/smithsonian_butterflies_10/two-step-test/data/hotspots/user_hotspots.json",
+  "gzipped": false,
+  "config": {
+    "sizes": {
+      "atlas": 4096,
+      "cell": 82,
+      "lod": 128
+    }
+  },
+  "creation_date": "16-November-2025-13:15:57"
+}
