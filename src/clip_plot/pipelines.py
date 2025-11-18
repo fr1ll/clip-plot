@@ -7,6 +7,7 @@ __all__ = ['project_images_pipeline', 'embed_images_pipeline']
 # print separately that we're loading dependencies, as this can take a while
 # and we want to give immediate feedback the program is starting
 from .utils import timestamp
+
 print(timestamp(), "Beginning to load dependencies")
 
 # %% ../../nbs/13_pipelines.ipynb 4
@@ -96,6 +97,7 @@ def embed_images_pipeline(images: list[Path],
                 """Embed a folder of images, save embeddings as .npy file to disk"""
                 output_dir = Path(output_dir)
                 data_dir = output_dir / "data"
+                table_dir = output_dir / "data" / "tables"
 
                 imageEngine = ImageFactory(image_paths=images, data_dir=data_dir, metadata_paths=metadata)
 
@@ -128,8 +130,8 @@ def embed_images_pipeline(images: list[Path],
                 cols_sorted = cols_in_order + non_standard_cols
                 df = df.with_columns(cols_sorted)
 
-                (data_dir / "tables").mkdir(parents=True, exist_ok=True)
+                table_dir.mkdir(parents=True, exist_ok=True)
                 if table_format == "csv":
-                        df.write_csv(data_dir / f"tables/EmbedImages__{table_id}.csv")
+                        df.write_csv(table_dir / f"EmbedImages__{table_id}.csv")
                 else:
-                        df.write_parquet(data_dir / f"tables/EmbedImages__{table_id}.parquet")
+                        df.write_parquet(table_dir / f"EmbedImages__{table_id}.parquet")

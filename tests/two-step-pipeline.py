@@ -19,7 +19,7 @@ IMAGE_GLOB: str = (libroot / "tests/smithsonian_butterflies_10/jpgs/*.jpg").as_p
 META_GLOB: str = (libroot / "tests/smithsonian_butterflies_10/meta_data/good_meta.csv").as_posix()
 TABLE_ID: str = "woofy"
 
-###----
+###----global vars for config for Step 2:
 
 TAGLINE: str = "Smithsonian Butterflies - Two Step Pipeline Test"
 CELL_SIZE: int = 82
@@ -28,9 +28,9 @@ MIN_DIST: float = 0.1
 MIN_CLUSTER_SIZE: int = 10
 
 cfg_step1 = Cfg(paths={"images": IMAGE_GLOB,
-                                  "metadata": META_GLOB,
-                                  "output_dir": OUTPUT_DIR,
-                                  "table_id": TABLE_ID,
+                            "metadata": META_GLOB,
+                            "output_dir": OUTPUT_DIR,
+                            "table_id": TABLE_ID,
                                  },
                            model=LOCAL_MODEL.as_posix(),
                            )
@@ -48,8 +48,8 @@ embed_images_pipeline(images=cfg_step1.paths.images,
 print("=== Finished Step 1: Embedding Images ===")
 
 cfg_step2 = Cfg(paths={"tables":
-                       OUTPUT_DIR/"data"/"tables"/"EmbedImages__*.parquet",
-                     "output_dir": OUTPUT_DIR},
+                              OUTPUT_DIR/"data"/"tables"/"EmbedImages__*.parquet",
+                            "output_dir": OUTPUT_DIR},
                      view_opts={"tagline": TAGLINE},
                      image_opts={"cell_size": CELL_SIZE},
                      umap_spec={"n_neighbors": N_NEIGHBORS,

@@ -15,6 +15,7 @@ from collections import defaultdict
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+from pprint import pprint
 from typing import Any
 
 import matplotlib.pyplot as plt
@@ -81,12 +82,12 @@ class AlphabeticLayout(BaseMetaLayout):
         print(timestamp(), "Creating grid layout")
         out_path = get_json_path(self.data_dir, self._SUBDIR, self._FILENAME, self.plot_id)
         n = math.ceil(self.imageEngine.count ** (1 / 2))
-        l = []  # positions
+        positions = []
         for i in range(self.imageEngine.count):
             x = i % n
             y = math.floor(i / n)
-            l.append([x, y])
-        z = np.array(l)
+            positions.append([x, y])
+        z = np.array(positions)
 
         write_layout(out_path, z)
         return out_path
@@ -267,9 +268,9 @@ class CustomLayout(BaseMetaLayout):
 
 # %% ../../nbs/05_layouts.ipynb 12
 def get_pointgrid_layout(input_path: Path, data_dir: Path, label, plot_id: str):
-    """Gridify the positions in `path` and return the path to this new layout
-    """
-    print(timestamp(), "Creating {label} pointgrid")
+    """Gridify the positions in `path` and return the path to this new layout"""
+
+    print(timestamp(), f"Creating {label} pointgrid")
     out_path = get_json_path(data_dir=data_dir, subdir="layouts",
                              filename=f"{label}-jittered",
                              plot_id=plot_id)
@@ -286,8 +287,8 @@ def get_pointgrid_layout(input_path: Path, data_dir: Path, label, plot_id: str):
 
 # %% ../../nbs/05_layouts.ipynb 13
 def get_rasterfairy_layout(data_dir: Path, plot_id: str, umap_json_path: Path):
-    """Create regular grid layout that keeps umap XYs close to each other
-    """
+    """Create regular grid layout that keeps umap XYs close to each other"""
+
     print(timestamp(), "Creating rasterfairy layout")
     out_path = get_json_path(data_dir, "layouts", "rasterfairy", plot_id)
     umap = np.array(read_json(umap_json_path))
@@ -311,11 +312,10 @@ def get_rasterfairy_layout(data_dir: Path, plot_id: str, umap_json_path: Path):
 # %% ../../nbs/05_layouts.ipynb 14
 def get_umap_layout_or_layouts(v: np.ndarray, imageEngine: ImageFactory, umap_spec: UmapSpec,
                               data_dir: Path, plot_id: str) -> dict[str, list]:
-    """Create a multi-layout UMAP projection
-    """
+    """Create a multi-layout UMAP projection"""
+
     print(timestamp(), "Importing UMAP libraries")
-    from umap import UMAP, AlignedUMAP
-    print(timestamp(), "Creating multi-umap layout")
+    from umap import AlignedUMAP
     umap_variants = []
     for n_neighbors, min_dist in itertools.product(
         umap_spec.n_neighbors, umap_spec.min_dist
@@ -330,6 +330,9 @@ def get_umap_layout_or_layouts(v: np.ndarray, imageEngine: ImageFactory, umap_sp
                 "out_path": out_path,
             }
         )
+
+    print(timestamp(), "UMAP variants to compute:")
+    pprint(umap_variants)
 
     singleLayout = len(umap_variants) == 1
 
@@ -352,25 +355,28 @@ def get_umap_layout_or_layouts(v: np.ndarray, imageEngine: ImageFactory, umap_sp
                 else:
                     y.append(d[label])
             """
-            Currently there is no way to have a particular image with the missing field for 
+            Currently there is no way to have a particular image with the missing field for
             "label". For scenarios with metadata, If an image is not matched, it is excluded from
             the project.  If the meta value is empty, it will still have "" value .
             """
             y = np.array(y)
 
-        # Fit the model on the data
-        if singleLayout: # Single layout
+        if singleLayout:
+            print(timestamp(), "Creating single UMAP layout")
             model = get_single_umap_model(umap_spec)
             z = model.fit(v, y=y if np.any(y) else None).embedding_
             write_layout(umap_variants[0]["out_path"], z)
 
-        else:  # Multiple layouts
+        else:
+            print(timestamp(), "Creating multi-UMAP layout")
             model = AlignedUMAP(
                 n_neighbors=[v["n_neighbors"] for v in uncomputed_variants], # type: ignore
                 min_dist=[v["min_dist"] for v in uncomputed_variants], # type: ignore
             )
             z = model.fit(
-                [v for _ in umap_variants], y=[y if np.any(y) else None for _ in umap_variants], relations=[relations_dict for _ in umap_variants[1:]]
+                [v for _ in umap_variants],
+                y=[y if np.any(y) else None for _ in umap_variants],
+                relations=[relations_dict for _ in umap_variants[1:]],
             )
             for i, v in enumerate(umap_variants):
                 write_layout(v["out_path"], z.embeddings_[i]) # type: ignore
@@ -400,7 +406,7 @@ def get_single_umap_model(umap_spec: UmapSpec, seed: int | None = None) -> Calla
     """
     unpack params list and handle UMAP not letting transform_seed be None
     """
-    from umap import UMAP # duplicated, will find already-imported UMAP
+    from umap import UMAP
     config ={
         "n_neighbors" : umap_spec.n_neighbors[0],
         "min_dist" : umap_spec.min_dist[0],
@@ -412,7 +418,7 @@ def get_single_umap_model(umap_spec: UmapSpec, seed: int | None = None) -> Calla
         config.update({"transform_seed": seed})
     return UMAP(**config)
 
-# %% ../../nbs/05_layouts.ipynb 15
+# %% ../../nbs/05_layouts.ipynb 16
 def get_heightmap(json_path: Path, label: str, data_dir: Path):
     """
     Create a heightmap using the distribution of points stored at `path`
@@ -442,7 +448,7 @@ def get_heightmap(json_path: Path, label: str, data_dir: Path):
     out_path = hmap_dir / f"{label}-heightmap.png"
     plt.savefig(out_path, pad_inches=0)
 
-# %% ../../nbs/05_layouts.ipynb 16
+# %% ../../nbs/05_layouts.ipynb 17
 def get_layouts(imageEngine: ImageFactory, hidden_vectors: np.ndarray,
                 data_dir: Path, plot_id: str,
                 umap_spec: UmapSpec,
