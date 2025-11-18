@@ -21,7 +21,6 @@ geo
 !clip_plot/web
 !clip_plot/web/**/dist
 
-
 ## gitignore created by nbdev_new
 
 _docs/

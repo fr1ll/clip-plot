@@ -110,7 +110,7 @@ class Cfg(BaseSettings):
     umap_spec: UmapSpec = UmapSpec()
     cluster_spec: ClusterSpec = ClusterSpec()
     clipplot_version: str = Field(version(clip_plot.__name__), description="Version of clipplot")
-    plot_id: str = Field(default_factory=lambda: str(uuid4()), description="Unique identifier for plot")
+    plot_id: str = Field(default_factory=lambda: str(uuid4())[:8], description="Unique identifier for plot")
     paths: Paths = Paths()
     view_opts: ViewerOptions = ViewerOptions()
     image_opts: ImageLoaderOptions = ImageLoaderOptions()

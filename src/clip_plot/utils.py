@@ -52,12 +52,12 @@ def get_json_path(data_dir: Path, subdir: str | None,
     Combine path and add json extension
     """
     if subdir:
-        data_dir = data_dir / subdir
+        output_dir = data_dir / subdir
     if plot_id:
-        filename = f"{filename}-{plot_id}"
-    return (data_dir/filename).with_suffix(".json")
+        filename = f"{filename}__{plot_id}"
+    return output_dir/(filename + ".json") # don't use with_suffix, it chops names with decimals
 
-# %% ../../nbs/01_utils.ipynb 12
+# %% ../../nbs/01_utils.ipynb 13
 def write_json(output_path: Path, object: Any):
     """
     Write json object `obj` to disk and return the path to that file
@@ -74,12 +74,12 @@ def write_json(output_path: Path, object: Any):
     with output_path.open("w", encoding="utf-8") as out:
         json.dump(object, out, default=_convert_paths, indent=2)
 
-# %% ../../nbs/01_utils.ipynb 13
+# %% ../../nbs/01_utils.ipynb 14
 def read_json(path: Path) -> dict:
     with path.open("r") as f:
         return json.load(f)
 
-# %% ../../nbs/01_utils.ipynb 15
+# %% ../../nbs/01_utils.ipynb 16
 def copytree_agnostic(a,b):
     if sys.version_info.major >=3 and sys.version_info.minor >=8:
         copytree(a, b, dirs_exist_ok=True)
@@ -87,7 +87,7 @@ def copytree_agnostic(a,b):
         from distutils.dir_util import copy_tree
         copy_tree(a, b)
 
-# %% ../../nbs/01_utils.ipynb 17
+# %% ../../nbs/01_utils.ipynb 18
 def clean_filename(s: str) -> str:
     """Given a string that points to a filename, return a clean filename
     """
