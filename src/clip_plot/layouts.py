@@ -361,25 +361,25 @@ def get_umap_layout_or_layouts(v: np.ndarray, imageEngine: ImageFactory, umap_sp
             """
             y = np.array(y)
 
-        if singleLayout:
-            print(timestamp(), "Creating single UMAP layout")
-            model = get_single_umap_model(umap_spec)
-            z = model.fit(v, y=y if np.any(y) else None).embedding_
-            write_layout(umap_variants[0]["out_path"], z)
+    if singleLayout:
+        print(timestamp(), "Creating single UMAP layout")
+        model = get_single_umap_model(umap_spec)
+        z = model.fit(v, y=y if np.any(y) else None).embedding_
+        write_layout(umap_variants[0]["out_path"], z)
 
-        else:
-            print(timestamp(), "Creating multi-UMAP layout")
-            model = AlignedUMAP(
-                n_neighbors=[v["n_neighbors"] for v in uncomputed_variants], # type: ignore
-                min_dist=[v["min_dist"] for v in uncomputed_variants], # type: ignore
-            )
-            z = model.fit(
-                [v for _ in umap_variants],
-                y=[y if np.any(y) else None for _ in umap_variants],
-                relations=[relations_dict for _ in umap_variants[1:]],
-            )
-            for i, v in enumerate(umap_variants):
-                write_layout(v["out_path"], z.embeddings_[i]) # type: ignore
+    else:
+        print(timestamp(), "Creating multi-UMAP layout")
+        model = AlignedUMAP(
+            n_neighbors=[v["n_neighbors"] for v in uncomputed_variants], # type: ignore
+            min_dist=[v["min_dist"] for v in uncomputed_variants], # type: ignore
+        )
+        z = model.fit(
+            [v for _ in umap_variants],
+            y=[y if np.any(y) else None for _ in umap_variants],
+            relations=[relations_dict for _ in umap_variants[1:]],
+        )
+        for i, v in enumerate(umap_variants):
+            write_layout(v["out_path"], z.embeddings_[i]) # type: ignore
 
     # return layout variants
     return {"variants": [

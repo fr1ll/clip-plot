@@ -51,6 +51,7 @@ def get_json_path(data_dir: Path, subdir: str | None,
     """
     Combine path and add json extension
     """
+    output_dir = data_dir
     if subdir:
         output_dir = data_dir / subdir
     if plot_id:
