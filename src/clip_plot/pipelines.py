@@ -21,7 +21,7 @@ from fastcore.all import in_ipython
 from .configuration import Cfg, ClusterSpec, ImageLoaderOptions, UmapSpec, ViewerOptions
 from .embeddings import get_embeddings
 from .from_tables import cat_tables, table_to_meta
-from .images import ImageFactory, create_atlases_and_thumbs
+from .images import ImageFactory, write_viewer_images
 from .metadata import get_manifest, write_metadata
 from .web_config import copy_web_assets, get_clip_plot_root
 
@@ -39,6 +39,8 @@ def project_images_pipeline(output_dir: Path,
                             metadata: list[Path] | None = None,
                             image_path_col: str = "image_path",
                             vectors_col: str = "hidden_vectors",
+                            x_col: str | None = None,
+                            y_col: str | None = None,
         ):
         """Convert a folder of images into a clip-plot visualization"""
 
@@ -61,7 +63,7 @@ def project_images_pipeline(output_dir: Path,
 
         data_dir = output_dir / "data"
         imageEngine = ImageFactory(images, data_dir, metadata,
-                                        **image_opts.model_dump(),)
+                                            **image_opts.model_dump())
 
         # TODO: simplify the mad tables/metadata possibilities
         if meta_vals:
@@ -76,12 +78,15 @@ def project_images_pipeline(output_dir: Path,
         copy_web_assets(output_dir=output_dir,
                         tagline=viewer_opts.tagline, logo=viewer_opts.logo)
 
-        _, atlas_data = create_atlases_and_thumbs(imageEngine, plot_id)
+        atlas_positions = write_viewer_images(imageEngine, plot_id,
+                        data_dir=data_dir, thumb_size=image_opts.thumbnail_size,
+                        row_height=image_opts.atlas_row_height, atlas_size=image_opts.atlas_size)
         write_metadata(imageEngine)
 
-        get_manifest(imageEngine, atlas_data, hidden_vectors,
-                        plot_id=plot_id, output_dir=output_dir,
-                        umap_spec=umap_spec, cluster_spec=cluster_spec
+        get_manifest(imageEngine, atlas_positions, hidden_vectors,
+                     plot_id=plot_id, output_dir=output_dir,
+                     umap_spec=umap_spec, cluster_spec=cluster_spec,
+                     x_col=x_col, y_col=y_col,
         )
         # write_images(imageEngine)
         print(timestamp(), "Done!")

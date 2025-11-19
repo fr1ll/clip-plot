@@ -92,15 +92,15 @@ class ClusterSpec(BaseModel):
 class ImageLoaderOptions(BaseSettings):
     seed: CliSuppress[int | None] = Field(42, description="Seed for reproducible transforms")
     shuffle: CliSuppress[bool] = Field(False, description="Shuffle images before creating viewer")
-    cell_size: CliSuppress[int] = Field(64, description="Size of cell in viewer atlas")
-    lod_cell_height: CliSuppress[int] = Field(128)
+    atlas_row_height: CliSuppress[int] = Field(64, description="Height of row in viewer atlas")
+    thumbnail_size: CliSuppress[int] = Field(128)
     atlas_size: CliSuppress[int] = Field(4096, description="Size for atlases")
+    max_images: int | None = Field(None, description="Maximum number of imagers to process")
 
 # %% ../../nbs/09_configuration.ipynb 7
 class ViewerOptions(BaseSettings):
     logo: CliSuppress[None | Path] = Field(None, description="Path to custom logo")
     tagline: CliSuppress[None | str] = Field(None, description="Custom tagline for viewer")
-
 
 # %% ../../nbs/09_configuration.ipynb 8
 class Cfg(BaseSettings):
@@ -116,6 +116,8 @@ class Cfg(BaseSettings):
     image_opts: ImageLoaderOptions = ImageLoaderOptions()
     image_path_col: str = Field("image_path", description="Name of column with paths to images")
     vectors_col: str = Field("hidden_vectors", description="Name of column with hidden vectors i.e. embeddings")
+    x_col: str | None = Field(None, description="Metadata column for X in custom layout")
+    y_col: str | None = Field(None, description="Metadata column for Y in custom layout")
     # image_column: str = Field("image", description="Name of column with images")
     # vectors_column: str = Field("hidden_vectors", description="Name of column with hidden vectors")
 

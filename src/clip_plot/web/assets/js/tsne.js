@@ -50,12 +50,12 @@ function Config() {
   this.mobileBreakpoint = 600;
   this.isTouchDevice = 'ontouchstart' in document.documentElement;
   // texture buffer pixel *limits* are independent of memory *size*
-  var smallTexSize = Math.min(2048, webgl.limits.textureSize) // a small, safe size
+  var smallTexSize = Math.min(4096, webgl.limits.textureSize) // a small, safe size
   // Try for max (8192/128)^2 = (2^6)^2 = 4096 LOD images (or smaller safe size)
-  //          or (2048/128)^2 = 256 LOD images for mobile.
+  //          or (4096/128)^2 = 256 LOD images for mobile.
   var bigTexSize = Math.min(2**13, webgl.limits.textureSize)
   this.size = {
-    cell: 32, // height of each cell in atlas
+    cell: 64, // height of each cell in atlas
     lodCell: 128, // height of each cell in LOD
     atlas: smallTexSize, // height of each atlas
     texture: this.isTouchDevice ? smallTexSize : webgl.limits.textureSize,
@@ -388,7 +388,7 @@ function Cell(obj) {
   this.dx = obj.dx;
   this.dy = obj.dy;
   this.w = obj.w; // width of lod cell
-  this.h = obj.h; // heiht of lod cell
+  this.h = obj.h; // height of lod cell
   this.updateParentBoundingBox();
 }
 

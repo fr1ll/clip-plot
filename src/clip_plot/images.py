@@ -2,47 +2,48 @@
 
 # %% auto 0
 __all__ = ['load_image', 'resize_to_max_side', 'resize_to_height', 'autocontrast', 'get_image_paths', 'load_metadata',
-           'get_metadata_list', 'ValidImage', 'ImageFactory', 'create_atlases_and_thumbs']
+           'get_metadata_list', 'ValidImage', 'ImageFactory', 'write_thumbnails', 'copy_originals', 'new_atlas',
+           'create_atlases', 'write_viewer_images']
 
-# %% ../../nbs/03_images.ipynb 3
-import os
+# %% ../../nbs/03_images.ipynb 2
+import copy
 import csv
 import json
-import copy
+import os
+import random
+from collections.abc import Generator
 from dataclasses import dataclass, field
 from glob import glob
-from collections.abc import Generator
-import random
 from pathlib import Path
 
-import pandas as pd
-import polars as pl
 import numpy as np
-from tqdm.auto import tqdm
+import polars as pl
 from PIL import Image
+from tqdm.auto import tqdm
 
-from .utils import timestamp, FILE_NAME
+from .utils import FILE_NAME, timestamp
 
-# %% ../../nbs/03_images.ipynb 5
+
+# %% ../../nbs/03_images.ipynb 4
 def load_image(image_path:str, format:str="RGB")->Image.Image:
     '''load an image and convert to desired format'''
     return Image.open(image_path).convert(format)
 
-# %% ../../nbs/03_images.ipynb 8
-def resize_to_max_side(img: Image.Image, n:int=128):
+# %% ../../nbs/03_images.ipynb 7
+def resize_to_max_side(img: Image.Image, maxlen:int=128):
     '''
     resize to a maximum side length
     '''
     w, h = img.size
     if w > h:
         # preserve ratio but ensure height is >=1 pixel
-        size =  (n, max(1, int(n * h / w)))
+        size =  (maxlen, max(1, int(maxlen * h / w)))
     else:
         # preserve ratio but ensure width is >=1 pixel
-        size =  (max(1, int(n * w / h)), n)
+        size =  (max(1, int(maxlen * w / h)), maxlen)
     return img.resize(size, reducing_gap=2.0)
 
-# %% ../../nbs/03_images.ipynb 9
+# %% ../../nbs/03_images.ipynb 8
 def resize_to_height(img: Image.Image, height:int=128):
     '''
     resize to an exact height
@@ -55,7 +56,7 @@ def resize_to_height(img: Image.Image, height:int=128):
     size= (resizedwidth, height)
     return img.resize(size, reducing_gap=2.0)
 
-# %% ../../nbs/03_images.ipynb 11
+# %% ../../nbs/03_images.ipynb 10
 def autocontrast(img: Image.Image) -> Image.Image:
     '''autocontrast lifted from keras library --
     added lightness normalization'''
@@ -72,7 +73,7 @@ def autocontrast(img: Image.Image) -> Image.Image:
     x = np.clip(x - mean_shift, 0, 255)
     return Image.fromarray(x.astype("uint8"))
 
-# %% ../../nbs/03_images.ipynb 15
+# %% ../../nbs/03_images.ipynb 14
 def get_image_paths(images: str | list) -> list[Path]:
     """
     Called once to provide a list of image paths
@@ -87,7 +88,7 @@ def get_image_paths(images: str | list) -> list[Path]:
     else:
         return image_paths
 
-# %% ../../nbs/03_images.ipynb 17
+# %% ../../nbs/03_images.ipynb 16
 def load_metadata(metadata_paths: list[Path]) -> pl.DataFrame:
     """load metadata from disk into a single dataframe"""
     if metadata_paths[0].suffix.lower() == ".csv":
@@ -97,7 +98,7 @@ def load_metadata(metadata_paths: list[Path]) -> pl.DataFrame:
         return pl.concat((pl.read_json(loc) for loc in metadata_paths),
                          how="diagonal_relaxed")
 
-# %% ../../nbs/03_images.ipynb 19
+# %% ../../nbs/03_images.ipynb 18
 def get_metadata_list(metadata_paths: list[Path]) -> tuple[list[dict] , list[str]]:
     """Return a list of objects with image metadata.
 
@@ -143,7 +144,7 @@ def get_metadata_list(metadata_paths: list[Path]) -> tuple[list[dict] , list[str
             metaDict.update({"tags": metaDict["category"]})
     return metaList, headers
 
-# %% ../../nbs/03_images.ipynb 20
+# %% ../../nbs/03_images.ipynb 19
 @dataclass
 class ValidImage:
     path: Path
@@ -165,12 +166,12 @@ class ValidImage:
         return self._unique_name
 
 
-    def valid(self, lod_cell_height: int, oblong_ratio: int | float) -> tuple[bool, str]:
+    def valid(self, thumbnail_size: int, oblong_ratio: int | float) -> tuple[bool, str]:
         """Validate that image can be opened and loaded correctly.
 
         Args:
-            lod_cell_height (int):
-            oblong_ratio (int|float): atlas_size/cell_size ratio
+            thumbnail_size (int):
+            oblong_ratio (int|float): atlas_size/atlas_row_height ratio
 
         Returns:
             Tuple[pass,msg]:
@@ -183,7 +184,7 @@ class ValidImage:
             return False, f"Skipping {self.path} because it contains 0 height or width"
         # remove images that have 0 height or width when resized
         try:
-            _ = resize_to_height(self.original, height=lod_cell_height)
+            _ = resize_to_height(self.original, height=thumbnail_size)
         except ValueError:
             return False, f"Skipping {self.path} because it contains 0 height or width when resized"
         except OSError:
@@ -194,7 +195,7 @@ class ValidImage:
 
         return True, ""
 
-# %% ../../nbs/03_images.ipynb 22
+# %% ../../nbs/03_images.ipynb 21
 @dataclass
 class ImageFactory:
     """
@@ -218,10 +219,10 @@ class ImageFactory:
     metadata: list[dict] = field(default_factory=list) # list of metadata
     filenames: list[str] = field(default_factory=list)
 
+    thumbnail_size: int = 128
+    atlas_row_height: int = 64
+    atlas_size: int = 4096
     shuffle: bool = False
-    atlas_size: int = 2048
-    cell_size: int = 32
-    lod_cell_height: int = 128
     seed: int | None = None
     max_images: int | None = None
 
@@ -279,14 +280,14 @@ class ImageFactory:
 
         # process and filter the images
         filtered_image_paths = []
-        oblong_ratio = self.atlas_size/ self.cell_size
+        oblong_ratio = self.atlas_size/ self.atlas_row_height
 
         print(timestamp(), "Validating input images")
         for img in tqdm(self.stream_images(self.image_paths), total=len(self.image_paths)):
             if img is None:
                 pass
             else:
-                valid, msg = img.valid(lod_cell_height=self.lod_cell_height, oblong_ratio=oblong_ratio)
+                valid, msg = img.valid(thumbnail_size=self.thumbnail_size, oblong_ratio=oblong_ratio)
                 if valid is True:
                     filtered_image_paths += [img.path]
                 else:
@@ -350,18 +351,10 @@ class ImageFactory:
     @staticmethod
     def stream_images(image_paths: list[Path], metadata: list[dict] | None = None
                       ) -> Generator[ValidImage | None, None, None]:
-        """Read in all images from args[0], a list of image paths
-
-        Args:
-            image_paths (list[str]): list of image locations
-            metadata (Optional[list[dict]]): metadata for each image
-
-        Returns:
-            yields ValidImage instance
-
+        """
         Notes:
             image is matched to metadata by index location
-                Matching by key would be better
+            Matching by key would be better
         """
         for i, p in enumerate(image_paths):
             try:
@@ -373,37 +366,37 @@ class ImageFactory:
                 print(timestamp(), f"Image {p} could not be processed -- {exc}")
                 yield None
 
-# %% ../../nbs/03_images.ipynb 23
-def create_atlases_and_thumbs(imageEngine: ImageFactory, plot_id: str, use_cache: bool = False):
-    '''create folder with atlases in data dir'''
-
-    print(timestamp(), "Copying images to output directory")
-
-    # create directories
-    atlas_dir = imageEngine.data_dir / "atlases" / str(plot_id)
-    atlas_dir.mkdir(exist_ok=True, parents=True)
+# %% ../../nbs/03_images.ipynb 22
+def write_thumbnails(imageEngine: ImageFactory, data_dir: Path, thumb_size: int):
+    """create thumbnails and write to disk"""
+    print(timestamp(), "Copying thumbnails to output directory")
 
     thumbs_dir = imageEngine.data_dir / "thumbs"
-    thumbs_dir.mkdir(exist_ok=True)
-
-    orig_dir = imageEngine.data_dir / "originals"
-    orig_dir.mkdir(exist_ok=True)
-
-    # initialize some atlas values
-    n_atlases, x, y = 0,0,0
-    positions = []
-    atlas_size = (imageEngine.atlas_size, imageEngine.atlas_size)
-    atlas = Image.new(mode="RGB", size=atlas_size)
+    thumbs_dir.mkdir(exist_ok=True, parents=True)
+    thumb_dims: list[tuple[int, int]] = []
 
     for img in tqdm(imageEngine, total=imageEngine.count):
 
         # copy thumbnail
-        thumb = resize_to_max_side(img.original, n=imageEngine.lod_cell_height)
+        thumb = resize_to_max_side(img.original, maxlen=thumb_size)
         thumb = autocontrast(thumb)
-        thumb_w, thumb_h = thumb.width, thumb.height
+        thumb_dims.append((thumb.width, thumb.height))
         thumb.save(thumbs_dir / img.unique_name)
 
-        # copy resized original
+    return thumb_dims
+
+
+# %% ../../nbs/03_images.ipynb 23
+def copy_originals(imageEngine: ImageFactory, data_dir: Path,
+                   use_cache: bool = False, max_height: int = 600):
+    """create thumbnails and write to disk"""
+    print(timestamp(), "Copying originals to output directory")
+
+    orig_dir = imageEngine.data_dir / "originals"
+    orig_dir.mkdir(exist_ok=True)
+
+    for img in tqdm(imageEngine, total=imageEngine.count):
+
         fullsize_path = orig_dir / img.unique_name
         if use_cache and fullsize_path.exists():
             pass
@@ -411,29 +404,72 @@ def create_atlases_and_thumbs(imageEngine: ImageFactory, plot_id: str, use_cache
             fullsize = resize_to_height(img.original, height=600)
             fullsize.save(orig_dir / img.unique_name)
 
-        # create atlas
-        cell = resize_to_height(img.original, height=imageEngine.cell_size)
-        cell = autocontrast(cell)
+    return None
 
-        if (x+cell.width) > atlas_size[0]: # end of a row
-            y+=cell.height
-            x=0
-        if (y+cell.height) > atlas_size[0]: # end of first column
-            atlas.save(atlas_dir/f"atlas-{n_atlases}.jpg")
-            n_atlases += 1
-            x,y=0,0 # start a new atlas
-        if x == 0 and y == 0:
-            atlas = Image.new(mode="RGB", size=atlas_size)
+# %% ../../nbs/03_images.ipynb 24
+def new_atlas(atlas_size: int) -> Image.Image:
+    return Image.new(mode="RGB", size=(atlas_size,atlas_size))
+
+# %% ../../nbs/03_images.ipynb 25
+def create_atlases(imageEngine: ImageFactory, thumb_dims: list[int, int],
+                   atlas_size: int = 4096, row_height: int = 32
+                   ) -> tuple[list[Image.Image], list[int, int]]:
+    """Create list of atlases, plus positions"""
+    x, y = 0, 0
+    atlas = new_atlas(atlas_size)
+    atlases: list[Image.Image] = []
+    positions: list[dict[str,int]] = []
+    atlas_idx = 0
+
+    for image_idx, (img, (thumb_h, thumb_w)) in tqdm(enumerate(zip(imageEngine, thumb_dims))):
+        cell = resize_to_height(img.original, height=row_height)
+        cell = autocontrast(cell)
+        if x + cell.width > atlas_size: # new row
+            x = 0
+            y += row_height
+        if y + cell.height > atlas_size: # new atlas
+            atlas = new_atlas(atlas_size)
+            atlases.append(atlas)
+            atlas_idx += 1
+            x = 0
+            y = 0
         atlas.paste(cell, (x,y))
 
         # store in dict
         positions.append({
-            "idx": n_atlases,
-            "x":x, "y":y, "w": thumb_w, "h": thumb_h
+            # "image_idx": image_idx,
+            # "atlas_idx": atlas_idx,
+            "idx": atlas_idx,
+            "x":x, "y":y,
+            "w": thumb_w, "h": thumb_h,
+            # "cell_w": cell.width, "cell_h": cell.height,
+            # "thumb_w": thumb_w, "thumb_h": thumb_h
         })
         x+=cell.width
 
-    if not (x == 0 and y == 0): # if last atlas wasn't already written
-        atlas.save(atlas_dir/f"atlas-{n_atlases}.jpg")
+    # append final atlas
+    if len(atlases) <= atlas_idx:
+        atlases.append(atlas)
 
-    return atlas_dir.as_posix(), positions
+    print(f"Number of atlases generated: {len(atlases)}")
+    return atlases, positions
+
+# %% ../../nbs/03_images.ipynb 26
+def write_viewer_images(imageEngine: ImageFactory,
+                        plot_id: str, data_dir: Path,
+                        thumb_size: int = 128,
+                        row_height: int = 32, atlas_size: int = 4096) -> list[dict]:
+    """create thumbnail, original, and atlas files"""
+
+    print(timestamp(), "Creating image files for viewer")
+    thumb_dims = write_thumbnails(imageEngine, data_dir, thumb_size=thumb_size)
+    copy_originals(imageEngine, data_dir)
+
+    atlases, positions = create_atlases(imageEngine, thumb_dims,
+                                                            atlas_size, row_height)
+    atlas_dir = data_dir / "atlases" / str(plot_id)
+    atlas_dir.mkdir(exist_ok=True, parents=True)
+    for i, atlas in enumerate(atlases):
+        atlas.save(atlas_dir/f"atlas-{i}.jpg")
+
+    return positions

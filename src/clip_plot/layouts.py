@@ -233,6 +233,10 @@ class CategoricalLayout(BaseMetaLayout):
 class CustomLayout(BaseMetaLayout):
     _FILENAME = "custom"
 
+    def __init__(self, x_col: str, y_col: str):
+        self.x_col = x_col
+        self.y_col = y_col
+
     def get_layout(self):
         """
         Return a 2D array of image positions corresponding to x,y coordinates in metadata
@@ -243,8 +247,8 @@ class CustomLayout(BaseMetaLayout):
         found_coords = False
         coords = []
         for i in self.imageEngine:
-            x = i.metadata.get("x")
-            y = i.metadata.get("y")
+            x = i.metadata.get(self.x_col)
+            y = i.metadata.get(self.y_col)
             if x and y:
                 found_coords = True
                 coords.append([x, y])
@@ -259,10 +263,9 @@ class CustomLayout(BaseMetaLayout):
         if not found_coords:
             return
         else:
-            print(timestamp(), "Creating custom layout based on xy coordinates in metadata")
+            print(timestamp(), f"Creating custom layout for x:{self.x_col} and y:{self.y_col}")
         coords = np.array(coords).astype(float)
         coords = (minmax_scale(coords) - 0.5) * 2
-        print(timestamp(), "Creating custom layout")
         write_layout(out_path, coords.tolist())
         return {"layout": out_path}
 
@@ -451,13 +454,12 @@ def get_heightmap(json_path: Path, label: str, data_dir: Path):
 # %% ../../nbs/05_layouts.ipynb 17
 def get_layouts(imageEngine: ImageFactory, hidden_vectors: np.ndarray,
                 data_dir: Path, plot_id: str,
-                umap_spec: UmapSpec,
+                umap_spec: UmapSpec, x_col, y_col
                 ):
     """Get the image positions in each projection"""
 
     alphabetic_layout = AlphabeticLayout(plot_id, imageEngine)
     categorical_layout = CategoricalLayout(plot_id, imageEngine)
-    custom_layout = CustomLayout(plot_id, imageEngine)
     umap_layouts_dict = get_umap_layout_or_layouts(hidden_vectors, imageEngine, umap_spec,
                                                 data_dir, plot_id)
     layouts = {
@@ -472,6 +474,9 @@ def get_layouts(imageEngine: ImageFactory, hidden_vectors: np.ndarray,
                               ),
         },
         "categorical": categorical_layout.get_layout(),
-        "custom": custom_layout.get_layout(),
     }
+    if x_col and y_col:
+        custom_layout = CustomLayout(plot_id, imageEngine)
+        layouts.update({"custom": custom_layout.get_layout(),})
+
     return layouts

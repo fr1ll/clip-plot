@@ -87,6 +87,8 @@ def get_manifest(imageEngine, atlas_data,
                  umap_spec: UmapSpec,
                  cluster_spec: ClusterSpec,
                  has_metadata: bool = False,
+                 x_col: str | None = None,
+                 y_col: str | None = None,
                  ):
     """
     Create and return the base object for the manifest output file
@@ -102,7 +104,9 @@ def get_manifest(imageEngine, atlas_data,
         pos[i["idx"]].append([i["x"], i["y"]])
 
     # obtain the paths to each layout's JSON positions
-    layouts = get_layouts(imageEngine, hidden_vectors, data_dir, plot_id, umap_spec)
+    layouts = get_layouts(imageEngine, hidden_vectors,
+                                   data_dir, plot_id, umap_spec,
+                                   x_col, y_col)
     # create a heightmap for the umap layout
     if "umap" in layouts and layouts["umap"]:
         get_heightmap(json_path=layouts["umap"]["variants"][0]["layout"],
@@ -146,8 +150,8 @@ def get_manifest(imageEngine, atlas_data,
         "config": {
             "sizes": {
                 "atlas": imageEngine.atlas_size,
-                "cell": imageEngine.cell_size,
-                "lod": imageEngine.lod_cell_height,
+                "cell": imageEngine.atlas_row_height,
+                "lod": imageEngine.thumbnail_size,
             },
         },
         "creation_date": datetime.today().strftime("%d-%B-%Y-%H:%M:%S"),
