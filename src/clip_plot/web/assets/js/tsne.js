@@ -173,7 +173,7 @@ Data.prototype.parseManifest = function(json) {
   };
   // add cells to the world
   layout.getLayoutPath.bind(layout)
-  get(getPathconfig.data.dir + '/' + layout.getLayoutPath()), function(data) {
+  get(getPath(config.data.dir + '/' + layout.getLayoutPath()), function(data) {
     this.addCells(data);
     this.hotspots.initialize();
   }.bind(this))
