@@ -428,8 +428,8 @@ def create_atlases(imageEngine: ImageFactory, thumb_dims: list[int, int],
             x = 0
             y += row_height
         if y + cell.height > atlas_size: # new atlas
-            atlas = new_atlas(atlas_size)
             atlases.append(atlas)
+            atlas = new_atlas(atlas_size)
             atlas_idx += 1
             x = 0
             y = 0
