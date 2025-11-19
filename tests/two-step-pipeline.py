@@ -19,13 +19,15 @@ IMAGE_GLOB: str = (libroot / "tests/smithsonian_butterflies_10/jpgs/*.jpg").as_p
 META_GLOB: str = (libroot / "tests/smithsonian_butterflies_10/meta_data/good_meta.csv").as_posix()
 TABLE_ID: str = "woofy"
 
+rmtree(OUTPUT_DIR)
+
 ###----global vars for config for Step 2:
 
 TAGLINE: str = "Smithsonian Butterflies - Two Step Pipeline Test"
 CELL_SIZE: int = 82
 N_NEIGHBORS: int = 15
 MIN_DIST: float = 0.1
-MIN_CLUSTER_SIZE: int = 10
+MIN_CLUSTER_SIZE: int = 2
 
 cfg_step1 = Cfg(paths={"images": IMAGE_GLOB,
                             "metadata": META_GLOB,
@@ -71,5 +73,3 @@ project_images_pipeline(
                    )
 
 print("=== Finished Step 2: Creating Viewer ===")
-
-#rmtree(OUTPUT_DIR)

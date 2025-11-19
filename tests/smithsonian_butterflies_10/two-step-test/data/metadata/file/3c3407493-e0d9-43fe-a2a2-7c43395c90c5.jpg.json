@@ -1,15 +1,15 @@
 {
-  "y": "0.333333333",
-  "year": "1995",
   "tags": [
     "Moth",
     "Broken",
     "Ugly"
   ],
-  "x": "0.666666667",
-  "lng": "-122.329087",
-  "filename": "3c3407493-e0d9-43fe-a2a2-7c43395c90c5.jpg",
+  "y": "0.333333333",
   "label": "Broken ugly moth Seattle",
+  "lng": "-122.329087",
+  "lat": "47.59104",
+  "x": "0.666666667",
   "category": "Moth",
-  "lat": "47.59104"
+  "filename": "3c3407493-e0d9-43fe-a2a2-7c43395c90c5.jpg",
+  "year": "1995"
 }

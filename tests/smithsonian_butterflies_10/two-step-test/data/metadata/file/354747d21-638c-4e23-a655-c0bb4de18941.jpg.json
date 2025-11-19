@@ -1,14 +1,14 @@
 {
-  "y": "1",
-  "year": "2000",
   "tags": [
     "Gray",
     "Ugly"
   ],
-  "x": "0",
-  "lng": "-66.063889",
-  "filename": "354747d21-638c-4e23-a655-c0bb4de18941.jpg",
+  "y": "1",
   "label": "Gray ugly butterfly San Juan",
+  "lng": "-66.063889",
+  "lat": "18.406389",
+  "x": "0",
   "category": "Butterfly",
-  "lat": "18.406389"
+  "filename": "354747d21-638c-4e23-a655-c0bb4de18941.jpg",
+  "year": "2000"
 }

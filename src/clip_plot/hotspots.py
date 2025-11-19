@@ -28,9 +28,11 @@ def get_cluster_model(min_cluster_size: int = 15):
     )
 
 # %% ../../nbs/12_hotspots.ipynb 4
-def get_hotspots(imageEngine: ImageFactory, vecs: np.ndarray,
+def get_hotspots(imageEngine: ImageFactory,
+                 vecs: np.ndarray,
                  data_dir: Path, plot_id: str,
                  cluster_spec: ClusterSpec,
+                 layout_name: str = "umap_base_layout",
                 ):
     """Return the stable clusters from the condensed tree of connected components from the density graph
     """
@@ -43,8 +45,8 @@ def get_hotspots(imageEngine: ImageFactory, vecs: np.ndarray,
     for idx, i in enumerate(z.labels_):
         if i != -1:
             d[i]["images"].append(idx)
-            d[i]["img"] = imageEngine[idx].filename
-            d[i]["layout"] = "inception_vectors"
+            d[i]["img"] = imageEngine[idx].unique_name
+            d[i]["layout"] = layout_name
 
     # remove massive clusters
     deletable = []

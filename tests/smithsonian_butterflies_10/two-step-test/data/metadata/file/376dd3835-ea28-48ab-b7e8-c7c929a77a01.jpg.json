@@ -1,15 +1,15 @@
 {
-  "y": "0.916666667",
-  "year": "1999",
   "tags": [
     "Tiny",
     "Ugly",
     "Gray"
   ],
-  "x": "0.083333333",
-  "lng": "-80.222953",
-  "filename": "376dd3835-ea28-48ab-b7e8-c7c929a77a01.jpg",
+  "y": "0.916666667",
   "label": "Tiny ugly gray butterfly Miami",
+  "lng": "-80.222953",
+  "lat": "25.769311",
+  "x": "0.083333333",
   "category": "Butterfly",
-  "lat": "25.769311"
+  "filename": "376dd3835-ea28-48ab-b7e8-c7c929a77a01.jpg",
+  "year": "1999"
 }
