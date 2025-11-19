@@ -18,10 +18,11 @@ models
 geo
 
 # force to include web folder
-!clip_plot/web
-!clip_plot/web/**/dist
+!src/clip_plot/web
+!src/clip_plot/web/**/dist
 
 ## gitignore created by nbdev_new
+tests/smithsonian_butterflies_10/two-step-test
 
 _docs/
 _proc/
@@ -173,5 +174,3 @@ checklink/cookies.txt
 .pkg
 
 # Quarto
-.quarto
-# tests/butterflies_baseline/**/*

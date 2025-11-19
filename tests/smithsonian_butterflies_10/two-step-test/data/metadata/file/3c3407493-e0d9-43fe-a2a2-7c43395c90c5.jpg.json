@@ -1,15 +1,18 @@
 {
-  "tags": [
-    "Moth",
-    "Broken",
-    "Ugly"
-  ],
-  "y": "0.333333333",
-  "label": "Broken ugly moth Seattle",
-  "lng": "-122.329087",
-  "lat": "47.59104",
-  "x": "0.666666667",
-  "category": "Moth",
+  "permalink": "https://ids.si.edu/ids/deliveryService?id=https://collections.nmnh.si.edu/media/?irn=13591932",
+  "gender": "Pinned",
   "filename": "3c3407493-e0d9-43fe-a2a2-7c43395c90c5.jpg",
-  "year": "1995"
+  "tags": [
+    "Chrysopeleiinae"
+  ],
+  "scientific_name": "Aeaea venifica Hodges; 1964",
+  "description": "view Aeaea venifica digital asset number 1",
+  "taxonomy": "Animalia; Arthropoda; Insecta; Lepidoptera; Glossata; Cosmopterigidae; Chrysopeleiinae",
+  "embed_path": "/home/wsanger/git/clip-plot/datasets/smithsonian_butterflies_150sm/embeds_eva02_base_patch14_224.mim_in22k/3c3407493-e0d9-43fe-a2a2-7c43395c90c5.jpg.npy",
+  "locality": "[Not Stated]; Putnam; Illinois; United States",
+  "region": "",
+  "sim_score": "0.8997740745544434",
+  "name": "Aeaea venifica",
+  "year": "1957",
+  "category": " Chrysopeleiinae"
 }

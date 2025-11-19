@@ -15,11 +15,12 @@ libroot = Path(__file__).parents[1]
 print(f"libroot: {libroot.resolve()}")
 OUTPUT_DIR: Path = libroot / "tests/smithsonian_butterflies_10/two-step-test/"
 LOCAL_MODEL: Path = libroot / "models/timm__vit_pe_core_tiny_patch16_384.fb"
-IMAGE_GLOB: str = (libroot / "tests/smithsonian_butterflies_10/jpgs/*.jpg").as_posix()
-META_GLOB: str = (libroot / "tests/smithsonian_butterflies_10/meta_data/good_meta.csv").as_posix()
+IMAGE_GLOB: str = (libroot / "datasets/smithsonian_butterflies_150sm/jpgs/*.jpg").as_posix()
+META_GLOB: str = (libroot / "datasets/smithsonian_butterflies_150sm/2023-12-21_butterflies-150sm-meta.csv").as_posix()
 TABLE_ID: str = "woofy"
 
-rmtree(OUTPUT_DIR)
+if OUTPUT_DIR.exists():
+  rmtree(OUTPUT_DIR)
 
 ###----global vars for config for Step 2:
 
@@ -37,7 +38,7 @@ cfg_step1 = Cfg(paths={"images": IMAGE_GLOB,
                            model=LOCAL_MODEL.as_posix(),
                            )
 
-pprint(cfg_step1.model_dump())
+# pprint(cfg_step1.model_dump())
 
 embed_images_pipeline(images=cfg_step1.paths.images,
                         model=cfg_step1.model,

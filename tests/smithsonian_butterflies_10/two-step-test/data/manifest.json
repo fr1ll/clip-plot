@@ -1,6 +1,6 @@
 {
   "version": "0.0.1",
-  "plot_id": "21bf3ea7",
+  "plot_id": "1e9d65ef",
   "output_directory": "/home/wsanger/git/clip-plot/tests/smithsonian_butterflies_10/two-step-test",
   "layouts": {
     "umap": {
@@ -8,39 +8,37 @@
         {
           "n_neighbors": 15,
           "min_dist": 0.1,
-          "layout": "/home/wsanger/git/clip-plot/tests/smithsonian_butterflies_10/two-step-test/data/layouts/21bf3ea7__umap-n_neighbors_15-min_dist_0.1.json",
-          "jittered": "/home/wsanger/git/clip-plot/tests/smithsonian_butterflies_10/two-step-test/data/layouts/umap-n_neighbors_15-min_dist_0.1-jittered__21bf3ea7.json"
+          "layout": "/home/wsanger/git/clip-plot/tests/smithsonian_butterflies_10/two-step-test/data/layouts/1e9d65ef__umap-n_neighbors_15-min_dist_0.1.json",
+          "jittered": "/home/wsanger/git/clip-plot/tests/smithsonian_butterflies_10/two-step-test/data/layouts/umap-n_neighbors_15-min_dist_0.1-jittered__1e9d65ef.json"
         }
       ]
     },
     "alphabetic": {
-      "layout": "/home/wsanger/git/clip-plot/tests/smithsonian_butterflies_10/two-step-test/data/layouts/21bf3ea7__grid.json"
+      "layout": "/home/wsanger/git/clip-plot/tests/smithsonian_butterflies_10/two-step-test/data/layouts/1e9d65ef__grid.json"
     },
     "grid": {
-      "layout": "/home/wsanger/git/clip-plot/tests/smithsonian_butterflies_10/two-step-test/data/layouts/21bf3ea7__rasterfairy.json"
+      "layout": "/home/wsanger/git/clip-plot/tests/smithsonian_butterflies_10/two-step-test/data/layouts/1e9d65ef__rasterfairy.json"
     },
     "categorical": {
-      "layout": "/home/wsanger/git/clip-plot/tests/smithsonian_butterflies_10/two-step-test/data/layouts/21bf3ea7__categorical.json",
-      "labels": "/home/wsanger/git/clip-plot/tests/smithsonian_butterflies_10/two-step-test/data/layouts/21bf3ea7__categorical-labels.json"
+      "layout": "/home/wsanger/git/clip-plot/tests/smithsonian_butterflies_10/two-step-test/data/layouts/1e9d65ef__categorical.json",
+      "labels": "/home/wsanger/git/clip-plot/tests/smithsonian_butterflies_10/two-step-test/data/layouts/1e9d65ef__categorical-labels.json"
     },
-    "custom": {
-      "layout": "/home/wsanger/git/clip-plot/tests/smithsonian_butterflies_10/two-step-test/data/layouts/21bf3ea7__custom.json"
-    }
+    "custom": null
   },
   "initial_layout": "umap",
   "point_sizes": {
     "min": 0,
-    "grid": 0.25,
-    "max": 0.3,
-    "scatter": 0.05,
-    "initial": 0.05,
-    "categorical": 0.15,
-    "geographic": 0.00625
+    "grid": 0.07692307692307693,
+    "max": 0.09230769230769231,
+    "scatter": 0.015384615384615385,
+    "initial": 0.015384615384615385,
+    "categorical": 0.046153846153846156,
+    "geographic": 0.0019230769230769232
   },
   "imagelist": "/home/wsanger/git/clip-plot/tests/smithsonian_butterflies_10/two-step-test/data/imagelist.json",
-  "atlas_dir": "/home/wsanger/git/clip-plot/tests/smithsonian_butterflies_10/two-step-test/data/atlases/21bf3ea7",
+  "atlas_dir": "/home/wsanger/git/clip-plot/tests/smithsonian_butterflies_10/two-step-test/data/atlases/1e9d65ef",
   "metadata": false,
-  "default_hotspots": "/home/wsanger/git/clip-plot/tests/smithsonian_butterflies_10/two-step-test/data/hotspots/21bf3ea7__hotspot.json",
+  "default_hotspots": "/home/wsanger/git/clip-plot/tests/smithsonian_butterflies_10/two-step-test/data/hotspots/1e9d65ef__hotspot.json",
   "custom_hotspots": "/home/wsanger/git/clip-plot/tests/smithsonian_butterflies_10/two-step-test/data/hotspots/user_hotspots.json",
   "gzipped": false,
   "config": {
@@ -50,5 +48,5 @@
       "lod": 128
     }
   },
-  "creation_date": "18-November-2025-17:53:38"
+  "creation_date": "18-November-2025-18:38:10"
 }
