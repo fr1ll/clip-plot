@@ -3173,7 +3173,16 @@ function Hotspots() {
 }
 
 Hotspots.prototype.initialize = function() {
-  get(getPath(data.json.custom_hotspots), this.handleJson.bind(this),
+  // If custom hotspots is set to None in manifest, load default hotspots
+  if (!data.json.custom_hotspots) {
+    get(getPath(data.json.default_hotspots), this.handleJson.bind(this));
+    return;
+  }
+  
+  // Otherwise, try custom first, fall back to defaults on error
+  get(
+    getPath(data.json.custom_hotspots),
+    this.handleJson.bind(this),
     function(err) {
       get(getPath(data.json.default_hotspots), this.handleJson.bind(this))
     }.bind(this)
