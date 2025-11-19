@@ -416,8 +416,7 @@ def create_atlases(imageEngine: ImageFactory, thumb_dims: list[int, int],
                    ) -> tuple[list[Image.Image], list[int, int]]:
     """Create list of atlases, plus positions"""
     x, y = 0, 0
-    atlas = new_atlas(atlas_size)
-    atlases: list[Image.Image] = []
+    atlases: list[Image.Image] = [new_atlas(atlas_size)]
     positions: list[dict[str,int]] = []
     atlas_idx = 0
 
@@ -428,12 +427,11 @@ def create_atlases(imageEngine: ImageFactory, thumb_dims: list[int, int],
             x = 0
             y += row_height
         if y + cell.height > atlas_size: # new atlas
-            atlases.append(atlas)
-            atlas = new_atlas(atlas_size)
             atlas_idx += 1
+            atlases.append(new_atlas(atlas_size))
             x = 0
             y = 0
-        atlas.paste(cell, (x,y))
+        atlases[atlas_idx].paste(cell, (x,y))
 
         # store in dict
         positions.append({
@@ -446,10 +444,6 @@ def create_atlases(imageEngine: ImageFactory, thumb_dims: list[int, int],
             # "thumb_w": thumb_w, "thumb_h": thumb_h
         })
         x+=cell.width
-
-    # append final atlas
-    if len(atlases) <= atlas_idx:
-        atlases.append(atlas)
 
     print(f"Number of atlases generated: {len(atlases)}")
     return atlases, positions
