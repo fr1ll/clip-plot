@@ -36,8 +36,8 @@ def byo_logo(web_dir: Path, logo_path: Path):
     '''copy logo into web folder and replace reference in index.html'''
     logo_dest = web_dir / "assets/images" / logo_path.name
     copy(logo_path, logo_dest)
-    replace_web_strings(web_dir, {"dhlab-logo.svg": logo_path.name,
-                                  "DHLab logo": "Custom logo"
+    replace_web_strings(web_dir, {"cp_logo.png": logo_path.name,
+                                  "clip-plot logo": "Custom logo"
                                })
 
 # %% ../../nbs/06_web_config.ipynb 7

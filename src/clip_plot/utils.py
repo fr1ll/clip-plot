@@ -56,9 +56,9 @@ def write_json(output_path: Path, data_dir: Path, obj: Any):
     #| export
 
     def _convert_paths(obj):
-        """convert Path objects to strings relative to data_dir's parent"""
+        """convert Path objects to strings relative to data_dir"""
         if isinstance(obj, Path):
-            return str(obj.relative_to(data_dir.parent))
+            return str(obj.relative_to(data_dir))
         # let json handle other types
         raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
 
@@ -68,8 +68,9 @@ def write_json(output_path: Path, data_dir: Path, obj: Any):
 
 # %% ../../nbs/01_utils.ipynb 12
 def get_version():
-    import clip_plot
     from importlib.metadata import version
+
+    import clip_plot
     return version(clip_plot.__name__)
 
 # %% ../../nbs/01_utils.ipynb 13

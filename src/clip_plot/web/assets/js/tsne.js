@@ -42,8 +42,7 @@
 
 function Config() {
   this.data = {
-    output_directory: 'output', // user specified out_dir or 'output'
-    dir: 'data', // data folder within the output_directory
+    dir: 'data', // data folder in same folder as index.html
     file: 'manifest.json',
     gzipped: false,
   }
@@ -125,8 +124,7 @@ function Data() {
 Data.prototype.load = function() {
   get(getPath(config.data.dir + '/' + config.data.file),
     function(json) {
-      config.data.output_directory = json.output_directory;
-      get(getPath(json.imagelist), function(data) {
+      get(getPath(config.data.dir + '/' + json.imagelist), function(data) {
         this.parseManifest(Object.assign({}, json, data));
       }.bind(this))
     }.bind(this),
@@ -175,7 +173,7 @@ Data.prototype.parseManifest = function(json) {
   };
   // add cells to the world
   layout.getLayoutPath.bind(layout)
-  get(getPath(layout.getLayoutPath()), function(data) {
+  get(getPathconfig.data.dir + '/' + layout.getLayoutPath()), function(data) {
     this.addCells(data);
     this.hotspots.initialize();
   }.bind(this))
@@ -344,7 +342,7 @@ function Atlas(obj) {
   this.onProgress = obj.onProgress;
   this.onLoad = obj.onLoad;
   this.image = null;
-  this.url = getPath(data.json.atlas_dir + '/atlas-' + this.idx + '.jpg');
+  this.url = getPath(config.data.dir + '/' + data.json.atlas_dir + '/atlas-' + this.idx + '.jpg');
   this.load();
 }
 
@@ -716,7 +714,7 @@ Layout.prototype.set = function(layout, enableDelay) {
   data.hotspots.setCreateHotspotVisibility(false);
   // begin the new layout transition
   setTimeout(function() {
-    get(getPath(this.getLayoutPath()), function(pos) {
+    get(getPath(config.data.dir + '/' + this.getLayoutPath()), function(pos) {
       // clear the LOD mechanism
       lod.clear();
       // set the target locations of each point
@@ -803,7 +801,7 @@ Layout.prototype.setText = function() {
   if (!text.mesh) return;
   var path = data.json.layouts[this.selected].labels;
   if (path && text.mesh) {
-    get(getPath(path), text.formatText.bind(text));
+    get(getPath(config.data.dir + '/' + path), text.formatText.bind(text));
     text.mesh.material.uniforms.render.value = 1.0;
   } else {
     text.mesh.material.uniforms.render.value = 0.0;
@@ -2045,7 +2043,7 @@ Lasso.prototype.downloadSelected = function() {
       var images = this.getSelectedFilenames();
       var nAdded = 0;
       for (var i=0; i<images.length; i++) {
-        var imagePath = getPath('data/originals/' + images[i]);
+        var imagePath = getPath(config.data.dir + '/originals/' + images[i]);
         imageToDataUrl(imagePath, function(result) {
           var imageFilename = result.src.split('originals/')[1];
           var base64 = result.dataUrl.split(';base64,')[1];
@@ -2614,7 +2612,7 @@ Modal.prototype.showCells = function(cellIndices, cellIdx) {
   // parse data attributes
   var filename = data.json.images[self.cellIndices[self.cellIdx]];
   // conditionalize the path to the image
-  var src = config.data.dir + '/originals/' + filename;
+  var src = getPath(config.data.dir + '/originals/' + filename);
   // define function to show the modal
   function showModal(json) {
     var json = json || {};
@@ -2841,7 +2839,7 @@ LOD.prototype.fetchNextImage = function() {
           this.state.cellsToActivate = this.state.cellsToActivate.concat(cellIdx);
         }
       }.bind(this, cellIdx);
-      image.src = config.data.dir + '/thumbs/' + data.json.images[cellIdx];
+      image.src = getPath(config.data.dir + '/thumbs/' + data.json.images[cellIdx]);
     };
   // there was no image to fetch, so add neighbors to fetch queue if possible
   } else if (this.state.neighborsRequested < this.state.radius) {
@@ -3175,16 +3173,16 @@ function Hotspots() {
 Hotspots.prototype.initialize = function() {
   // If custom hotspots is set to None in manifest, load default hotspots
   if (!data.json.custom_hotspots) {
-    get(getPath(data.json.default_hotspots), this.handleJson.bind(this));
+    get(getPath(config.data.dir + '/' + data.json.default_hotspots), this.handleJson.bind(this));
     return;
   }
   
   // Otherwise, try custom first, fall back to defaults on error
   get(
-    getPath(data.json.custom_hotspots),
+    getPath(config.data.dir + '/' + data.json.custom_hotspots),
     this.handleJson.bind(this),
     function(err) {
-      get(getPath(data.json.default_hotspots), this.handleJson.bind(this))
+      get(getPath(config.data.dir + '/' + data.json.default_hotspots), this.handleJson.bind(this))
     }.bind(this)
   );
 }
@@ -4010,7 +4008,7 @@ function getCanvasSize() {
 function getPath(path) {
   var base = window.location.origin;
   base += window.location.pathname.replace('index.html', '');
-  base += path.replace('\\','/').replace(config.data.output_directory + '/', '');
+  base += path.replace('\\','/');
   return base;
 }
 
