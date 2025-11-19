@@ -3,22 +3,21 @@
 # %% auto 0
 __all__ = ['write_metadata', 'get_manifest']
 
-# %% ../../nbs/07_metadata.ipynb 3
-from math import ceil
-from datetime import datetime
+# %% ../../nbs/07_metadata.ipynb 2
 from collections import defaultdict
+from datetime import datetime
+from math import ceil
 from pathlib import Path
 
 import numpy as np
 
-from .utils import clean_filename, FILE_NAME
-from .layouts import get_layouts, get_heightmap
+from .configuration import ClusterSpec, UmapSpec
 from .hotspots import get_hotspots
-from .utils import is_number, get_version, write_json, read_json
-from .configuration import UmapSpec, ClusterSpec
+from .layouts import get_heightmap, get_layouts
+from .utils import FILE_NAME, clean_filename, get_version, is_number, read_json, write_json
 
 
-# %% ../../nbs/07_metadata.ipynb 5
+# %% ../../nbs/07_metadata.ipynb 4
 def write_metadata(imageEngine):
     """
     Write list `metadata` of objects to disk
@@ -41,18 +40,20 @@ def write_metadata(imageEngine):
         row["tags"] = [j.strip() for j in row.get("tags", "").split("|")]
         for j in row["tags"]:
             d["__".join(j.split())].append(filename)
-        write_json((meta_dir/"file"/f"{filename}.json"), row)
+        write_json((meta_dir/"file"/f"{filename}.json"),
+                    data_dir=data_dir, obj=row)
 
-    write_json(
-        (meta_dir/"filters"/"filters.json"),
-        [{"filter_name": "select",
-          "filter_values": list(d.keys()),
+    write_json(output_path=(meta_dir/"filters"/"filters.json"),
+               data_dir=data_dir,
+               obj=[{"filter_name": "select",
+               "filter_values": list(d.keys()),
         }],
     )
 
     # create the options for the category dropdown
     for i in d:
-        write_json((meta_dir/"options"/ f"{i}.json"), d[i])
+        write_json(output_path=meta_dir/f"options/{i}.json",
+                   data_dir=data_dir, obj=d[i])
 
     # create the map from date to images with that date (if dates present)
     date_d = defaultdict(list)
@@ -74,12 +75,12 @@ def write_metadata(imageEngine):
 
     # write the dates json
     if len(date_d) > 1:
-        write_json(
-            (meta_dir/"dates.json"),
-            {"domain": domain, "dates": date_d,},
+        write_json(output_path=meta_dir/"dates.json",
+                   data_dir=data_dir,
+                   obj={"domain": domain, "dates": date_d},
         )
 
-# %% ../../nbs/07_metadata.ipynb 6
+# %% ../../nbs/07_metadata.ipynb 5
 def get_manifest(imageEngine, atlas_data,
                  hidden_vectors: np.ndarray,
                  plot_id: str,
@@ -92,7 +93,7 @@ def get_manifest(imageEngine, atlas_data,
                  ):
     """
     Create and return the base object for the manifest output file
-    Returns: None
+    All paths are relative to data_dir
     """
     data_dir = output_dir/"data"
     # store each cell's size and atlas position
@@ -133,19 +134,19 @@ def get_manifest(imageEngine, atlas_data,
     manifest = {
         "version": get_version(),
         "plot_id": plot_id,
-        "output_directory": output_dir.as_posix(),
+        "output_directory": ".",
         "layouts": layouts,
         "initial_layout": "umap",
         "point_sizes": point_sizes,
-        "imagelist": (data_dir / "imagelist.json").as_posix(),
-        "atlas_dir": (data_dir/"atlases"/plot_id).as_posix(),
+        "imagelist": "data/imagelist.json",
+        "atlas_dir": f"data/atlases/{plot_id}",
         "metadata": has_metadata,
         "default_hotspots": get_hotspots(imageEngine, hidden_vectors,
                                          data_dir, plot_id,
                                          cluster_spec=cluster_spec,
                                         #  layouts=layouts,
                                          ),
-        "custom_hotspots": (data_dir/"hotspots/user_hotspots.json").as_posix(),
+        "custom_hotspots": None,
         "gzipped": False,
         "config": {
             "sizes": {
@@ -157,8 +158,8 @@ def get_manifest(imageEngine, atlas_data,
         "creation_date": datetime.today().strftime("%d-%B-%Y-%H:%M:%S"),
     }
 
-    write_json(data_dir/"manifests/manifest.json", manifest)
-    write_json(data_dir/"manifest.json", manifest)
+    write_json(data_dir/"manifests/manifest.json", data_dir=data_dir, obj=manifest)
+    write_json(data_dir/"manifest.json", data_dir=data_dir, obj=manifest)
 
     imagelist = {
         "cell_sizes": sizes,
@@ -169,4 +170,5 @@ def get_manifest(imageEngine, atlas_data,
         },
     }
 
-    write_json(data_dir / "imagelist.json", imagelist)
+    write_json(data_dir / "imagelist.json",
+               data_dir=data_dir, obj=imagelist)

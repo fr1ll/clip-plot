@@ -4,16 +4,17 @@
 __all__ = ['get_cluster_model', 'get_hotspots']
 
 # %% ../../nbs/12_hotspots.ipynb 2
-from pathlib import Path
 import multiprocessing
 from collections import defaultdict
+from pathlib import Path
 
 import numpy as np
 from hdbscan import HDBSCAN
 
-from .images import ImageFactory
-from .utils import write_json, timestamp, get_json_path
 from .configuration import ClusterSpec
+from .images import ImageFactory
+from .utils import get_json_path, timestamp, write_json
+
 
 # %% ../../nbs/12_hotspots.ipynb 3
 def get_cluster_model(min_cluster_size: int = 15):
@@ -71,5 +72,5 @@ def get_hotspots(imageEngine: ImageFactory,
     # save the hotspots to disk and return the path to the saved json
     print(timestamp(), "Found", len(clusters), "hotspots")
     json_path = get_json_path(data_dir, "hotspots", "hotspot", plot_id)
-    write_json(json_path, clusters)
+    write_json(json_path, data_dir=data_dir, obj=clusters)
     return json_path

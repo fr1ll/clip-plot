@@ -36,6 +36,6 @@ def project_tables_cli():
                             tables=cfg.paths.tables,
                             metadata=cfg.paths.metadata,
                             image_path_col=cfg.image_path_col,
-                            vectors_path_col=cfg.vectors_path_col,
+                            vectors_col=cfg.vectors_col,
                 )
     return None

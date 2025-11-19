@@ -83,10 +83,16 @@ def project_images_pipeline(output_dir: Path,
                         row_height=image_opts.atlas_row_height, atlas_size=image_opts.atlas_size)
         write_metadata(imageEngine)
 
+        if imageEngine.metadata:
+                has_metadata=True
+        else:
+                has_metadata=False
+
         get_manifest(imageEngine, atlas_positions, hidden_vectors,
                      plot_id=plot_id, output_dir=output_dir,
                      umap_spec=umap_spec, cluster_spec=cluster_spec,
                      x_col=x_col, y_col=y_col,
+                     has_metadata=has_metadata
         )
         # write_images(imageEngine)
         print(timestamp(), "Done!")

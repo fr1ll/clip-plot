@@ -3,14 +3,16 @@
 # %% auto 0
 __all__ = ['get_clip_plot_root', 'replace_web_strings', 'byo_logo', 'copy_web_assets']
 
-# %% ../../nbs/06_web_config.ipynb 4
-from . import utils
-from .utils import get_version
-from fastcore.all import in_ipython
+# %% ../../nbs/06_web_config.ipynb 3
 from pathlib import Path
 from shutil import copy
 
-# %% ../../nbs/06_web_config.ipynb 5
+from fastcore.all import in_ipython
+
+from . import utils
+from .utils import get_version
+
+# %% ../../nbs/06_web_config.ipynb 4
 def get_clip_plot_root() -> Path:
     # ipython doesn't have __file__ attribute
     if in_ipython():
@@ -18,7 +20,7 @@ def get_clip_plot_root() -> Path:
     else:
         return Path(__file__).parents[1]
 
-# %% ../../nbs/06_web_config.ipynb 6
+# %% ../../nbs/06_web_config.ipynb 5
 def replace_web_strings(web_dir: Path, from_to: dict):
     '''sequentially replace strings based on dict'''
     for i in ["index.html", "assets/js/tsne.js"]:
@@ -29,7 +31,7 @@ def replace_web_strings(web_dir: Path, from_to: dict):
         f.write_text(t)
 
 
-# %% ../../nbs/06_web_config.ipynb 7
+# %% ../../nbs/06_web_config.ipynb 6
 def byo_logo(web_dir: Path, logo_path: Path):
     '''copy logo into web folder and replace reference in index.html'''
     logo_dest = web_dir / "assets/images" / logo_path.name
@@ -38,7 +40,7 @@ def byo_logo(web_dir: Path, logo_path: Path):
                                   "DHLab logo": "Custom logo"
                                })
 
-# %% ../../nbs/06_web_config.ipynb 8
+# %% ../../nbs/06_web_config.ipynb 7
 def copy_web_assets(output_dir: Path, tagline: str | None, logo: Path | None) -> None:
     """
     Copy the /web directory from the clipplot source to the users cwd.
