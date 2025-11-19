@@ -25,7 +25,7 @@ if OUTPUT_DIR.exists():
 ###----global vars for config for Step 2:
 
 TAGLINE: str = "Smithsonian Butterflies - Two Step Pipeline Test"
-CELL_SIZE: int = 82
+ATLAS_ROW_HEIGHT: int = 64
 N_NEIGHBORS: int = 15
 MIN_DIST: float = 0.1
 MIN_CLUSTER_SIZE: int = 2
@@ -54,7 +54,7 @@ cfg_step2 = Cfg(paths={"tables":
                               OUTPUT_DIR/"data"/"tables"/"EmbedImages__*.parquet",
                             "output_dir": OUTPUT_DIR},
                      view_opts={"tagline": TAGLINE},
-                     image_opts={"cell_size": CELL_SIZE},
+                     image_opts={"atlas_row_height": ATLAS_ROW_HEIGHT},
                      umap_spec={"n_neighbors": N_NEIGHBORS,
                                 "min_dist": MIN_DIST},
                      cluster_spec={"min_cluster_size": MIN_CLUSTER_SIZE},

@@ -412,7 +412,7 @@ def new_atlas(atlas_size: int) -> Image.Image:
 
 # %% ../../nbs/03_images.ipynb 25
 def create_atlases(imageEngine: ImageFactory, thumb_dims: list[int, int],
-                   atlas_size: int = 4096, row_height: int = 32
+                   atlas_size: int = 4096, row_height: int = 64
                    ) -> tuple[list[Image.Image], list[int, int]]:
     """Create list of atlases, plus positions"""
     x, y = 0, 0
@@ -421,7 +421,7 @@ def create_atlases(imageEngine: ImageFactory, thumb_dims: list[int, int],
     positions: list[dict[str,int]] = []
     atlas_idx = 0
 
-    for image_idx, (img, (thumb_h, thumb_w)) in tqdm(enumerate(zip(imageEngine, thumb_dims))):
+    for image_idx, (img, (thumb_w, thumb_h)) in tqdm(enumerate(zip(imageEngine, thumb_dims))):
         cell = resize_to_height(img.original, height=row_height)
         cell = autocontrast(cell)
         if x + cell.width > atlas_size: # new row
@@ -458,7 +458,7 @@ def create_atlases(imageEngine: ImageFactory, thumb_dims: list[int, int],
 def write_viewer_images(imageEngine: ImageFactory,
                         plot_id: str, data_dir: Path,
                         thumb_size: int = 128,
-                        row_height: int = 32, atlas_size: int = 4096) -> list[dict]:
+                        row_height: int = 64, atlas_size: int = 4096) -> list[dict]:
     """create thumbnail, original, and atlas files"""
 
     print(timestamp(), "Creating image files for viewer")
