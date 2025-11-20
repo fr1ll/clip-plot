@@ -53,12 +53,13 @@ def project_images_pipeline(output_dir: Path,
                 raise ValueError("No images found from either tables or images input.")
         if tables and not images:
                 print(timestamp(), "Loading tables")
-                table: pl.DataFrame | None = cat_tables(tables)
+                table: pl.DataFrame | None = cat_tables(tables).sort_values(image_path_col)
                 images: list[Path] = [Path(p) for p in table[image_path_col].to_numpy()]
                 print(timestamp(), "Loading embeddings from disk")
                 hidden_vectors: np.ndarray | None = table[vectors_col].to_numpy()
                 meta_names, meta_vals= table_to_meta(table)
         elif not tables and images:
+                images = sorted(images)
                 hidden_vectors = get_embeddings(images, model_name=model)
 
         data_dir = output_dir / "data"
@@ -105,10 +106,11 @@ def embed_images_pipeline(images: list[Path],
                      table_format: str,
                      table_id: str,
                 ):
-                """Embed a folder of images, save embeddings as .npy file to disk"""
+                """Embed a list of images, sync with metadata, and save as table"""
                 output_dir = Path(output_dir)
                 data_dir = output_dir / "data"
                 table_dir = output_dir / "data" / "tables"
+                images = sorted(images)
 
                 imageEngine = ImageFactory(image_paths=images, data_dir=data_dir, metadata_paths=metadata)
 
@@ -125,11 +127,12 @@ def embed_images_pipeline(images: list[Path],
                         if "image_path" in df_meta.columns:
                                 df_meta = df_meta.drop("image_path")
 
-                        df = df.join(df_meta.unique(subset=["image_filename"]), on="image_filename",
-                                              how="left")
+                        df = df.join(df_meta.unique(subset=["image_filename"]),
+                                     on="image_filename", how="left")
 
                 df = df.with_columns(pl.col("image_path").map_elements(
-                                     lambda x: x.as_posix(),  return_dtype=pl.Utf8))
+                                     lambda x: x.as_posix(),  return_dtype=pl.Utf8
+                                     ))
 
                 ## standardize sort order of table
                 # put standard columns in a sensible order if they exist in df

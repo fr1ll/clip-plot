@@ -187,6 +187,15 @@ Data.prototype.onTextureLoad = function(texIdx) {
 
 // Add all cells to the world
 Data.prototype.addCells = function(positions) {
+  // Diagnostic: verify data structures
+  console.log('addCells called:', {
+    numAtlases: this.json.cell_sizes.length,
+    totalImages: this.json.images.length,
+    numPositions: positions.length,
+    firstPosition: positions[0],
+    firstAtlasSize: this.json.cell_sizes[0] ? this.json.cell_sizes[0].length : 0
+  });
+  
   // datastore indicating data in current draw call
   var drawcall = {
     idx: 0, // idx of draw call among all draw calls
@@ -206,6 +215,19 @@ Data.prototype.addCells = function(positions) {
       // Always use actual content dimensions from cell_sizes for rendering
       var cellW = size[0];
       var cellH = size[1];
+      
+      // Diagnostic: log first few cells
+      if (idx < 5) {
+        console.log(`Cell ${idx}:`, {
+          atlasIdx: i,
+          cellInAtlas: j,
+          filename: this.json.images[idx],
+          worldPos: worldPos,
+          atlasPos: atlasPos,
+          size: size
+        });
+      }
+      
       this.cells.push(new Cell({
         idx: idx, // index of cell among all cells
         w:  cellW, // width of actual image content
@@ -2354,6 +2376,16 @@ Picker.prototype.select = function(obj) {
   world.renderer.readRenderTargetPixels(this.tex, x, y, 1, 1, pixelBuffer);
   var id = (pixelBuffer[0] << 16) | (pixelBuffer[1] << 8) | (pixelBuffer[2]),
       cellIdx = id-1; // ids use id+1 as the id of null selections is 0
+  // Diagnostic logging
+  if (cellIdx >= 0 && cellIdx < data.cells.length) {
+    console.log('GPU Picker:', {
+      cellIdx: cellIdx,
+      cellActualIdx: data.cells[cellIdx].idx,
+      filename: data.json.images[cellIdx],
+      rgb: [pixelBuffer[0], pixelBuffer[1], pixelBuffer[2]],
+      decodedId: id
+    });
+  }
   return cellIdx;
 }
 
