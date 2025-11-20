@@ -28,9 +28,9 @@ if OUTPUT_DIR.exists():
 
 ###----global vars for config for Step 2:
 
-TAGLINE: str = "Smithsonian Butterflies - Two Step Pipeline Test"
+TAGLINE: str = "Smithsonian Butterflies - Two-step Pipeline Test"
 ATLAS_CELL_SIZE: int = 128
-N_NEIGHBORS: int = 15
+N_NEIGHBORS: list[int] = [5, 15, 30]
 MIN_DIST: float = 0.1
 MIN_CLUSTER_SIZE: int = 2
 
@@ -64,7 +64,7 @@ cfg_step2 = Cfg(paths={"tables":
                      cluster_spec={"min_cluster_size": MIN_CLUSTER_SIZE},
                     )
 
-pprint(cfg_step1.model_dump())
+# pprint(cfg_step1.model_dump())
 
 project_images_pipeline(
                    output_dir=cfg_step2.paths.output_dir,
