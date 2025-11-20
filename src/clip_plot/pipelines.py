@@ -64,7 +64,7 @@ def project_images_pipeline(output_dir: Path,
 
         data_dir = output_dir / "data"
         imageEngine = ImageFactory(images, data_dir, metadata,
-                                            **image_opts.model_dump())
+                                   **image_opts.model_dump())
 
         # TODO: simplify the mad tables/metadata possibilities
         if meta_vals:

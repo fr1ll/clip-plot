@@ -222,7 +222,6 @@ class ImageFactory:
     thumbnail_size: int = 128
     atlas_cell_size: int = 128
     atlas_size: int = 4096
-    shuffle: bool = False
     seed: int | None = None
     max_images: int | None = None
 
@@ -267,12 +266,7 @@ class ImageFactory:
             raise Exception(
                 f"Image filenames should be unique. These are duplicated:\n{dups_to_print}")
 
-        # optionally shuffle the image_paths
-        if self.shuffle:
-            print(timestamp(), "Shuffling input images")
-            random.Random(self.seed).shuffle(self.image_paths)
-        else:
-            self.image_paths = sorted(self.image_paths)
+        self.image_paths = sorted(self.image_paths)
 
         # Optionally limit the number of images in image_paths
         if self.max_images:
