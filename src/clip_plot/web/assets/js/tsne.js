@@ -1176,6 +1176,12 @@ World.prototype.getDrawCallToCells = function() {
     if (!(drawCall in drawCallToCells)) drawCallToCells[drawCall] = [cell];
     else drawCallToCells[drawCall].push(cell);
   }
+  // Diagnostic: log first draw call cells
+  if (drawCallToCells[0]) {
+    console.log('First draw call has', drawCallToCells[0].length, 'cells');
+    console.log('First 5 cell indices in draw call 0:', 
+      drawCallToCells[0].slice(0, 5).map(c => c.idx));
+  }
   return drawCallToCells;
 }
 
@@ -1187,7 +1193,15 @@ World.prototype.getGroupAttributes = function(cells) {
   var it = this.getCellIterators(cells.length);
   for (var i=0; i<cells.length; i++) {
     var cell = cells[i];
-    var rgb = this.color.setHex(cells[i].idx + 1); // use 1-based ids for colors
+    // GPU picking: encode cell index directly as RGB components (1-based)
+    var id = cells[i].idx + 1;
+    var r = ((id >> 16) & 0xFF) / 255.0;
+    var g = ((id >> 8) & 0xFF) / 255.0;
+    var b = (id & 0xFF) / 255.0;
+    // Diagnostic: log first few color encodings
+    if (i < 5) {
+      console.log(`Encoding cell ${i}: idx=${cells[i].idx}, id=${id}, rgb=[${r}, ${g}, ${b}]`);
+    }
     it.texIndex[it.texIndexIterator++] = cell.texIdx; // index of texture among all textures -1 means LOD texture
     it.translation[it.translationIterator++] = cell.x; // current position.x
     it.translation[it.translationIterator++] = cell.y; // current position.y
@@ -1195,9 +1209,9 @@ World.prototype.getGroupAttributes = function(cells) {
     it.targetTranslation[it.targetTranslationIterator++] = cell.tx; // target position.x
     it.targetTranslation[it.targetTranslationIterator++] = cell.ty; // target position.y
     it.targetTranslation[it.targetTranslationIterator++] = cell.tz; // target position.z
-    it.color[it.colorIterator++] = rgb.r; // could be single float
-    it.color[it.colorIterator++] = rgb.g; // unique color for GPU picking
-    it.color[it.colorIterator++] = rgb.b; // unique color for GPU picking
+    it.color[it.colorIterator++] = r; // R component of picking color
+    it.color[it.colorIterator++] = g; // G component of picking color
+    it.color[it.colorIterator++] = b; // B component of picking color
     it.opacity[it.opacityIterator++] = 1.0; // cell opacity value
     it.selected[it.selectedIterator++] = 0.0; // 1.0 if cell is selected, else 0.0
     it.clusterSelected[it.clusterSelectedIterator++] = 0.0; // 1.0 if cell's cluster is selected, else 0.0
