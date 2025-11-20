@@ -48,17 +48,14 @@ function Config() {
   }
   this.mobileBreakpoint = 600;
   this.isTouchDevice = 'ontouchstart' in document.documentElement;
-  // texture buffer pixel *limits* are independent of memory *size*
-  var smallTexSize = Math.min(4096, webgl.limits.textureSize) // a small, safe size
-  // Try for max (8192/128)^2 = (2^6)^2 = 4096 LOD images (or smaller safe size)
-  //          or (4096/128)^2 = 256 LOD images for mobile.
-  var bigTexSize = Math.min(2**13, webgl.limits.textureSize)
+  // FEATURE FLAG: Set to true to use mipmaps instead of LOD system
+  this.useMipmaps = true;
   this.size = {
-    cell: 64, // height of each cell in atlas
-    lodCell: 128, // height of each cell in LOD
-    atlas: smallTexSize, // height of each atlas
-    texture: this.isTouchDevice ? smallTexSize : webgl.limits.textureSize,
-    lodTexture: this.isTouchDevice ? smallTexSize : bigTexSize, // one detail texture buffer
+    cell: this.useMipmaps ? 128 : 64, // cell size in atlas
+    atlas: 4096, // hardcoded atlas size
+    texture: this.isTouchDevice ? 4096 : webgl.limits.textureSize,
+    lodCell: 128, // for backward compatibility with old LOD system
+    lodTexture: this.isTouchDevice ? 4096 : Math.min(2**13, webgl.limits.textureSize),
     points: { // the follow values are set by Data()
       min: 0, // min point size
       max: 0, // max point size
@@ -142,10 +139,7 @@ Data.prototype.load = function() {
 
 Data.prototype.parseManifest = function(json) {
   this.json = json;
-  // set sizes of cells, atlases, and points
-  config.size.cell = json.config.sizes.cell;
-  config.size.atlas = json.config.sizes.atlas;
-  config.size.lodCell = json.config.sizes.lod;
+  // set point sizes from manifest
   config.size.points = json.point_sizes;
   // update the point size DOM element
   world.elems.pointSize.min = 0;
@@ -193,6 +187,16 @@ Data.prototype.onTextureLoad = function(texIdx) {
 
 // Add all cells to the world
 Data.prototype.addCells = function(positions) {
+  // Diagnostic: verify data structures
+  console.log('addCells called:', {
+    numAtlases: this.json.cell_sizes.length,
+    totalImages: this.json.images.length,
+    numPositions: positions.length,
+    firstPosition: positions[0],
+    firstAtlasSize: this.json.cell_sizes[0] ? this.json.cell_sizes[0].length : 0
+  });
+  console.log('First 10 images in order:', this.json.images.slice(0, 10));
+  
   // datastore indicating data in current draw call
   var drawcall = {
     idx: 0, // idx of draw call among all draw calls
@@ -209,21 +213,39 @@ Data.prototype.addCells = function(positions) {
           atlasPos = this.json.atlas.positions[i][j], // idx-th cell position in atlas
           atlasOffset = getAtlasOffset(i),
           size = this.json.cell_sizes[i][j];
+      // Always use actual content dimensions from cell_sizes for rendering
+      var cellW = size[0];
+      var cellH = size[1];
+      
+      // Diagnostic: log first few cells
+      if (idx < 5) {
+        console.log(`Cell ${idx}:`, {
+          atlasIdx: i,
+          cellInAtlas: j,
+          filename: this.json.images[idx],
+          worldPos: worldPos,
+          atlasPos: atlasPos,
+          size: size
+        });
+      }
+      
       this.cells.push(new Cell({
         idx: idx, // index of cell among all cells
-        w:  size[0], // width of cell in lod atlas
-        h:  size[1], // height of cell in lod atlas
+        w:  cellW, // width of actual image content
+        h:  cellH, // height of actual image content
         x:  worldPos[0], // x position of cell in world
         y:  worldPos[1], // y position of cell in world
         z:  worldPos[2] || null, // z position of cell in world
-        dx: atlasPos[0] + atlasOffset.x, // x offset of cell in atlas
-        dy: atlasPos[1] + atlasOffset.y, // y offset of cell in atlas
+        dx: atlasPos[0] + atlasOffset.x, // x offset of cell in atlas (already includes content offset)
+        dy: atlasPos[1] + atlasOffset.y, // y offset of cell in atlas (already includes content offset)
       }))
       idx++;
     }
   }
-  // add the cells to a searchable LOD texture
-  lod.indexCells();
+  // add the cells to a searchable LOD texture (skip if using mipmaps)
+  if (!config.useMipmaps) {
+    lod.indexCells();
+  }
 }
 
 /**
@@ -1154,6 +1176,12 @@ World.prototype.getDrawCallToCells = function() {
     if (!(drawCall in drawCallToCells)) drawCallToCells[drawCall] = [cell];
     else drawCallToCells[drawCall].push(cell);
   }
+  // Diagnostic: log first draw call cells
+  if (drawCallToCells[0]) {
+    console.log('First draw call has', drawCallToCells[0].length, 'cells');
+    console.log('First 5 cell indices in draw call 0:', 
+      drawCallToCells[0].slice(0, 5).map(c => c.idx));
+  }
   return drawCallToCells;
 }
 
@@ -1165,7 +1193,15 @@ World.prototype.getGroupAttributes = function(cells) {
   var it = this.getCellIterators(cells.length);
   for (var i=0; i<cells.length; i++) {
     var cell = cells[i];
-    var rgb = this.color.setHex(cells[i].idx + 1); // use 1-based ids for colors
+    // GPU picking: encode cell index directly as RGB components (1-based)
+    var id = cells[i].idx + 1;
+    var r = ((id >> 16) & 0xFF) / 255.0;
+    var g = ((id >> 8) & 0xFF) / 255.0;
+    var b = (id & 0xFF) / 255.0;
+    // Diagnostic: log first few color encodings
+    if (i < 5) {
+      console.log(`Encoding cell ${i}: idx=${cells[i].idx}, id=${id}, rgb=[${r}, ${g}, ${b}]`);
+    }
     it.texIndex[it.texIndexIterator++] = cell.texIdx; // index of texture among all textures -1 means LOD texture
     it.translation[it.translationIterator++] = cell.x; // current position.x
     it.translation[it.translationIterator++] = cell.y; // current position.y
@@ -1173,9 +1209,9 @@ World.prototype.getGroupAttributes = function(cells) {
     it.targetTranslation[it.targetTranslationIterator++] = cell.tx; // target position.x
     it.targetTranslation[it.targetTranslationIterator++] = cell.ty; // target position.y
     it.targetTranslation[it.targetTranslationIterator++] = cell.tz; // target position.z
-    it.color[it.colorIterator++] = rgb.r; // could be single float
-    it.color[it.colorIterator++] = rgb.g; // unique color for GPU picking
-    it.color[it.colorIterator++] = rgb.b; // unique color for GPU picking
+    it.color[it.colorIterator++] = r; // R component of picking color
+    it.color[it.colorIterator++] = g; // G component of picking color
+    it.color[it.colorIterator++] = b; // B component of picking color
     it.opacity[it.opacityIterator++] = 1.0; // cell opacity value
     it.selected[it.selectedIterator++] = 0.0; // 1.0 if cell is selected, else 0.0
     it.clusterSelected[it.clusterSelectedIterator++] = 0.0; // 1.0 if cell's cluster is selected, else 0.0
@@ -1308,9 +1344,15 @@ World.prototype.getTexture = function(canvas) {
   var tex = new THREE.Texture(canvas);
   tex.needsUpdate = true;
   tex.flipY = false;
-  tex.generateMipmaps = false;
+  // Enable mipmaps when using the new mipmap system
+  if (config.useMipmaps) {
+    tex.generateMipmaps = true;
+    tex.minFilter = THREE.LinearMipmapLinearFilter;
+  } else {
+    tex.generateMipmaps = false;
+    tex.minFilter = THREE.LinearFilter;
+  }
   tex.magFilter = THREE.LinearFilter;
-  tex.minFilter = THREE.LinearFilter;
   tex.wrapS = THREE.ClampToEdgeWrapping;
   tex.wrapT = THREE.ClampToEdgeWrapping;
   return tex;
@@ -2324,9 +2366,16 @@ Picker.prototype.init = function() {
   document.body.addEventListener('mouseup', this.onMouseUp.bind(this));
   document.body.addEventListener('touchend', this.onMouseUp.bind(this), { passive: false });
   var group = new THREE.Group();
+  if (config.debug) {
+    console.log('Picker init: cloning', world.group.children.length, 'meshes');
+  }
   for (var i=0; i<world.group.children.length; i++) {
     var mesh = world.group.children[i].clone();
     mesh.material = world.getShaderMaterial({useColor: true});
+    if (config.debug && i === 0) {
+      console.log('Picker mesh 0 color attribute:', mesh.geometry.attributes.color);
+      console.log('First 5 color values:', Array.from(mesh.geometry.attributes.color.array.slice(0, 15)));
+    }
     group.add(mesh);
   }
   this.scene.add(group);
@@ -2349,6 +2398,15 @@ Picker.prototype.select = function(obj) {
   world.renderer.readRenderTargetPixels(this.tex, x, y, 1, 1, pixelBuffer);
   var id = (pixelBuffer[0] << 16) | (pixelBuffer[1] << 8) | (pixelBuffer[2]),
       cellIdx = id-1; // ids use id+1 as the id of null selections is 0
+  if (config.debug && cellIdx >= 0 && cellIdx < data.cells.length) {
+    console.log('GPU Picker:', {
+      cellIdx: cellIdx,
+      cellActualIdx: data.cells[cellIdx].idx,
+      filename: data.json.images[cellIdx],
+      rgb: [pixelBuffer[0], pixelBuffer[1], pixelBuffer[2]],
+      decodedId: id
+    });
+  }
   return cellIdx;
 }
 
@@ -2722,7 +2780,7 @@ function LOD() {
     cellsToActivate: [], // list of cells cached in this.cellIdxToImage and ready to be added to lod texture
     fetchQueue: [], // list of images that need to be fetched and cached
     radius: r, // current radius for LOD
-    run: true, // bool indicating whether to use the lod mechanism
+    run: !config.useMipmaps, // disable LOD when using mipmaps
   };
 }
 

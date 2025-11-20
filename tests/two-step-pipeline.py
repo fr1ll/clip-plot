@@ -14,10 +14,14 @@ from clip_plot.configuration import Cfg
 libroot = Path(__file__).parents[1]
 print(f"libroot: {libroot.resolve()}")
 OUTPUT_DIR: Path = libroot / "tests/smithsonian_butterflies_10/two-step-test/"
-LOCAL_MODEL: Path = libroot / "models/timm__vit_pe_core_tiny_patch16_384.fb"
 IMAGE_GLOB: str = (libroot / "datasets/smithsonian_butterflies_150sm/jpgs/*.jpg").as_posix()
 META_GLOB: str = (libroot / "datasets/smithsonian_butterflies_150sm/2023-12-21_butterflies-150sm-meta.csv").as_posix()
 TABLE_ID: str = "woofy"
+
+# local model if it exists
+MODEL = "../models/timm__vit_pe_core_tiny_patch16_384.fb"
+if not Path(MODEL).exists():
+    MODEL = "timm/vit_pe_core_tiny_patch16_384.fb"
 
 if OUTPUT_DIR.exists():
   rmtree(OUTPUT_DIR)
@@ -25,7 +29,7 @@ if OUTPUT_DIR.exists():
 ###----global vars for config for Step 2:
 
 TAGLINE: str = "Smithsonian Butterflies - Two Step Pipeline Test"
-ATLAS_ROW_HEIGHT: int = 64
+ATLAS_CELL_SIZE: int = 128
 N_NEIGHBORS: int = 15
 MIN_DIST: float = 0.1
 MIN_CLUSTER_SIZE: int = 2
@@ -35,7 +39,7 @@ cfg_step1 = Cfg(paths={"images": IMAGE_GLOB,
                             "output_dir": OUTPUT_DIR,
                             "table_id": TABLE_ID,
                                  },
-                           model=LOCAL_MODEL.as_posix(),
+                           model=MODEL,
                            )
 
 # pprint(cfg_step1.model_dump())
@@ -54,7 +58,7 @@ cfg_step2 = Cfg(paths={"tables":
                               OUTPUT_DIR/"data"/"tables"/"EmbedImages__*.parquet",
                             "output_dir": OUTPUT_DIR},
                      view_opts={"tagline": TAGLINE},
-                     image_opts={"atlas_row_height": ATLAS_ROW_HEIGHT},
+                     image_opts={"atlas_cell_size": ATLAS_CELL_SIZE},
                      umap_spec={"n_neighbors": N_NEIGHBORS,
                                 "min_dist": MIN_DIST},
                      cluster_spec={"min_cluster_size": MIN_CLUSTER_SIZE},

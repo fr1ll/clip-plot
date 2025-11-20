@@ -220,9 +220,8 @@ class ImageFactory:
     filenames: list[str] = field(default_factory=list)
 
     thumbnail_size: int = 128
-    atlas_row_height: int = 64
+    atlas_cell_size: int = 128
     atlas_size: int = 4096
-    shuffle: bool = False
     seed: int | None = None
     max_images: int | None = None
 
@@ -267,12 +266,7 @@ class ImageFactory:
             raise Exception(
                 f"Image filenames should be unique. These are duplicated:\n{dups_to_print}")
 
-        # optionally shuffle the image_paths
-        if self.shuffle:
-            print(timestamp(), "Shuffling input images")
-            random.Random(self.seed).shuffle(self.image_paths)
-        else:
-            self.image_paths = sorted(self.image_paths)
+        self.image_paths = sorted(self.image_paths)
 
         # Optionally limit the number of images in image_paths
         if self.max_images:
@@ -280,7 +274,7 @@ class ImageFactory:
 
         # process and filter the images
         filtered_image_paths = []
-        oblong_ratio = self.atlas_size/ self.atlas_row_height
+        oblong_ratio = self.atlas_size/ self.atlas_cell_size
 
         print(timestamp(), "Validating input images")
         for img in tqdm(self.stream_images(self.image_paths), total=len(self.image_paths)):
@@ -412,47 +406,56 @@ def new_atlas(atlas_size: int) -> Image.Image:
 
 # %% ../../nbs/03_images.ipynb 25
 def create_atlases(imageEngine: ImageFactory, thumb_dims: list[int, int],
-                   atlas_size: int = 4096, row_height: int = 64
+                   atlas_size: int = 4096, cell_size: int = 128
                    ) -> tuple[list[Image.Image], list[int, int]]:
     """Create list of atlases, plus positions"""
     x, y = 0, 0
     atlases: list[Image.Image] = [new_atlas(atlas_size)]
     positions: list[dict[str,int]] = []
     atlas_idx = 0
+    cells_per_row = atlas_size // cell_size
 
     for image_idx, (img, (thumb_w, thumb_h)) in tqdm(enumerate(zip(imageEngine, thumb_dims))):
-        cell = resize_to_height(img.original, height=row_height)
-        cell = autocontrast(cell)
-        if x + cell.width > atlas_size: # new row
+        cell_content = resize_to_max_side(img.original, maxlen=cell_size)
+        cell_content = autocontrast(cell_content)
+        cell = Image.new('RGB', (cell_size, cell_size), (0, 0, 0))
+        
+        content_w, content_h = cell_content.size
+        paste_x = (cell_size - content_w) // 2
+        paste_y = (cell_size - content_h) // 2
+        cell.paste(cell_content, (paste_x, paste_y))
+        
+        if x + cell_size > atlas_size: # new row
             x = 0
-            y += row_height
-        if y + cell.height > atlas_size: # new atlas
+            y += cell_size
+        if y + cell_size > atlas_size: # new atlas
             atlas_idx += 1
             atlases.append(new_atlas(atlas_size))
             x = 0
             y = 0
-        atlases[atlas_idx].paste(cell, (x,y))
 
-        # store in dict
+        atlases[atlas_idx].paste(cell, (x, y))
+
+        # store position of current cell
         positions.append({
-            # "image_idx": image_idx,
-            # "atlas_idx": atlas_idx,
             "idx": atlas_idx,
             "x":x, "y":y,
-            "w": thumb_w, "h": thumb_h,
-            # "cell_w": cell.width, "cell_h": cell.height,
-            # "thumb_w": thumb_w, "thumb_h": thumb_h
+            "w": content_w, "h": content_h,
+            "offset_x": paste_x,
+            "offset_y": paste_y,
         })
-        x+=cell.width
+        x += cell_size
 
     print(f"Number of atlases generated: {len(atlases)}")
+    print(f"Cell size: {cell_size}x{cell_size}, Cells per atlas: {cells_per_row}x{cells_per_row}")
     return atlases, positions
 
 # %% ../../nbs/03_images.ipynb 26
 def write_viewer_images(imageEngine: ImageFactory,
                         plot_id: str, data_dir: Path,
                         thumb_size: int = 128,
-                        row_height: int = 64, atlas_size: int = 4096) -> list[dict]:
+                        cell_size: int = 128,
+                        atlas_size: int = 4096) -> list[dict]:
     """create thumbnail, original, and atlas files"""
 
     print(timestamp(), "Creating image files for viewer")
@@ -460,7 +463,7 @@ def write_viewer_images(imageEngine: ImageFactory,
     copy_originals(imageEngine, data_dir)
 
     atlases, positions = create_atlases(imageEngine, thumb_dims,
-                                                            atlas_size, row_height)
+                                        atlas_size, cell_size)
     atlas_dir = data_dir / "atlases" / str(plot_id)
     atlas_dir.mkdir(exist_ok=True, parents=True)
     for i, atlas in enumerate(atlases):
