@@ -53,7 +53,7 @@ def project_images_pipeline(output_dir: Path,
                 raise ValueError("No images found from either tables or images input.")
         if tables and not images:
                 print(timestamp(), "Loading tables")
-                table: pl.DataFrame | None = cat_tables(tables).sort_values(image_path_col)
+                table: pl.DataFrame | None = cat_tables(tables).sort(by=image_path_col)
                 images: list[Path] = [Path(p) for p in table[image_path_col].to_numpy()]
                 print(timestamp(), "Loading embeddings from disk")
                 hidden_vectors: np.ndarray | None = table[vectors_col].to_numpy()

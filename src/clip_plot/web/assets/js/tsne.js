@@ -195,6 +195,7 @@ Data.prototype.addCells = function(positions) {
     firstPosition: positions[0],
     firstAtlasSize: this.json.cell_sizes[0] ? this.json.cell_sizes[0].length : 0
   });
+  console.log('First 10 images in order:', this.json.images.slice(0, 10));
   
   // datastore indicating data in current draw call
   var drawcall = {
@@ -2351,9 +2352,15 @@ Picker.prototype.init = function() {
   document.body.addEventListener('mouseup', this.onMouseUp.bind(this));
   document.body.addEventListener('touchend', this.onMouseUp.bind(this), { passive: false });
   var group = new THREE.Group();
+  console.log('Picker init: cloning', world.group.children.length, 'meshes');
   for (var i=0; i<world.group.children.length; i++) {
     var mesh = world.group.children[i].clone();
     mesh.material = world.getShaderMaterial({useColor: true});
+    // Diagnostic: verify color attribute exists
+    if (i === 0) {
+      console.log('Picker mesh 0 color attribute:', mesh.geometry.attributes.color);
+      console.log('First 5 color values:', Array.from(mesh.geometry.attributes.color.array.slice(0, 15)));
+    }
     group.add(mesh);
   }
   this.scene.add(group);
