@@ -2366,12 +2366,13 @@ Picker.prototype.init = function() {
   document.body.addEventListener('mouseup', this.onMouseUp.bind(this));
   document.body.addEventListener('touchend', this.onMouseUp.bind(this), { passive: false });
   var group = new THREE.Group();
-  console.log('Picker init: cloning', world.group.children.length, 'meshes');
+  if (config.debug) {
+    console.log('Picker init: cloning', world.group.children.length, 'meshes');
+  }
   for (var i=0; i<world.group.children.length; i++) {
     var mesh = world.group.children[i].clone();
     mesh.material = world.getShaderMaterial({useColor: true});
-    // Diagnostic: verify color attribute exists
-    if (i === 0) {
+    if (config.debug && i === 0) {
       console.log('Picker mesh 0 color attribute:', mesh.geometry.attributes.color);
       console.log('First 5 color values:', Array.from(mesh.geometry.attributes.color.array.slice(0, 15)));
     }
@@ -2397,8 +2398,7 @@ Picker.prototype.select = function(obj) {
   world.renderer.readRenderTargetPixels(this.tex, x, y, 1, 1, pixelBuffer);
   var id = (pixelBuffer[0] << 16) | (pixelBuffer[1] << 8) | (pixelBuffer[2]),
       cellIdx = id-1; // ids use id+1 as the id of null selections is 0
-  // Diagnostic logging
-  if (cellIdx >= 0 && cellIdx < data.cells.length) {
+  if (config.debug && cellIdx >= 0 && cellIdx < data.cells.length) {
     console.log('GPU Picker:', {
       cellIdx: cellIdx,
       cellActualIdx: data.cells[cellIdx].idx,
