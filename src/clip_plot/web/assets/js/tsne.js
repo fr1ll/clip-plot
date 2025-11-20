@@ -50,6 +50,8 @@ function Config() {
   this.isTouchDevice = 'ontouchstart' in document.documentElement;
   // FEATURE FLAG: Set to true to use mipmaps instead of LOD system
   this.useMipmaps = true;
+  // FEATURE FLAG: Set to true to enable diagnostic console logging
+  this.debug = false;
   this.size = {
     cell: this.useMipmaps ? 128 : 64, // cell size in atlas
     atlas: 4096, // hardcoded atlas size
@@ -66,7 +68,7 @@ function Config() {
     },
   }
   this.transitions = {
-    duration: 2.0,
+    duration: 1.0,
     delay: 0.0,
     ease: {
       value: 1,
@@ -188,14 +190,16 @@ Data.prototype.onTextureLoad = function(texIdx) {
 // Add all cells to the world
 Data.prototype.addCells = function(positions) {
   // Diagnostic: verify data structures
-  console.log('addCells called:', {
-    numAtlases: this.json.cell_sizes.length,
-    totalImages: this.json.images.length,
-    numPositions: positions.length,
-    firstPosition: positions[0],
-    firstAtlasSize: this.json.cell_sizes[0] ? this.json.cell_sizes[0].length : 0
-  });
-  console.log('First 10 images in order:', this.json.images.slice(0, 10));
+  if (config.debug) {
+    console.log('addCells called:', {
+      numAtlases: this.json.cell_sizes.length,
+      totalImages: this.json.images.length,
+      numPositions: positions.length,
+      firstPosition: positions[0],
+      firstAtlasSize: this.json.cell_sizes[0] ? this.json.cell_sizes[0].length : 0
+    });
+    console.log('First 10 images in order:', this.json.images.slice(0, 10));
+  }
   
   // datastore indicating data in current draw call
   var drawcall = {
@@ -218,7 +222,7 @@ Data.prototype.addCells = function(positions) {
       var cellH = size[1];
       
       // Diagnostic: log first few cells
-      if (idx < 5) {
+      if (config.debug && idx < 5) {
         console.log(`Cell ${idx}:`, {
           atlasIdx: i,
           cellInAtlas: j,
@@ -543,6 +547,7 @@ Cell.prototype.setBuffer = function(attr) {
 function Layout() {
   this.jitterElem = null;
   this.selected = null;
+  this.previousLayout = null;
   this.options = [];
     this.elems = {
     input: document.querySelector('#jitter-input'),
@@ -552,7 +557,9 @@ function Layout() {
     layoutDate: document.querySelector('#layout-date'),
     layoutGeographic: document.querySelector('#layout-geographic'),
     minDistInput: document.querySelector('#min-dist-range-input'),
+    minDistValue: document.querySelector('#min-dist-value'),
     nNeighborsInput: document.querySelector('#n-neighbors-range-input'),
+    nNeighborsValue: document.querySelector('#n-neighbors-value'),
     minDistInputContainer: document.querySelector('#min-dist-range-input-container'),
     nNeighborsInputContainer: document.querySelector('#n-neighbors-range-input-container'),
     layoutSelect: document.querySelector('#layout-select'),
@@ -609,11 +616,30 @@ Layout.prototype.initializeUmapInputs = function() {
   this.elems.nNeighborsInput.setAttribute('max', nNeighborsOptions.length-1);
   this.elems.minDistInput.setAttribute('max', minDistOptions.length-1);
   this.elems.nNeighborsInput.addEventListener('change', function() {
-    this.set('umap', true);
+    this.set('umap', true, true);
   }.bind(this));
+  this.elems.nNeighborsInput.addEventListener('input', this.updateNNeighborsValue.bind(this));
   this.elems.minDistInput.addEventListener('change', function() {
-    this.set('umap', true);
+    this.set('umap', true, true);
   }.bind(this));
+  this.elems.minDistInput.addEventListener('input', this.updateMinDistValue.bind(this));
+  // Initialize the display values
+  this.updateNNeighborsValue();
+  this.updateMinDistValue();
+}
+
+Layout.prototype.updateNNeighborsValue = function() {
+  var value = this.getSelectedNNeighbors();
+  if (this.elems.nNeighborsValue && value) {
+    this.elems.nNeighborsValue.textContent = '(' + value + ')';
+  }
+}
+
+Layout.prototype.updateMinDistValue = function() {
+  var value = this.getSelectedMinDist();
+  if (this.elems.minDistValue && value) {
+    this.elems.minDistValue.textContent = '(' + parseFloat(value).toFixed(2) + ')';
+  }
 }
 
 Layout.prototype.showHideUmapInputs = function() {
@@ -636,7 +662,7 @@ Layout.prototype.getNNeighborsOptions = function() {
     return obj;
   }, {});
   options = Object.keys(options);
-  options.sort(function(a, b) { return b - a; });
+  options.sort(function(a, b) { return a - b; });
   return options;
 }
 
@@ -646,7 +672,7 @@ Layout.prototype.getMinDistOptions = function() {
     return obj;
   }, {});
   options = Object.keys(options);
-  options.sort(function(a, b) { return b - a; });
+  options.sort(function(a, b) { return a - b; });
   return options;
 }
 
@@ -691,7 +717,7 @@ Layout.prototype.addEventListeners = function() {
         this.elems.jitter.classList.add('visible');
       }
     }
-    this.set(this.selected, false);
+    this.set(this.selected, false, true);
   }.bind(this));
   // change the layout when the mobile select changes
   this.elems.layoutSelect.addEventListener('change', function(e) {
@@ -704,7 +730,7 @@ Layout.prototype.addEventListeners = function() {
 }
 
 // Transition to a new layout; layout must be an attr on Cell.layouts
-Layout.prototype.set = function(layout, enableDelay) {
+Layout.prototype.set = function(layout, enableDelay, preservePointSize) {
   // bail if the user clicked the settings icon
   if (layout === 'settings-icon') return;
   // disallow new transitions when we're transitioning
@@ -715,13 +741,21 @@ Layout.prototype.set = function(layout, enableDelay) {
   };
   world.state.transitioning = true;
   // set the selected layout
+  var layoutChanged = this.selected !== layout;
+  this.previousLayout = this.selected;
   this.selected = layout;
   // set the world mode back to pan
   world.setMode('pan');
   // select the active tab
   this.selectActiveIcon();
-  // set the point size given the selected layout
-  this.setPointScalar();
+  // set the point size given the selected layout (only if layout changed or not preserving)
+  if (layoutChanged && !preservePointSize) {
+    this.setPointScalar();
+  } else if (preservePointSize) {
+    // When preserving point size, ensure targetScale matches current scale for smooth transition
+    var scale = world.getPointScale();
+    world.setUniform('targetScale', scale);
+  }
   // add any labels to the plot
   this.setText();
   // show or hide any contextual elements (e.g. geographic shapes)
@@ -785,6 +819,7 @@ Layout.prototype.setPointScalar = function() {
   if (l == 'date') size = config.size.points.date;
   if (size) {
     world.elems.pointSize.value = size / window.devicePixelRatio;
+    world.updatePointSizeValue();
     var scale = world.getPointScale();
     world.setUniform('targetScale', scale);
   }
@@ -888,7 +923,9 @@ function World() {
   };
   this.elems = {
     pointSize: document.querySelector('#pointsize-range-input'),
+    pointSizeValue: document.querySelector('#pointsize-value'),
     borderWidth: document.querySelector('#border-width-range-input'),
+    borderWidthValue: document.querySelector('#border-width-value'),
     selectTooltip: document.querySelector('#select-tooltip'),
     selectTooltipButton: document.querySelector('#select-tooltip-button'),
     mobileInteractions: document.querySelector('#mobile-interaction-guide'),
@@ -1047,6 +1084,14 @@ World.prototype.setScaleUniforms = function() {
 World.prototype.addScalarChangeListener = function() {
   this.elems.pointSize.addEventListener('change', this.setScaleUniforms.bind(this));
   this.elems.pointSize.addEventListener('input', this.setScaleUniforms.bind(this));
+  this.elems.pointSize.addEventListener('input', this.updatePointSizeValue.bind(this));
+  // Initialize the display value
+  this.updatePointSizeValue();
+}
+
+World.prototype.updatePointSizeValue = function() {
+  var value = parseFloat(this.elems.pointSize.value);
+  this.elems.pointSizeValue.textContent = '(' + value.toFixed(5) + ')';
 }
 
 /**
@@ -1056,10 +1101,18 @@ World.prototype.addScalarChangeListener = function() {
 World.prototype.addBorderWidthChangeListener = function() {
   this.elems.borderWidth.addEventListener('change', this.setBorderWidthUniforms.bind(this));
   this.elems.borderWidth.addEventListener('input', this.setBorderWidthUniforms.bind(this));
+  this.elems.borderWidth.addEventListener('input', this.updateBorderWidthValue.bind(this));
+  // Initialize the display value
+  this.updateBorderWidthValue();
 }
 
 World.prototype.setBorderWidthUniforms = function(e) {
   world.setUniform('borderWidth', parseFloat(e.target.value));
+}
+
+World.prototype.updateBorderWidthValue = function() {
+  var value = parseFloat(this.elems.borderWidth.value);
+  this.elems.borderWidthValue.textContent = '(' + value.toFixed(2) + ')';
 }
 
 /**
@@ -1177,7 +1230,7 @@ World.prototype.getDrawCallToCells = function() {
     else drawCallToCells[drawCall].push(cell);
   }
   // Diagnostic: log first draw call cells
-  if (drawCallToCells[0]) {
+  if (config.debug && drawCallToCells[0]) {
     console.log('First draw call has', drawCallToCells[0].length, 'cells');
     console.log('First 5 cell indices in draw call 0:', 
       drawCallToCells[0].slice(0, 5).map(c => c.idx));
@@ -1199,7 +1252,7 @@ World.prototype.getGroupAttributes = function(cells) {
     var g = ((id >> 8) & 0xFF) / 255.0;
     var b = (id & 0xFF) / 255.0;
     // Diagnostic: log first few color encodings
-    if (i < 5) {
+    if (config.debug && i < 5) {
       console.log(`Encoding cell ${i}: idx=${cells[i].idx}, id=${id}, rgb=[${r}, ${g}, ${b}]`);
     }
     it.texIndex[it.texIndexIterator++] = cell.texIdx; // index of texture among all textures -1 means LOD texture

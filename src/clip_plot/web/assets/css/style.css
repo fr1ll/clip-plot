@@ -445,6 +445,11 @@ input[type=range]::-ms-thumb {
   margin-left: 40px;
 }
 
+.slider-value {
+  color: #999;
+  font-weight: 300;
+}
+
 #pointsize-range-input {
   margin-top: 6px;
 }
