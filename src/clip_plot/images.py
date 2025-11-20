@@ -446,7 +446,7 @@ def create_atlases(imageEngine: ImageFactory, thumb_dims: list[int, int],
         positions.append({
             "idx": atlas_idx,
             "x":x, "y":y,
-            "w": content_w, "h": content_w,
+            "w": content_w, "h": content_h,
             "offset_x": paste_x,
             "offset_y": paste_y,
         })

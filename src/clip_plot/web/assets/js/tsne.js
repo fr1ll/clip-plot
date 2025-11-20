@@ -2727,7 +2727,7 @@ function LOD() {
     cellsToActivate: [], // list of cells cached in this.cellIdxToImage and ready to be added to lod texture
     fetchQueue: [], // list of images that need to be fetched and cached
     radius: r, // current radius for LOD
-    run: true, // bool indicating whether to use the lod mechanism
+    run: !config.useMipmaps, // disable LOD when using mipmaps
   };
 }
 
