@@ -102,7 +102,11 @@ def get_manifest(imageEngine, atlas_data,
     pos = [[] for _ in atlas_ids]
     for i in atlas_data:
         sizes[i["idx"]].append([i["w"], i["h"]])
-        pos[i["idx"]].append([i["x"], i["y"]])
+        # Add content offset to position so shader samples from content area
+        content_x = i["x"] + i.get("offset_x", 0)
+        content_y = i["y"] + i.get("offset_y", 0)
+        pos[i["idx"]].append([content_x, content_y])
+
 
     # obtain the paths to each layout's JSON positions
     layouts = get_layouts(imageEngine, hidden_vectors,
@@ -151,7 +155,7 @@ def get_manifest(imageEngine, atlas_data,
         "config": {
             "sizes": {
                 "atlas": imageEngine.atlas_size,
-                "cell": imageEngine.atlas_row_height,
+                "cell": imageEngine.atlas_cell_size,
                 "lod": imageEngine.thumbnail_size,
             },
         },

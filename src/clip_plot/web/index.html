@@ -231,8 +231,6 @@
 
             // if this cell has a border make the image constant size regardless of border size
             if (hasBorder) {
-
-              // the percent of the cell in the y/x axis to be textured (in decimal form)
               float texturedPercentY = vBorderPercent.y * 2.0;
               float texturedPercentX = vBorderPercent.x * 2.0;
 
@@ -246,8 +244,9 @@
             }
 
             // scale the unit uvs to the size of this cell in px
-            uv.x *= isLod ? vWidth : vWidth / vHeight * cellPxHeight;
-            uv.y *= isLod ? vHeight : cellPxHeight;
+            // For mipmaps: use actual content dimensions (vWidth, vHeight)
+            uv.x *= vWidth;
+            uv.y *= vHeight;
 
             // vOffset is a translation of the cell in px
             uv += vOffset;

@@ -80,7 +80,7 @@ def project_images_pipeline(output_dir: Path,
 
         atlas_positions = write_viewer_images(imageEngine, plot_id,
                         data_dir=data_dir, thumb_size=image_opts.thumbnail_size,
-                        row_height=image_opts.atlas_row_height, atlas_size=image_opts.atlas_size)
+                        cell_size=image_opts.atlas_cell_size, atlas_size=image_opts.atlas_size)
         write_metadata(imageEngine)
 
         if imageEngine.metadata:

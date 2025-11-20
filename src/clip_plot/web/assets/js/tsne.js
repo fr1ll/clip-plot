@@ -48,17 +48,14 @@ function Config() {
   }
   this.mobileBreakpoint = 600;
   this.isTouchDevice = 'ontouchstart' in document.documentElement;
-  // texture buffer pixel *limits* are independent of memory *size*
-  var smallTexSize = Math.min(4096, webgl.limits.textureSize) // a small, safe size
-  // Try for max (8192/128)^2 = (2^6)^2 = 4096 LOD images (or smaller safe size)
-  //          or (4096/128)^2 = 256 LOD images for mobile.
-  var bigTexSize = Math.min(2**13, webgl.limits.textureSize)
+  // FEATURE FLAG: Set to true to use mipmaps instead of LOD system
+  this.useMipmaps = true;
   this.size = {
-    cell: 64, // height of each cell in atlas
-    lodCell: 128, // height of each cell in LOD
-    atlas: smallTexSize, // height of each atlas
-    texture: this.isTouchDevice ? smallTexSize : webgl.limits.textureSize,
-    lodTexture: this.isTouchDevice ? smallTexSize : bigTexSize, // one detail texture buffer
+    cell: this.useMipmaps ? 128 : 64, // cell size in atlas
+    atlas: 4096, // hardcoded atlas size
+    texture: this.isTouchDevice ? 4096 : webgl.limits.textureSize,
+    lodCell: 128, // for backward compatibility with old LOD system
+    lodTexture: this.isTouchDevice ? 4096 : Math.min(2**13, webgl.limits.textureSize),
     points: { // the follow values are set by Data()
       min: 0, // min point size
       max: 0, // max point size
@@ -142,10 +139,7 @@ Data.prototype.load = function() {
 
 Data.prototype.parseManifest = function(json) {
   this.json = json;
-  // set sizes of cells, atlases, and points
-  config.size.cell = json.config.sizes.cell;
-  config.size.atlas = json.config.sizes.atlas;
-  config.size.lodCell = json.config.sizes.lod;
+  // set point sizes from manifest
   config.size.points = json.point_sizes;
   // update the point size DOM element
   world.elems.pointSize.min = 0;
@@ -209,21 +203,26 @@ Data.prototype.addCells = function(positions) {
           atlasPos = this.json.atlas.positions[i][j], // idx-th cell position in atlas
           atlasOffset = getAtlasOffset(i),
           size = this.json.cell_sizes[i][j];
+      // Always use actual content dimensions from cell_sizes for rendering
+      var cellW = size[0];
+      var cellH = size[1];
       this.cells.push(new Cell({
         idx: idx, // index of cell among all cells
-        w:  size[0], // width of cell in lod atlas
-        h:  size[1], // height of cell in lod atlas
+        w:  cellW, // width of actual image content
+        h:  cellH, // height of actual image content
         x:  worldPos[0], // x position of cell in world
         y:  worldPos[1], // y position of cell in world
         z:  worldPos[2] || null, // z position of cell in world
-        dx: atlasPos[0] + atlasOffset.x, // x offset of cell in atlas
-        dy: atlasPos[1] + atlasOffset.y, // y offset of cell in atlas
+        dx: atlasPos[0] + atlasOffset.x, // x offset of cell in atlas (already includes content offset)
+        dy: atlasPos[1] + atlasOffset.y, // y offset of cell in atlas (already includes content offset)
       }))
       idx++;
     }
   }
-  // add the cells to a searchable LOD texture
-  lod.indexCells();
+  // add the cells to a searchable LOD texture (skip if using mipmaps)
+  if (!config.useMipmaps) {
+    lod.indexCells();
+  }
 }
 
 /**
@@ -1308,9 +1307,15 @@ World.prototype.getTexture = function(canvas) {
   var tex = new THREE.Texture(canvas);
   tex.needsUpdate = true;
   tex.flipY = false;
-  tex.generateMipmaps = false;
+  // Enable mipmaps when using the new mipmap system
+  if (config.useMipmaps) {
+    tex.generateMipmaps = true;
+    tex.minFilter = THREE.LinearMipmapLinearFilter;
+  } else {
+    tex.generateMipmaps = false;
+    tex.minFilter = THREE.LinearFilter;
+  }
   tex.magFilter = THREE.LinearFilter;
-  tex.minFilter = THREE.LinearFilter;
   tex.wrapS = THREE.ClampToEdgeWrapping;
   tex.wrapT = THREE.ClampToEdgeWrapping;
   return tex;

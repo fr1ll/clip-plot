@@ -91,7 +91,7 @@ class ClusterSpec(BaseModel):
 class ImageLoaderOptions(BaseSettings):
     seed: CliSuppress[int | None] = Field(42, description="Seed for reproducible transforms")
     shuffle: CliSuppress[bool] = Field(False, description="Shuffle images before creating viewer")
-    atlas_row_height: CliSuppress[int] = Field(64, description="Height of row in viewer atlas")
+    atlas_cell_size: CliSuppress[int] = Field(128, description="Height of row in viewer atlas")
     thumbnail_size: CliSuppress[int] = Field(128)
     atlas_size: CliSuppress[int] = Field(4096, description="Size for atlases")
     max_images: int | None = Field(None, description="Maximum number of imagers to process")
