@@ -3,8 +3,7 @@
 # %% auto 0
 __all__ = ['normalize_layout', 'write_layout', 'BaseLayout', 'BaseMetaLayout', 'AlphabeticLayout', 'Box', 'get_categorical_boxes',
            'get_categorical_points', 'CategoricalLayout', 'CustomLayout', 'get_pointgrid_layout',
-           'get_rasterfairy_layout', 'get_umap_layout_or_layouts', 'get_single_umap_model', 'get_heightmap',
-           'get_layouts']
+           'get_rasterfairy_layout', 'get_umap_layout_or_layouts', 'get_heightmap', 'get_layouts']
 
 # %% ../../nbs/05_layouts.ipynb 2
 import itertools
@@ -12,7 +11,6 @@ import math
 import operator
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from pprint import pprint
@@ -28,6 +26,7 @@ from sklearn.preprocessing import minmax_scale
 
 from .configuration import UmapSpec
 from .images import ImageFactory
+from .reducers import get_single_reducer_xy
 from .utils import get_json_path, read_json, round_floats, timestamp, write_json
 
 
@@ -325,7 +324,7 @@ def get_rasterfairy_layout(data_dir: Path, plot_id: str, umap_json_path: Path):
 
 # %% ../../nbs/05_layouts.ipynb 15
 def get_umap_layout_or_layouts(v: np.ndarray, imageEngine: ImageFactory, umap_spec: UmapSpec,
-                              data_dir: Path, plot_id: str) -> dict[str, list]:
+                              data_dir: Path, plot_id: str, projector: str = "umap") -> dict[str, list]:
     """Create a multi-layout UMAP projection"""
 
     print(timestamp(), "Importing UMAP libraries")
@@ -376,10 +375,9 @@ def get_umap_layout_or_layouts(v: np.ndarray, imageEngine: ImageFactory, umap_sp
             y = np.array(y)
 
     if singleLayout:
-        print(timestamp(), "Creating single UMAP layout")
-        model = get_single_umap_model(umap_spec)
-        z = model.fit(v, y=y if np.any(y) else None).embedding_
-        write_layout(umap_variants[0]["out_path"], data_dir=data_dir, obj=z)
+        print(timestamp(), f"Creating single xy-reduced layout with {umap_spec.reducer}")
+        xy = get_single_reducer_xy(hidden_vecs=v, umap_spec=umap_spec, y=y)
+        write_layout(umap_variants[0]["out_path"], data_dir=data_dir, obj=xy)
 
     else:
         print(timestamp(), "Creating multi-UMAP layout")
@@ -387,13 +385,13 @@ def get_umap_layout_or_layouts(v: np.ndarray, imageEngine: ImageFactory, umap_sp
             n_neighbors=[v["n_neighbors"] for v in uncomputed_variants], # type: ignore
             min_dist=[v["min_dist"] for v in uncomputed_variants], # type: ignore
         )
-        z = model.fit(
+        z = model.fit_transform(
             [v for _ in umap_variants],
             y=[y if np.any(y) else None for _ in umap_variants],
             relations=[relations_dict for _ in umap_variants[1:]],
         )
         for i, v in enumerate(umap_variants):
-            write_layout(v["out_path"], data_dir=data_dir, obj=z.embeddings_[i]) # type: ignore
+            write_layout(v["out_path"], data_dir=data_dir, obj=z[i]) # type: ignore
 
     # return layout variants
     return {"variants": [
@@ -414,23 +412,6 @@ def get_umap_layout_or_layouts(v: np.ndarray, imageEngine: ImageFactory, umap_sp
                 for v in umap_variants
                 ]
     }
-
-
-def get_single_umap_model(umap_spec: UmapSpec, seed: int | None = None) -> Callable:
-    """
-    unpack params list and handle UMAP not letting transform_seed be None
-    """
-    from umap import UMAP
-    config ={
-        "n_neighbors" : umap_spec.n_neighbors[0],
-        "min_dist" : umap_spec.min_dist[0],
-        "n_components" : 2,
-        "metric" : umap_spec.metric,
-        "random_state" : seed,
-    }
-    if seed:
-        config.update({"transform_seed": seed})
-    return UMAP(**config)
 
 # %% ../../nbs/05_layouts.ipynb 17
 def get_heightmap(json_path: Path, label: str, data_dir: Path):

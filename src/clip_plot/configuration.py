@@ -66,8 +66,8 @@ class Paths(BaseModel):
 
 # %% ../../nbs/09_configuration.ipynb 4
 class UmapSpec(BaseModel):
-    n_neighbors: int | list[int] = Field([15], description="Number of neighbors in UMAP")
-    min_dist: float | list[float] = Field([0.1], description="Minimum distance in UMAP")
+    n_neighbors: list[int] | int = Field([15], description="Number of neighbors in UMAP")
+    min_dist: list[float] | float = Field([0.1], description="Minimum distance in UMAP")
     metric: CliSuppress[str] = Field("correlation", description="Metric argument for UMAP")
     reducer: Literal["umap", "localmap", "pacmap"] = Field("umap", description="Dimensionality reduction algorithm.")
 
