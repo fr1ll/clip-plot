@@ -24,6 +24,8 @@ geo
 
 ## gitignore created by nbdev_new
 tests/smithsonian_butterflies_10/two-step-test
+tests/smithsonian_butterflies_10/two-step-to-atlas
+tests/smithsonian_butterflies_10/two-step-to-atlas_prep
 
 _docs/
 _proc/

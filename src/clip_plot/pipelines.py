@@ -23,7 +23,7 @@ from .embeddings import get_embeddings
 from .from_tables import cat_tables, table_to_meta
 from .images import ImageFactory, write_viewer_images
 from .metadata import get_manifest, write_metadata
-from .reducers import get_localmap_xy
+from .reducers import get_single_reducer_xy
 from .to_emb_atlas import create_emb_atlas
 from .web_config import copy_web_assets, get_clip_plot_root
 
@@ -103,6 +103,7 @@ def project_images_pipeline(output_dir: Path,
 def tables_to_emb_atlas(tables: list[Path],
                         output_dir: Path,
                         umap_spec: UmapSpec,
+                        plot_id: str,
                         image_path_col: str = "image_path",
                         vectors_col: str = "hidden_vectors",
     ):
@@ -111,13 +112,14 @@ def tables_to_emb_atlas(tables: list[Path],
     print(timestamp(), "Loading tables")
     table: pl.DataFrame = cat_tables(tables)
     hidden_vectors: np.ndarray = table[vectors_col].to_numpy()
-    xy = get_localmap_xy(hidden_vectors, umap_spec)
+    xy = get_single_reducer_xy(hidden_vectors, umap_spec)
     table = table.with_columns(
                 emb_x = pl.lit(xy[:,0]),
                 emb_y = pl.lit(xy[:,1])
     ).drop(vectors_col)
 
-    create_emb_atlas(table, image_path_col, output_dir)
+    create_emb_atlas(table, image_path_col,
+                     viewer_dir=output_dir, plot_id=plot_id)
 
     print(timestamp(), "Done!")
 
