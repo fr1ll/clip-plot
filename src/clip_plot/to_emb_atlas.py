@@ -5,6 +5,8 @@ __all__ = ['relative_image_path', 'load_images', 'unzip_atlas', 'run_emb_atlas',
 
 # %% ../../nbs/14_to-emb-atlas.ipynb 2
 import atexit
+import os
+import shutil
 import zipfile
 from pathlib import Path
 
@@ -27,25 +29,25 @@ def load_images(df: daft.DataFrame, image_path_col: str,
     .with_column("image_bytes", daft.col(image_path_col).url.download(on_error="null"))
     .with_column("image", daft.col("image_bytes").image.decode())
     .with_column("image_jpeg_bytes", daft.col("image").image.encode("JPEG"))
-    .with_column("image_jpeg_base64", daft.col("image_jpeg_bytes").encode("base64").decode("utf-8"))
+    # .with_column("image_jpeg_base64", daft.col("image_jpeg_bytes").encode("base64").decode("utf-8"))
     # .with_column("image_relpath", relative_image_path(df[image_path_col], viewer_dir))
     # .with_column("image", to_struct(daft.col("image_jpeg_bytes"), daft.col(image_path_col)))
     )
-    df = df.with_column("image_data_url",
-                        daft.functions.concat(daft.lit("data:image/jpeg;base64,"),
-                        df["image_jpeg_base64"]))
-    df = df.with_column("image", to_struct(bytes=df["image_jpeg_bytes"], path=df[image_path_col]))
+    # df = df.with_column("image_data_url",
+    #                     daft.functions.concat(daft.lit("data:image/jpeg;base64,"),
+    #                     df["image_jpeg_base64"]))
+    df = df.with_column("image", to_struct(bytes=df["image_jpeg_bytes"], path=df[image_path_col])
+    ).exclude("image_bytes", "image_jpeg_bytes")
 
-    front_cols = ["image", "image_data_url", image_path_col]
+    front_cols = ["image", image_path_col]
     # drop_cols = ["image_bytes", "image_jpeg_bytes", "image_jpeg_base64"]
-    drop_cols = ["image_bytes", "image_jpeg_base64"]
-    others = sorted({c for c in df.column_names if c not in (*front_cols, *drop_cols)})
+    others = sorted(c for c in df.column_names if c not in front_cols)
     keep = front_cols + others
     print(f"Columns to keep: {keep}")
     return df.select(*keep)
 
 # %% ../../nbs/14_to-emb-atlas.ipynb 8
-def unzip_atlas(zip_path: Path, extract_target: Path, delete_after: bool = True):
+def unzip_atlas(zip_path: Path, extract_target: Path, delete_after: bool = False):
     """unzip at exit"""
     print(timestamp(), f"Extracting the viewer bundle to \n{extract_target.as_posix()}")
     with zipfile.ZipFile(zip_path, 'r') as zip_ref:
@@ -55,7 +57,10 @@ def unzip_atlas(zip_path: Path, extract_target: Path, delete_after: bool = True)
     return None
 
 # %% ../../nbs/14_to-emb-atlas.ipynb 9
-def run_emb_atlas(parquet_path: Path, zip_path: Path, viewer_dir: Path):
+def run_emb_atlas(parquet_path: Path, zip_path: Path,
+                  viewer_dir: Path, prep_dir: Path):
+    atexit.register(shutil.rmtree, prep_dir)
+    # last registered runs first
     atexit.register(unzip_atlas,
                     zip_path=zip_path, extract_target=viewer_dir
                     )
@@ -68,15 +73,16 @@ def run_emb_atlas(parquet_path: Path, zip_path: Path, viewer_dir: Path):
         )
     return None
 
-# %% ../../nbs/14_to-emb-atlas.ipynb 11
+# %% ../../nbs/14_to-emb-atlas.ipynb 10
 def create_emb_atlas(table: pl.DataFrame, image_path_col: str,
                      viewer_dir: Path, plot_id: str) -> None:
     df = daft.from_arrow(table.to_arrow())
     df = load_images(df, image_path_col, viewer_dir)
-    prep_dir = viewer_dir.with_name(viewer_dir.name+"_prep")
+    prep_dir = viewer_dir.with_name(viewer_dir.name+f"-{plot_id}_prep")
     parquet_path = prep_dir / f"viewer-input-{plot_id}.parquet"
     zip_path = parquet_path.with_suffix(".zip")
-    df.write_parquet(parquet_path)
-    run_emb_atlas(parquet_path, zip_path=zip_path, viewer_dir=viewer_dir)
+    df.write_parquet(parquet_path, write_mode="overwrite")
+    run_emb_atlas(parquet_path, zip_path=zip_path,
+                  viewer_dir=viewer_dir, prep_dir=prep_dir)
 
     return None
