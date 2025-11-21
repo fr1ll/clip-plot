@@ -1,10 +1,10 @@
 [project]
 name="clip-plot"
-version = "0.1.5a1"
+version = "0.1.6a1"
 description = "Visual-similarity-space viewer for images"
 readme = "README.md"
 license = "MIT"
-requires-python=">=3.10"
+requires-python=">=3.11"
 dependencies = [
     "fastcore>=1.8",
     "hdbscan",
@@ -21,6 +21,7 @@ dependencies = [
     "typing-extensions>=4.15.0",
     "click>=8.3.0",
     "polars>=1.35.2",
+    "pacmap>=0.8.0",
 ]
 	
 [project.urls]
@@ -34,6 +35,12 @@ clipplot_embed_images = "clip_plot.main:embed_im_cli"
 
 [tool.uv]
 package = true
+
+[optional-dependencies]
+atlas =  [
+    "daft-lts>=0.6.14",
+    "embedding-atlas>=0.10.0; python_version >= '3.12'",
+]
 
 [dependency-groups]
 dev = [
