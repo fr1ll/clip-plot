@@ -6,6 +6,7 @@ test two-step pipeline:
 
 from pathlib import Path
 from shutil import rmtree
+from typing import Literal
 
 from clip_plot.configuration import Cfg
 from clip_plot.pipelines import embed_images_pipeline, tables_to_emb_atlas
@@ -16,6 +17,7 @@ OUTPUT_DIR: Path = libroot / "tests/smithsonian_butterflies_10/two-step-to-atlas
 IMAGE_GLOB: str = (libroot / "datasets/smithsonian_butterflies_150sm/jpgs/*.jpg").as_posix()
 META_GLOB: str = (libroot / "datasets/smithsonian_butterflies_150sm/2023-12-21_butterflies-150sm-meta.csv").as_posix()
 TABLE_ID: str = "inp-to-atlas"
+MODE: Literal["RGB", "RGBA", "L"] = "L"
 
 # local model if it exists
 MODEL = (libroot / "models/timm__vit_pe_core_tiny_patch16_384.fb").as_posix()
@@ -57,6 +59,7 @@ cfg_step2 = Cfg(paths={"tables":
                      umap_spec={"n_neighbors": N_NEIGHBORS,
                                 "reducer": REDUCER,
                                 },
+                     image_mode=MODE,
                     )
 
 # pprint(cfg_step1.model_dump())
@@ -65,6 +68,7 @@ tables_to_emb_atlas(tables=cfg_step2.paths.tables,
                    umap_spec=cfg_step2.umap_spec,
                    output_dir=cfg_step2.paths.output_dir,
                    plot_id=cfg_step2.plot_id,
+                   mode=cfg_step2.image_mode
                    )
 
 print("=== Finished Step 2: Creating Viewer ===")

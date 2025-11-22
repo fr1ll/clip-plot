@@ -12,6 +12,7 @@ from typing import Literal
 
 import daft
 import embedding_atlas.cli as emb_atlas_cli
+import numpy as np
 import polars as pl
 from daft.functions import to_struct
 from PIL import Image
@@ -27,8 +28,10 @@ def relative_image_path(img_path: str, viewer_dir: Path) -> str:
 
 # %% ../../nbs/14_to-emb-atlas.ipynb 7
 @daft.func
-def resize_for_preview(image: Image.Image, max_side: int = 128) -> Image.Image:
-    return resize_to_max_side(image, max_side)
+def resize_for_preview(image: np.ndarray, max_side: int = 128,
+                       mode: Literal["RGB", "RGBA", "L"] = "RGB") -> Image.Image:
+    im = Image.fromarray(image).convert(mode)
+    return resize_to_max_side(im, max_side)
 
 # %% ../../nbs/14_to-emb-atlas.ipynb 8
 def load_images(df: daft.DataFrame, image_path_col: str,
@@ -38,43 +41,42 @@ def load_images(df: daft.DataFrame, image_path_col: str,
     originals_dir.mkdir(exist_ok=True, parents=True)
     df = (df
     .with_column("image_bytes", daft.col(image_path_col).url.download(on_error="null"))
-    .with_column("image", daft.col("image_bytes").image.decode())
+    .with_column("image_fullsize", daft.col("image_bytes").image.decode())
+    .with_column("image_preview", resize_for_preview(daft.col("image_fullsize"), preview_size, mode))
     )
     if mode != "RGB": # loads as RGB by default
-        df = df.with_column("image", daft.functions.convert_image(df["image"], mode=mode))
+        df = (df
+        .with_column("image_fullsize", daft.functions.convert_image(df["image_fullsize"], mode=mode))
+        .with_column("image_preview", daft.functions.convert_image(df["image_preview"], mode=mode))
+        )
 
     df = (df
     .with_column("image_name", daft.col(image_path_col).str.replace("\\", "/").str.split("/"))
-    .with_column("image_name", daft.col("image_name").get(-1))
+    .with_column("image_name", daft.col("image_name").list.get(-1))
     )
 
     df = (df
-    .with_column("outpath", daft.functions.concat(
+    .with_column("destination", daft.functions.concat(
         daft.lit(str(originals_dir)+"/"), df["image_name"]
         ))
-    .with_column("image_relpath", daft.functions.concat(
+    .with_column("image_local_path", daft.functions.concat(
         daft.lit(originals_dir.name +"/"), df["image_name"]
         ))
     )
 
+    df = (df
+    .with_column("image_preview_bytes", daft.col("image_preview").image.encode("JPEG"))
+    .with_column("image_fullsize_bytes", daft.col("image_fullsize").image.encode("JPEG"))
     # TODO: put None in for duplicate image names
     # and handle appropriate in upload (don't upload to orig folder, which is flat)
-    daft.functions.upload(df["image"], df["outpath"])
-
-    df = (df
-    .with_column("image", resize_for_preview(df["image"], preview_size))
-    .with_column("image_jpeg_bytes", daft.col("image").image.encode("JPEG"))
-    .with_column("image_jpeg_base64", daft.col("image_jpeg_bytes").encode("base64").decode("utf-8"))
-    # .with_column("image_relpath", relative_image_path(df[image_path_col], viewer_dir))
+    .with_column("saved_path", daft.col("image_fullsize_bytes").url.upload(df["destination"]))
     )
-    df = df.with_column("image_data_url",
-                        daft.functions.concat(daft.lit("data:image/jpeg;base64,"),
-                        df["image_jpeg_base64"]))
-    df = df.with_column("image", to_struct(bytes=df["image_data_url"], path=df[image_path_col])
-    ).exclude("image_bytes", "image_jpeg_bytes", "image_jpeg_base64", "image_data_url")
 
-    front_cols = ["image", image_path_col]
-    # drop_cols = ["image_bytes", "image_jpeg_bytes", "image_jpeg_base64"]
+    df = df.with_column("image_preview", to_struct(bytes=df["image_preview_bytes"], path=df[image_path_col])
+    ).exclude("image_bytes", "image_preview_bytes", "image_fullsize_bytes", "image_name",
+              "saved_path", "destination")
+
+    front_cols = ["image_preview", "image_local_path", image_path_col]
     others = sorted(c for c in df.column_names if c not in front_cols)
     keep = front_cols + others
     print(f"Columns to keep: {keep}")
