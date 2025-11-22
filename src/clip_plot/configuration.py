@@ -106,6 +106,7 @@ class Cfg(BaseSettings):
     thumbnail_size: int = Field(128, description="Size of images in main clip-plot view")
     model: str = Field("timm/convnext_tiny.dinov3_lvd1689m",
                             description="Model name on huggingface.co/models")
+    image_mode: Literal["RGB", "RGBA", "L"] = Field("RGB", description="Type for image - currently used for Atlas output only")
     umap_spec: UmapSpec = UmapSpec()
     cluster_spec: ClusterSpec = ClusterSpec()
     plot_id: str = Field(default_factory=lambda: str(uuid4())[:8], description="Unique identifier for plot")

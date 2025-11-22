@@ -1,0 +1,17 @@
+website:
+  sidebar:
+    contents:
+      - index.ipynb
+      - 00_main.ipynb
+      - 01_utils.ipynb
+      - 03_images.ipynb
+      - 04_embeddings.ipynb
+      - 05_layouts.ipynb
+      - 06_web_config.ipynb
+      - 07_metadata.ipynb
+      - 08_from_tables.ipynb
+      - 09_configuration.ipynb
+      - 12_hotspots.ipynb
+      - 13_pipelines.ipynb
+      - 14_to-emb-atlas.ipynb
+      - 15_reducers.ipynb

@@ -13,6 +13,7 @@ print(timestamp(), "Beginning to load dependencies")
 # %% ../../nbs/13_pipelines.ipynb 4
 from pathlib import Path
 from shutil import rmtree
+from typing import Literal
 
 import numpy as np
 import polars as pl
@@ -104,6 +105,7 @@ def tables_to_emb_atlas(tables: list[Path],
                         output_dir: Path,
                         umap_spec: UmapSpec,
                         plot_id: str,
+                        mode: Literal["RGB", "RGBA", "L"] = "L",
                         image_path_col: str = "image_path",
                         vectors_col: str = "hidden_vectors",
     ):
