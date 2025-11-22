@@ -5,17 +5,17 @@ __all__ = ['relative_image_path', 'load_images', 'unzip_atlas', 'run_emb_atlas',
 
 # %% ../../nbs/14_to-emb-atlas.ipynb 2
 import atexit
-import os
-import shutil
 import zipfile
 from pathlib import Path
+from tempfile import TemporaryDirectory as TmpDir
 
 import daft
-from daft.functions import to_struct
 import embedding_atlas.cli as emb_atlas_cli
 import polars as pl
+from daft.functions import to_struct
 
 from .utils import timestamp
+
 
 # %% ../../nbs/14_to-emb-atlas.ipynb 6
 @daft.func
@@ -58,16 +58,18 @@ def unzip_atlas(zip_path: Path, extract_target: Path, delete_after: bool = False
 
 # %% ../../nbs/14_to-emb-atlas.ipynb 9
 def run_emb_atlas(parquet_path: Path, zip_path: Path,
-                  viewer_dir: Path, prep_dir: Path):
-    atexit.register(shutil.rmtree, prep_dir)
+                  viewer_dir: Path, temp_dir: TmpDir):
+    atexit.register(print,
+                    f"{timestamp()} Finished creating atlas viewer at {viewer_dir}")
+    atexit.register(temp_dir.cleanup)
     # last registered runs first
     atexit.register(unzip_atlas,
                     zip_path=zip_path, extract_target=viewer_dir
                     )
     emb_atlas_cli.main.main(
         args=[parquet_path.as_posix(),
-              "--x", "emb_x", "--y", "emb_y",
-              "--export-application", zip_path.as_posix(),
+            "--x", "emb_x", "--y", "emb_y",
+            "--export-application", zip_path.as_posix(),
             ],
         standalone_mode=False
         )
@@ -78,11 +80,10 @@ def create_emb_atlas(table: pl.DataFrame, image_path_col: str,
                      viewer_dir: Path, plot_id: str) -> None:
     df = daft.from_arrow(table.to_arrow())
     df = load_images(df, image_path_col, viewer_dir)
-    prep_dir = viewer_dir.with_name(viewer_dir.name+f"-{plot_id}_prep")
-    parquet_path = prep_dir / f"viewer-input-{plot_id}.parquet"
+    prep_dir = TmpDir()
+    parquet_path = Path(prep_dir.name) / f"viewer-input-{plot_id}.parquet"
     zip_path = parquet_path.with_suffix(".zip")
     df.write_parquet(parquet_path, write_mode="overwrite")
     run_emb_atlas(parquet_path, zip_path=zip_path,
-                  viewer_dir=viewer_dir, prep_dir=prep_dir)
-
+                    viewer_dir=viewer_dir, temp_dir=prep_dir)
     return None
