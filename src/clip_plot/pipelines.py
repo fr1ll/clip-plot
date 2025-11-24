@@ -121,7 +121,8 @@ def tables_to_emb_atlas(tables: list[Path],
     ).drop(vectors_col)
 
     create_emb_atlas(table, image_path_col,
-                     viewer_dir=output_dir, plot_id=plot_id)
+                     viewer_dir=output_dir, plot_id=plot_id,
+                     mode=mode)
 
     print(timestamp(), "Done!")
 
