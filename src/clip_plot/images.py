@@ -2,15 +2,14 @@
 
 # %% auto 0
 __all__ = ['load_image', 'resize_to_max_side', 'resize_to_height', 'autocontrast', 'get_image_paths', 'load_metadata',
-           'get_metadata_list', 'ValidImage', 'ImageFactory', 'write_thumbnails', 'copy_originals', 'new_atlas',
-           'create_atlases', 'write_viewer_images']
+           'normalize_metadata_cols', 'get_metadata_list', 'ValidImage', 'ImageFactory', 'write_thumbnails',
+           'copy_originals', 'new_atlas', 'create_atlases', 'write_viewer_images']
 
 # %% ../../nbs/03_images.ipynb 2
 import copy
 import csv
 import json
 import os
-import random
 from collections.abc import Generator
 from dataclasses import dataclass, field
 from glob import glob
@@ -91,60 +90,54 @@ def get_image_paths(images: str | list) -> list[Path]:
 # %% ../../nbs/03_images.ipynb 16
 def load_metadata(metadata_paths: list[Path]) -> pl.DataFrame:
     """load metadata from disk into a single dataframe"""
-    if metadata_paths[0].suffix.lower() == ".csv":
+    suffixes = {p.suffix.lower() for p in metadata_paths}
+    if len(suffixes) > 1:
+        exs = [p for p in metadata_paths if p.suffix.lower() == suffixes.pop()]
+        exs += [p for p in metadata_paths if p.suffix.lower() == suffixes.pop()]
+        raise ValueError(f"Found more than one format for metadata:\n{exs}")
+    if suffixes == {".csv"}:
         return pl.concat((pl.read_csv(loc) for loc in metadata_paths),
                          how="diagonal_relaxed")
-    elif metadata_paths[0].suffix.lower() == ".json":
+    elif suffixes == {".json"}:
         return pl.concat((pl.read_json(loc) for loc in metadata_paths),
                          how="diagonal_relaxed")
+    elif suffixes == {".parquet"}:
+        return pl.concat((pl.read_parquet(loc) for loc in metadata_paths),
+                         how="diagonal_relaxed")
+    else:
+        raise ValueError(f"Metadata paths must be one of .parquet, .csv, or .json. First example: {metadata_paths[0]}")
 
 # %% ../../nbs/03_images.ipynb 18
+def normalize_metadata_cols(df: pl.DataFrame, ) -> pl.DataFrame:
+    standard_cols = {"image_path", "image_filename", "hidden_vectors",
+                                                   "category", "tags", "x", "y"}
+    mapping = {c: c.lower() for c in df.columns if c.lower() in standard_cols}
+    return df.rename(mapping)
+
+# %% ../../nbs/03_images.ipynb 19
 def get_metadata_list(metadata_paths: list[Path]) -> tuple[list[dict] , list[str]]:
-    """Return a list of objects with image metadata.
+    """Return a list of dictionaries, one per image, with image metadata.
 
     Will create 'tags' key if 'category' is in metadata
     but not 'tags'.
 
     Returns:
-        l (List[dict]): List of metadata
+    - list[dict]: list of metadata
+    - list[str]: list of headers
 
-    Notes:
-        No check for 'filename' is performed
-
-    Todo:
-        Think about separating .csv and json functionality.
-        Can we use pandas numpy to process csv?
     """
-    # handle csv metadata
-    metaList = []
+    df_meta = load_metadata(metadata_paths)
+    df_meta = normalize_metadata_cols(df_meta)
 
-    if metadata_paths[0].suffix == ".csv":
-        if len(metadata_paths) != 1:
-            raise NotImplementedError("Currently hardcoded for a single csv file or multiple json")
-        with open(metadata_paths[0]) as f:
-            reader = csv.reader(f)
-            headers = [i.lower() for i in next(reader)]
-            for i in reader:
-                metaList.append(
-                    {
-                        headers[j]: i[j] if len(i) > j and i[j] else ""
-                        for j, _ in enumerate(headers)
-                    }
-                )
-    
-    # handle json metadata
-    else:
-        for p in metadata_paths:
-            with open(p) as f:
-                metaList.append(json.load(f))
+    if "category" in df_meta.columns and "tags" not in df_meta.columns:
+        df_meta = df_meta.with_columns(pl.col("category").alias("tags"))
 
-    # if the user provided a category but not a tag, use the category as the tag
-    for metaDict in metaList:
-        if "category" in metaDict and ("tags" in metaDict) is False:
-            metaDict.update({"tags": metaDict["category"]})
-    return metaList, headers
+    print("First three metadata rows:")
+    print(df_meta.glimpse(max_items_per_column=3))
 
-# %% ../../nbs/03_images.ipynb 19
+    return df_meta.to_dicts(), df_meta.columns
+
+# %% ../../nbs/03_images.ipynb 20
 @dataclass
 class ValidImage:
     path: Path
@@ -195,7 +188,7 @@ class ValidImage:
 
         return True, ""
 
-# %% ../../nbs/03_images.ipynb 21
+# %% ../../nbs/03_images.ipynb 22
 @dataclass
 class ImageFactory:
     """
@@ -360,7 +353,7 @@ class ImageFactory:
                 print(timestamp(), f"Image {p} could not be processed -- {exc}")
                 yield None
 
-# %% ../../nbs/03_images.ipynb 22
+# %% ../../nbs/03_images.ipynb 23
 def write_thumbnails(imageEngine: ImageFactory, data_dir: Path, thumb_size: int):
     """create thumbnails and write to disk"""
     print(timestamp(), "Copying thumbnails to output directory")
@@ -380,7 +373,7 @@ def write_thumbnails(imageEngine: ImageFactory, data_dir: Path, thumb_size: int)
     return thumb_dims
 
 
-# %% ../../nbs/03_images.ipynb 23
+# %% ../../nbs/03_images.ipynb 24
 def copy_originals(imageEngine: ImageFactory, data_dir: Path,
                    use_cache: bool = False, max_height: int = 600):
     """create thumbnails and write to disk"""
@@ -400,11 +393,11 @@ def copy_originals(imageEngine: ImageFactory, data_dir: Path,
 
     return None
 
-# %% ../../nbs/03_images.ipynb 24
+# %% ../../nbs/03_images.ipynb 25
 def new_atlas(atlas_size: int) -> Image.Image:
     return Image.new(mode="RGB", size=(atlas_size,atlas_size))
 
-# %% ../../nbs/03_images.ipynb 25
+# %% ../../nbs/03_images.ipynb 26
 def create_atlases(imageEngine: ImageFactory, thumb_dims: list[int, int],
                    atlas_size: int = 4096, cell_size: int = 128
                    ) -> tuple[list[Image.Image], list[int, int]]:
@@ -450,7 +443,7 @@ def create_atlases(imageEngine: ImageFactory, thumb_dims: list[int, int],
     print(f"Cell size: {cell_size}x{cell_size}, Cells per atlas: {cells_per_row}x{cells_per_row}")
     return atlases, positions
 
-# %% ../../nbs/03_images.ipynb 26
+# %% ../../nbs/03_images.ipynb 27
 def write_viewer_images(imageEngine: ImageFactory,
                         plot_id: str, data_dir: Path,
                         thumb_size: int = 128,

@@ -468,7 +468,7 @@ def get_layouts(imageEngine: ImageFactory, hidden_vectors: np.ndarray,
         "categorical": categorical_layout.get_layout(),
     }
     if x_col and y_col:
-        custom_layout = CustomLayout(plot_id, imageEngine)
+        custom_layout = CustomLayout(x_col=x_col, y_col=y_col)
         layouts.update({"custom": custom_layout.get_layout(),})
 
     return layouts

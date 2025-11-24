@@ -19,7 +19,7 @@ META_GLOB: str = (libroot / "datasets/smithsonian_butterflies_150sm/2023-12-21_b
 TABLE_ID: str = "woofy"
 
 # local model if it exists
-MODEL = "../models/timm__vit_pe_core_tiny_patch16_384.fb"
+MODEL = (libroot / "models/timm__vit_pe_core_tiny_patch16_384.fb").as_posix()
 if not Path(MODEL).exists():
     MODEL = "timm/vit_pe_core_tiny_patch16_384.fb"
 

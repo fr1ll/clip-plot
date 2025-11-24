@@ -14,7 +14,6 @@ import daft
 import embedding_atlas.cli as emb_atlas_cli
 import numpy as np
 import polars as pl
-from daft.functions import to_struct
 from PIL import Image
 
 from .images import resize_to_max_side
@@ -27,57 +26,51 @@ def relative_image_path(img_path: str, viewer_dir: Path) -> str:
     return str(Path(img_path).relative_to(viewer_dir))
 
 # %% ../../nbs/14_to-emb-atlas.ipynb 7
-@daft.func
+@daft.func(return_dtype=daft.DataType.image())
 def resize_for_preview(image: np.ndarray, max_side: int = 128,
                        mode: Literal["RGB", "RGBA", "L"] = "RGB") -> Image.Image:
-    im = Image.fromarray(image).convert(mode)
+    im = Image.fromarray(obj=np.squeeze(image), mode=mode)
+    # unclear why I need np.squeeze 😨
     return resize_to_max_side(im, max_side)
 
 # %% ../../nbs/14_to-emb-atlas.ipynb 8
 def load_images(df: daft.DataFrame, image_path_col: str,
                 viewer_dir: Path, mode: Literal["RGB", "RGBA", "L"],
                 preview_size: int = 128) -> daft.DataFrame:
+
     originals_dir = viewer_dir / "jpg_originals"
     originals_dir.mkdir(exist_ok=True, parents=True)
-    df = (df
-    .with_column("image_bytes", daft.col(image_path_col).url.download(on_error="null"))
-    .with_column("image_fullsize", daft.col("image_bytes").image.decode())
-    .with_column("image_preview", resize_for_preview(daft.col("image_fullsize"), preview_size, mode))
-    )
-    if mode != "RGB": # loads as RGB by default
-        df = (df
-        .with_column("image_fullsize", daft.functions.convert_image(df["image_fullsize"], mode=mode))
-        .with_column("image_preview", daft.functions.convert_image(df["image_preview"], mode=mode))
-        )
 
     df = (df
+    .with_column("image_bytes", daft.functions.download(daft.col(image_path_col), on_error="null"))
+    .with_column("image_fullsize", daft.functions.decode_image(daft.col("image_bytes"), mode=mode))
+    .with_column("image_preview", resize_for_preview(daft.col("image_fullsize"), preview_size, mode))
     .with_column("image_name", daft.col(image_path_col).str.replace("\\", "/").str.split("/"))
     .with_column("image_name", daft.col("image_name").list.get(-1))
-    )
-
-    df = (df
     .with_column("destination", daft.functions.concat(
-        daft.lit(str(originals_dir)+"/"), df["image_name"]
+        daft.lit(str(originals_dir)+"/"), daft.col("image_name")
         ))
     .with_column("image_local_path", daft.functions.concat(
-        daft.lit(originals_dir.name +"/"), df["image_name"]
+        daft.lit(originals_dir.name +"/"), daft.col("image_name")
         ))
-    )
-
-    df = (df
     .with_column("image_preview_bytes", daft.col("image_preview").image.encode("JPEG"))
     .with_column("image_fullsize_bytes", daft.col("image_fullsize").image.encode("JPEG"))
     # TODO: put None in for duplicate image names
     # and handle appropriate in upload (don't upload to orig folder, which is flat)
-    .with_column("saved_path", daft.col("image_fullsize_bytes").url.upload(df["destination"]))
+    .with_column("image_local_abspath", daft.functions.upload(daft.col("image_fullsize_bytes"), daft.col("destination")))
+    .with_column("image_preview",
+                                 daft.functions.to_struct(bytes=daft.col("image_preview_bytes"),
+                                                          path=daft.col(image_path_col)
+                 ))
     )
 
-    df = df.with_column("image_preview", to_struct(bytes=df["image_preview_bytes"], path=df[image_path_col])
-    ).exclude("image_bytes", "image_preview_bytes", "image_fullsize_bytes", "image_name",
-              "saved_path", "destination")
-
+    cols_to_exclude = [
+              "image_bytes", "image_preview_bytes", "image_fullsize_bytes",
+              "image_name", "image_fullsize", "destination",
+            #   "local_path_resolved",
+              ]
     front_cols = ["image_preview", "image_local_path", image_path_col]
-    others = sorted(c for c in df.column_names if c not in front_cols)
+    others = sorted(c for c in df.column_names if c not in front_cols and c not in cols_to_exclude)
     keep = front_cols + others
     print(f"Columns to keep: {keep}")
     return df.select(*keep)
@@ -118,6 +111,7 @@ def create_emb_atlas(table: pl.DataFrame, image_path_col: str,
                      preview_size: int = 128) -> None:
     df = daft.from_arrow(table.to_arrow())
     df = load_images(df, image_path_col, viewer_dir, mode, preview_size)
+    print(df.show(3))
     prep_dir = TmpDir()
     parquet_path = Path(prep_dir.name) / f"viewer-input-{plot_id}.parquet"
     zip_path = parquet_path.with_suffix(".zip")

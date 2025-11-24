@@ -63,7 +63,7 @@ def write_metadata(imageEngine):
             date_d[date].append(clean_filename(i[FILE_NAME]))
 
     # find the min and max dates to show on the date slider
-    dates = np.array([int(i.strip()) for i in date_d if is_number(i)])
+    dates = np.array([int(i) for i in date_d if is_number(i)])
     domain = {"min": float("inf"), "max": -float("inf")}
     mean = np.mean(dates)
     std = np.std(dates)
