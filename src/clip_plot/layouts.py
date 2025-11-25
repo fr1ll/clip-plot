@@ -256,13 +256,16 @@ class CustomLayout(BaseMetaLayout):
             return
         found_coords = False
         coords = []
-        for i in self.imageEngine:
-            x = i.metadata.get(self.x_col)
-            y = i.metadata.get(self.y_col)
-            if x and y:
+        for idx, img in enumerate(self.imageEngine):
+            xy = img.metadata.get(self.x_col), img.metadata.get(self.y_col)
+            if all(xy):
                 found_coords = True
-                coords.append([x, y])
+                coords.append(xy)
             else:
+                if idx == 0:
+                    print(f"Missing coordinate columns {(sought for found, sought
+                                                in zip(xy, [self.x_col, self.y_col])
+                                                if not found)}")
                 if found_coords:
                     print(
                         timestamp(),
@@ -468,6 +471,7 @@ def get_layouts(imageEngine: ImageFactory, hidden_vectors: np.ndarray,
         "categorical": categorical_layout.get_layout(),
     }
     if x_col and y_col:
+        print("Attempting to create XY layout")
         custom_layout = CustomLayout(x_col=x_col, y_col=y_col)
         layouts.update({"custom": custom_layout.get_layout(),})
 
