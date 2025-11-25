@@ -141,6 +141,23 @@ Data.prototype.load = function() {
 
 Data.prototype.parseManifest = function(json) {
   this.json = json;
+  // update config sizes from manifest if provided
+  if (json.config && json.config.sizes) {
+    if (json.config.sizes.cell) config.size.cell = json.config.sizes.cell;
+    if (json.config.sizes.atlas) config.size.atlas = json.config.sizes.atlas;
+    if (json.config.sizes.lod) config.size.lodCell = json.config.sizes.lod;
+    // recalculate atlasesPerTex with updated sizes
+    config.atlasesPerTex = (config.size.texture/config.size.atlas)**2;
+    if (config.debug) {
+      console.log('Config sizes updated from manifest:', {
+        cell: config.size.cell,
+        atlas: config.size.atlas,
+        texture: config.size.texture,
+        lodCell: config.size.lodCell,
+        atlasesPerTex: config.atlasesPerTex
+      });
+    }
+  }
   // set point sizes from manifest
   config.size.points = json.point_sizes;
   // update the point size DOM element
@@ -150,6 +167,13 @@ Data.prototype.parseManifest = function(json) {
   // set number of atlases and textures
   this.atlasCount = json.atlas.count;
   this.textureCount = Math.ceil(json.atlas.count / config.atlasesPerTex);
+  if (config.debug) {
+    console.log('Atlas/Texture counts:', {
+      atlasCount: this.atlasCount,
+      textureCount: this.textureCount,
+      atlasesPerTex: config.atlasesPerTex
+    });
+  }
   this.layouts = json.layouts;
   this.hotspots = new Hotspots();
   layout.init(Object.keys(this.layouts).filter(function(i) {
@@ -229,7 +253,11 @@ Data.prototype.addCells = function(positions) {
           filename: this.json.images[idx],
           worldPos: worldPos,
           atlasPos: atlasPos,
-          size: size
+          atlasOffset: atlasOffset,
+          texIdx: texIdx,
+          size: size,
+          finalDx: atlasPos[0] + atlasOffset.x,
+          finalDy: atlasPos[1] + atlasOffset.y
         });
       }
       
@@ -331,6 +359,14 @@ Texture.prototype.onAtlasLoad = function(atlas) {
       d = getAtlasOffset(idx),
       w = config.size.atlas,
       h = config.size.atlas;
+  if (config.debug) {
+    console.log(`Drawing atlas ${atlas.idx} to texture ${this.idx} at ${d.x},${d.y}`, {
+       atlasSize: w,
+       textureSize: textureSize,
+       imageWidth: atlas.image.width,
+       imageHeight: atlas.image.height
+    });
+  }
   this.ctx.drawImage(atlas.image, d.x, d.y, w, h);
   // If all atlases are loaded, build the texture
   if (++this.loadedAtlases == this.getAtlasCount()) this.onLoad(this.idx);
@@ -1343,8 +1379,8 @@ World.prototype.getCellIterators = function(n) {
     translation: new Float32Array(n * 3),
     targetTranslation: new Float32Array(n * 3),
     color: new Float32Array(n * 3),
-    width: new Uint8Array(n),
-    height: new Uint8Array(n),
+    width: new Float32Array(n),
+    height: new Float32Array(n),
     offset: new Uint16Array(n * 2),
     opacity: new Float32Array(n),
     selected: new Uint8Array(n),

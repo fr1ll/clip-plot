@@ -29,7 +29,7 @@ if OUTPUT_DIR.exists():
 ###----global vars for config for Step 2:
 
 TAGLINE: str = "Smithsonian Butterflies - Two-step Pipeline Test"
-ATLAS_CELL_SIZE: int = 128
+ATLAS_CELL_SIZE: int = 512
 N_NEIGHBORS: list[int] = [5, 15, 30]
 MIN_DIST: float = 0.1
 MIN_CLUSTER_SIZE: int = 2
