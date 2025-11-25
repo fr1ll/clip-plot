@@ -61,7 +61,6 @@ cfg_step2 = Cfg(paths={"tables":
                                 "reducer": REDUCER,
                                 },
                      image_mode=MODE,
-                     # image_opts={"thumbnail_size": 512},
                     )
 
 # pprint(cfg_step1.model_dump())
@@ -71,7 +70,6 @@ tables_to_emb_atlas(tables=cfg_step2.paths.tables,
                    output_dir=cfg_step2.paths.output_dir,
                    plot_id=cfg_step2.plot_id,
                    mode=cfg_step2.image_mode,
-                   # image_opts=cfg_step2.image_opts,
                    )
 
 print("=== Finished Step 2: Creating Viewer ===")
