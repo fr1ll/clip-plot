@@ -36,10 +36,11 @@ clipplot_embed_images = "clip_plot.main:embed_im_cli"
 [tool.uv]
 package = true
 
-[optional-dependencies]
+[project.optional-dependencies]
 atlas =  [
     "daft-lts>=0.6.14",
-    "embedding-atlas>=0.10.0; python_version >= '3.12'",
+    "embedding-atlas>=0.10.0",
+    # "python_version >= '3.12'",
 ]
 
 [dependency-groups]

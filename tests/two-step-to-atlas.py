@@ -33,6 +33,7 @@ if OUTPUT_DIR.exists():
 N_NEIGHBORS: int = 15
 REDUCER: str = "localmap"
 
+
 cfg_step1 = Cfg(paths={"images": IMAGE_GLOB,
                             "metadata": META_GLOB,
                             "output_dir": OUTPUT_DIR,
@@ -60,6 +61,7 @@ cfg_step2 = Cfg(paths={"tables":
                                 "reducer": REDUCER,
                                 },
                      image_mode=MODE,
+                     image_opts={"thumbnail_size": 512},
                     )
 
 # pprint(cfg_step1.model_dump())
@@ -68,7 +70,8 @@ tables_to_emb_atlas(tables=cfg_step2.paths.tables,
                    umap_spec=cfg_step2.umap_spec,
                    output_dir=cfg_step2.paths.output_dir,
                    plot_id=cfg_step2.plot_id,
-                   mode=cfg_step2.image_mode
+                   mode=cfg_step2.image_mode,
+                   image_opts=cfg_step2.image_opts,
                    )
 
 print("=== Finished Step 2: Creating Viewer ===")
