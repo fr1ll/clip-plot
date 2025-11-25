@@ -476,9 +476,9 @@
                   <div class='hotspot-bar-inner'></div>
                 </div>
                 <% if (isLocalhost) { %>
-                  <div class='hotspot-label' contenteditable='true' ><%= hotspot.label %></div>
+                  <div class='hotspot-label' contenteditable='true' ><%- hotspot.label %></div>
                 <% } else { %>
-                  <div class='hotspot-label'><%= hotspot.label %></div>
+                  <div class='hotspot-label'><%- hotspot.label %></div>
                 <% } %>
               </div>
             </div>
@@ -521,7 +521,7 @@
           <div class='modal-bottom-content'>
             <div class='modal-text-left'>
               <div id='image-title'><%- meta.filename ? decodeURIComponent(meta.filename) : decodeURIComponent(meta.src) %></div>
-              <span id='image-text'><%= meta.description ? decodeURIComponent(meta.description) : '' %></span>
+              <span id='image-text'><%- meta.description ? decodeURIComponent(meta.description) : '' %></span>
               <span id='image-date'><%- meta.date ? '(' + meta.date + ')' : '' %></span>
             </div>
             <div class='modal-text-right'>

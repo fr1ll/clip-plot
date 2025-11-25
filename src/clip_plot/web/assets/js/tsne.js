@@ -235,6 +235,7 @@ Data.prototype.addCells = function(positions) {
       
       this.cells.push(new Cell({
         idx: idx, // index of cell among all cells
+        atlasIdx: i, // index of atlas among all atlases
         w:  cellW, // width of actual image content
         h:  cellH, // height of actual image content
         x:  worldPos[0], // x position of cell in world
@@ -401,6 +402,7 @@ Atlas.prototype.load = function() {
 
 function Cell(obj) {
   this.idx = obj.idx; // idx among all cells
+  this.atlasIdx = obj.atlasIdx;
   this.texIdx = this.getIndexOfTexture();
   this.gridCoords = {}; // x, y pos of the cell in the lod grid (set by lod)
   this.x = obj.x;
@@ -430,6 +432,7 @@ Cell.prototype.updateParentBoundingBox = function() {
 
 // return the index of this atlas among all atlases
 Cell.prototype.getIndexOfAtlas = function() {
+  if (this.atlasIdx !== undefined) return this.atlasIdx;
   var i=0; // accumulate cells per atlas until we find this cell's atlas
   for (var j=0; j<data.json.atlas.positions.length; j++) {
     i += data.json.atlas.positions[j].length;
@@ -1366,9 +1369,11 @@ World.prototype.getCellIterators = function(n) {
 
 World.prototype.getTexIndices = function(cells) {
   // find the first non -1 tex index
-  var f=0; while (cells[f].texIdx == -1) f++;
+  var f=0; while (f < cells.length && cells[f].texIdx == -1) f++;
+  if (f >= cells.length) return { first: 0, last: 0 }; // No valid textures found
   // find the last non -1 tex index
-  var l=cells.length-1; while (cells[l].texIdx == -1) l--;
+  var l=cells.length-1; while (l >= 0 && cells[l].texIdx == -1) l--;
+  if (l < 0) return { first: 0, last: 0 }; // No valid textures found
   // return the first and last non -1 tex indices
   return {
     first: cells[f].texIdx,
@@ -2082,39 +2087,66 @@ Lasso.prototype.getSelectedMetadata = function(callback) {
   // conditionally fetch the metadata for each selected image
   var rows = [];
   if (data.json.metadata) {
-    for (var i=0; i<images.length; i++) {
-      var metadata = {};
-      get(config.data.dir + '/metadata/file/' + images[i] + '.json', function(data) {
-        metadata[data.filename] = data;
-        // if all metadata has loaded prepare data download
-        if (Object.keys(metadata).length == images.length) {
-          var keys = Object.keys(metadata);
-          var cols = Object.keys(metadata[keys[0]]);
-          cols = cols.filter(item => item !== 'filename')
-          cols = cols.filter(item => item !== 'tags')
-          var headers = ['filename','tags'].concat(cols);
-          // put header labels as first row
-          rows.push(headers)
-          Object.values(metadata).forEach( m =>{
-              console.log(m)
-              var row = [];
-              // two required columns -- blank if they aren't in input
-              row.push(
-                m.filename || '',
-                (m.tags || []).join('|'),
-              )
-              // all other columns
-              cols.forEach(col => {
-                row.push(m[col])
-                }
-              )
-              rows.push(row)
-            }
-          )
-          callback(rows);
-        }
-      }.bind(this));
-    }
+    var metadata = {};
+    var queue = images.slice();
+    var activeRequests = 0;
+    var maxRequests = 6; // Browser limit per domain is usually 6
+
+    var processQueue = function() {
+      if (queue.length === 0 && activeRequests === 0) {
+        // All done
+        finish();
+        return;
+      }
+
+      while (queue.length > 0 && activeRequests < maxRequests) {
+        var image = queue.shift();
+        activeRequests++;
+        get(config.data.dir + '/metadata/file/' + image + '.json', function(data) {
+          metadata[data.filename] = data;
+          activeRequests--;
+          processQueue();
+        }.bind(this), function() {
+          // Handle error by skipping
+          activeRequests--;
+          processQueue();
+        }.bind(this));
+      }
+    }.bind(this);
+
+    var finish = function() {
+      if (Object.keys(metadata).length == 0) {
+        // Fallback if no metadata found
+        for (var i=0; i<images.length; i++) rows.push([images[i]]);
+        callback(rows);
+        return;
+      }
+      var keys = Object.keys(metadata);
+      // Use the first found metadata object to determine columns
+      var firstKey = keys[0];
+      var cols = Object.keys(metadata[firstKey]).filter(function(item) {
+        return item !== 'filename' && item !== 'tags';
+      });
+      var headers = ['filename','tags'].concat(cols);
+      // put header labels as first row
+      rows.push(headers)
+      Object.values(metadata).forEach(function(m) {
+        var row = [];
+        // two required columns -- blank if they aren't in input
+        row.push(
+          m.filename || '',
+          (m.tags || []).join('|'),
+        )
+        // all other columns
+        cols.forEach(function(col) {
+          row.push(m[col])
+        })
+        rows.push(row)
+      })
+      callback(rows);
+    }.bind(this);
+
+    processQueue();
   } else {
     for (var i=0; i<images.length; i++) rows.push([images[i]]);
     callback(rows);
@@ -2136,20 +2168,33 @@ Lasso.prototype.downloadSelected = function() {
       var subfolder = zip.folder('images');
       // add the selected images to the zip archive
       var images = this.getSelectedFilenames();
-      var nAdded = 0;
-      for (var i=0; i<images.length; i++) {
-        var imagePath = getPath(config.data.dir + '/originals/' + images[i]);
-        imageToDataUrl(imagePath, function(result) {
-          var imageFilename = result.src.split('originals/')[1];
-          var base64 = result.dataUrl.split(';base64,')[1];
-          subfolder.file(imageFilename, base64, {base64: true});
-          if (++nAdded == images.length) {
-            zip.generateAsync({type: 'blob'}).then(function(blob) {
-              downloadBlob(blob, filename)
-            });
-          }
-        })
-      }
+      var queue = images.slice();
+      var activeRequests = 0;
+      var maxRequests = 4;
+
+      var processQueue = function() {
+        if (queue.length === 0 && activeRequests === 0) {
+          zip.generateAsync({type: 'blob'}).then(function(blob) {
+            downloadBlob(blob, filename)
+          });
+          return;
+        }
+
+        while (queue.length > 0 && activeRequests < maxRequests) {
+          var image = queue.shift();
+          activeRequests++;
+          var imagePath = getPath(config.data.dir + '/originals/' + image);
+          imageToDataUrl(imagePath, function(result) {
+            var imageFilename = result.src.split('originals/')[1];
+            var base64 = result.dataUrl.split(';base64,')[1];
+            subfolder.file(imageFilename, base64, {base64: true});
+            activeRequests--;
+            processQueue();
+          });
+        }
+      }.bind(this);
+
+      processQueue();
     }
   }.bind(this));
 }
@@ -2157,7 +2202,7 @@ Lasso.prototype.downloadSelected = function() {
 // return list of selected filenames; [filename, filename, ...]
 Lasso.prototype.getSelectedFilenames = function() {
   return Object.keys(this.selected).filter(function(k) {
-    return this.selected[k]
+    return this.selected[k];
   }.bind(this));
 }
 
@@ -2663,6 +2708,7 @@ Text.prototype.setWords = function(arr) {
       offsetIdx = 0,
       positionIdx = 0;
   arr.forEach(function(i, idx) {
+    if (idx >= this.count) return;
     for (var c=0; c<i.word.length; c++) {
       var offset = i.word[c] in this.texture.map
         ? this.texture.map[i.word[c]]
@@ -2720,6 +2766,7 @@ Modal.prototype.showCells = function(cellIndices, cellIdx) {
   self.state.displayed = true;
   self.cellIndices = Object.assign([], cellIndices);
   self.cellIdx = !isNaN(parseInt(cellIdx)) ? parseInt(cellIdx) : 0;
+  if (self.cellIdx < 0 || self.cellIdx >= self.cellIndices.length) return;
   // parse data attributes
   var filename = data.json.images[self.cellIndices[self.cellIdx]];
   // conditionalize the path to the image
@@ -2954,9 +3001,25 @@ LOD.prototype.fetchNextImage = function() {
     };
   // there was no image to fetch, so add neighbors to fetch queue if possible
   } else if (this.state.neighborsRequested < this.state.radius) {
+    var prevRadius = this.state.neighborsRequested;
     this.state.neighborsRequested = this.state.radius;
-    for (var x=Math.floor(-this.state.radius*1.5); x<=Math.ceil(this.state.radius*1.5); x++) {
-      for (var y=-this.state.radius; y<=this.state.radius; y++) {
+    var r = this.state.radius;
+    var xMin = Math.floor(-r * 1.5);
+    var xMax = Math.ceil(r * 1.5);
+    var yMin = -r;
+    var yMax = r;
+    
+    // Bounds of the previously scanned area
+    var prevXMin = Math.floor(-prevRadius * 1.5);
+    var prevXMax = Math.ceil(prevRadius * 1.5);
+    var prevYMin = -prevRadius;
+    var prevYMax = prevRadius;
+
+    for (var x=xMin; x<=xMax; x++) {
+      for (var y=yMin; y<=yMax; y++) {
+        // Skip if inside the previously processed area (including center 0,0 which is processed by updateGridPosition)
+        if (x >= prevXMin && x <= prevXMax && y >= prevYMin && y <= prevYMax) continue;
+
         var coords = [this.state.camPos.x+x, this.state.camPos.y+y],
             cellIndices = getNested(this.grid, coords, []).filter(function(cellIdx) {
             return !this.state.cellIdxToCoords[cellIdx];
