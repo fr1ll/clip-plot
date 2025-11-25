@@ -215,7 +215,7 @@ Data.prototype.addCells = function(positions) {
       var texIdx = Math.floor(i/config.atlasesPerTex),
           worldPos = positions[idx], // position of cell in world -1:1
           atlasPos = this.json.atlas.positions[i][j], // idx-th cell position in atlas
-          atlasOffset = getAtlasOffset(i),
+          atlasOffset = getAtlasOffset(i % config.atlasesPerTex),
           size = this.json.cell_sizes[i][j];
       // Always use actual content dimensions from cell_sizes for rendering
       var cellW = size[0];
@@ -457,8 +457,8 @@ Cell.prototype.getIndexOfTexture = function() {
 Cell.prototype.getIndexInTexture = function() {
   var i=0; // index of starting cell in atlas within texture
   for (var j=0; j<this.getIndexOfAtlas(); j++) {
-    if ((j%config.atlaesPerTex)==0) i = 0;
-    i += data.json.atlas.positions[i].length;
+    if ((j%config.atlasesPerTex)==0) i = 0;
+    i += data.json.atlas.positions[j].length;
   }
   return i + this.getIndexInAtlas();
 }
@@ -489,7 +489,7 @@ Cell.prototype.activate = function() {
 Cell.prototype.deactivate = function() {
   var atlasIndex = this.getIndexOfAtlas(),
       indexInAtlas = this.getIndexInAtlas(),
-      atlasOffset = getAtlasOffset(atlasIndex)
+      atlasOffset = getAtlasOffset(atlasIndex % config.atlasesPerTex)
       d = data.json.atlas.positions[atlasIndex][indexInAtlas];
   this.dx = d[0] + atlasOffset.x;
   this.dy = d[1] + atlasOffset.y;
@@ -1568,7 +1568,7 @@ World.prototype.getFragmentShader = function(obj) {
     // get the texture lookup tree
     var tree = this.getFragLeaf(-1, 'lodTexture');
     for (var i=firstTex; i<firstTex + textures.length; i++) {
-      tree += ' else ' + this.getFragLeaf(i, 'textures[' + i + ']');
+      tree += ' else ' + this.getFragLeaf(i, 'textures[' + (i - firstTex) + ']');
     }
     // replace the text in the fragment shader
     fragShader = fragShader.replace('#define SELECTING\n', '');
@@ -1681,7 +1681,7 @@ World.prototype.flyToCellImage = function(img) {
   for (var i=0; i<data.json.images.length; i++) {
     if (data.json.images[i] == img) idx = i;
   }
-  if (!idx) return console.warn('The requested image could not be found');
+  if (idx === null) return console.warn('The requested image could not be found');
   var cell = data.cells[idx];
   this.flyToCellIdx(idx);
 }
