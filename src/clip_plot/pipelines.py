@@ -25,7 +25,6 @@ from .from_tables import cat_tables, table_to_meta
 from .images import ImageFactory, write_viewer_images
 from .metadata import get_manifest, write_metadata
 from .reducers import get_single_reducer_xy
-from .to_emb_atlas import create_emb_atlas
 from .web_config import copy_web_assets, get_clip_plot_root
 
 
@@ -110,6 +109,7 @@ def tables_to_emb_atlas(tables: list[Path],
                         vectors_col: str = "hidden_vectors",
     ):
     """Convert table to Embedding Atlas (alternate to clip-plot) visualization"""
+    from clip_plot.to_emb_atlas import create_emb_atlas
 
     print(timestamp(), "Loading tables")
     table: pl.DataFrame = cat_tables(tables)
