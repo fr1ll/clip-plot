@@ -51,7 +51,8 @@ function Config() {
   // FEATURE FLAG: Set to true to use mipmaps instead of LOD system
   this.useMipmaps = true;
   // FEATURE FLAG: Set to true to enable diagnostic console logging
-  this.debug = false;
+  // Can be enabled via URL parameter ?debug=1 or console: config.debug = true
+  this.debug = new URLSearchParams(window.location.search).get('debug') === '1';
   this.size = {
     cell: this.useMipmaps ? 128 : 64, // cell size in atlas
     atlas: 4096, // hardcoded atlas size
@@ -334,11 +335,10 @@ Texture.prototype.load = function() {
 
 // Get the number of atlases to load into this texture
 Texture.prototype.getAtlasCount = function() {
-  var val = (data.atlasCount / config.atlasesPerTex) > (this.idx + 1)
-    ? config.atlasesPerTex
-    : data.atlasCount % config.atlasesPerTex;
-  // handle special case of single atlas that's size of single texture
-  return val ? val : 1;
+  // Calculate how many atlases belong to this texture
+  var startAtlas = this.idx * config.atlasesPerTex;
+  var endAtlas = Math.min(startAtlas + config.atlasesPerTex, data.atlasCount);
+  return endAtlas - startAtlas;
 }
 
 // Store the load progress of each atlas file

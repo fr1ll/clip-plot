@@ -13,9 +13,9 @@ from clip_plot.configuration import Cfg
 
 libroot = Path(__file__).parents[1]
 print(f"libroot: {libroot.resolve()}")
-OUTPUT_DIR: Path = libroot / "tests/1200-imgs/two-step-test/"
-IMAGE_GLOB: str = (libroot / "datasets/StreetView-Image-Dataset-10K_Limit1200/*.jpg").as_posix()
-META_GLOB: str = (libroot / "datasets/StreetView-Image-Dataset-10K_Limit1200/Sadhana-24__StreetView-Image-Dataset-10K__1200_meta.parquet/*.parquet").as_posix()
+OUTPUT_DIR: Path = libroot / "tests/2400-imgs/two-step-test/"
+IMAGE_GLOB: str = (libroot / "datasets/StreetView-Image-Dataset-10K_Limit2400/*.jpg").as_posix()
+META_GLOB: str = (libroot / "datasets/StreetView-Image-Dataset-10K_Limit2400/Sadhana-24__StreetView-Image-Dataset-10K__2400_meta.parquet/*.parquet").as_posix()
 TABLE_ID: str = "null"
 
 # local model if it exists

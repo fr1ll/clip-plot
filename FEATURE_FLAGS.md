@@ -32,7 +32,20 @@ Controls diagnostic console logging:
 - `true`: Enable detailed logging for debugging
 - `false`: Disable all diagnostic logs (cleaner console)
 
-**How to change:**
+**How to enable:**
+
+**Method 1: URL parameter ( runtime, no code changes):**
+```
+https://your-viewer-url/?debug=1
+```
+
+**Method 2: Console ( runtime, no code changes):**
+```javascript
+// Open browser console and type:
+config.debug = true;
+```
+
+**Method 3: Source code change:**
 ```javascript
 function Config() {
   // ...
@@ -43,6 +56,7 @@ function Config() {
 
 **What gets logged when enabled:**
 - Cell creation details (atlas positions, filenames, sizes)
+- Atlas/texture loading and mapping information
 - GPU picker mesh cloning and color attributes
 - Draw call grouping information
 - Color encoding for GPU picking
@@ -64,7 +78,7 @@ function Config() {
   
   // FEATURE FLAGS
   this.useMipmaps = true;   // Set to false to use LOD system
-  this.debug = false;        // Set to true for diagnostic logging
+  this.debug = new URLSearchParams(window.location.search).get('debug') === '1';  // Enable via ?debug=1
   
   // ... rest of config
 }
@@ -77,9 +91,11 @@ function Config() {
 
 2. **Debug mipmaps:** `useMipmaps: true, debug: true`
    - Debug the mipmap system with detailed logs
+   - Enable via: `?debug=1` or `config.debug = true`
 
 3. **Test LOD:** `useMipmaps: false, debug: false`
    - Test the legacy LOD system
 
 4. **Debug LOD:** `useMipmaps: false, debug: true`
    - Debug the LOD system with detailed logs
+   - Enable via: `?debug=1` or `config.debug = true`
