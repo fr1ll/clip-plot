@@ -263,9 +263,9 @@ class CustomLayout(BaseMetaLayout):
                 coords.append(xy)
             else:
                 if idx == 0:
-                    missing_cols = (sought for found, sought
-                                                in zip(xy, [self.x_col, self.y_col])
-                                                if not found)
+                    missing_cols = [sought for found, sought
+                                    in zip(xy, [self.x_col, self.y_col])
+                                    if not found]
                     print(f"Missing coordinate columns {missing_cols}")
                 if found_coords:
                     print(
