@@ -21,6 +21,9 @@ geo
 !src/clip_plot/web
 !src/clip_plot/web/**/dist
 !datasets/smithsonian_butterflies_10_output-by-pixplot
+!datasets/dl_buncha_jpgs.ipynb
+
+tests/1200-imgs
 
 ## gitignore created by nbdev_new
 tests/smithsonian_butterflies_10/two-step-test
