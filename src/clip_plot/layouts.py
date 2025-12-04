@@ -243,11 +243,12 @@ class CategoricalLayout(BaseMetaLayout):
 class CustomLayout(BaseMetaLayout):
     _FILENAME = "custom"
 
-    def __init__(self, x_col: str, y_col: str):
-        super().__init__(plot_id, imageEngine.data_dir)
+    def __init__(self, x_col: str, y_col: str, plot_id: str, imageEngine: ImageFactory):
+        super().__init__(plot_id, imageEngine)
         self.x_col = x_col
         self.y_col = y_col
         self.imageEngine = imageEngine
+        self.plot_id = plot_id
 
     def get_layout(self):
         """

@@ -13,9 +13,9 @@ from clip_plot.configuration import Cfg
 
 libroot = Path(__file__).parents[1]
 print(f"libroot: {libroot.resolve()}")
-OUTPUT_DIR: Path = libroot / "tests/2400-imgs/two-step-test/"
-IMAGE_GLOB: str = (libroot / "datasets/StreetView-Image-Dataset-10K_Limit2400/*.jpg").as_posix()
-META_GLOB: str = (libroot / "datasets/StreetView-Image-Dataset-10K_Limit2400/Sadhana-24__StreetView-Image-Dataset-10K__2400_meta.parquet/*.parquet").as_posix()
+OUTPUT_DIR: Path = libroot / "tests/1200-imgs/two-step-test/"
+IMAGE_GLOB: str = (libroot / "datasets/StreetView-Image-Dataset-10K_Limit1200/*.jpg").as_posix()
+META_GLOB: str = (libroot / "datasets/StreetView-Image-Dataset-10K_Limit1200/Sadhana-24__StreetView-Image-Dataset-10K__1200_meta.parquet/*.parquet").as_posix()
 TABLE_ID: str = "null"
 
 # local model if it exists
@@ -31,7 +31,7 @@ if OUTPUT_DIR.exists():
 TAGLINE: str = "Smithsonian Butterflies - Two-step Pipeline Test"
 N_NEIGHBORS: int = 30
 MIN_DIST: float = 0.01
-MIN_CLUSTER_SIZE: int = 20
+MIN_CLUSTER_SIZE: int = 5
 
 cfg_step1 = Cfg(paths={"images": IMAGE_GLOB,
                         "metadata": META_GLOB,
@@ -77,6 +77,8 @@ project_images_pipeline(
                    image_opts=cfg_step2.image_opts,
                    tables=cfg_step2.paths.tables,
                    image_path_col=cfg_step2.image_path_col,
+                   x_col=cfg_step2.x_col,
+                   y_col=cfg_step2.y_col,
                    )
 
 print("=== Finished Step 2: Creating Viewer ===")

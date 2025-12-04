@@ -9,7 +9,9 @@ from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
-from hdbscan import HDBSCAN
+# from hdbscan import HDBSCAN
+from sklearn.preprocessing import normalize
+from sklearn.cluster import HDBSCAN
 
 from .configuration import ClusterSpec
 from .images import ImageFactory
@@ -21,11 +23,16 @@ def get_cluster_model(min_cluster_size: int = 15):
     """Return model with .fit() method that can be used to cluster input vectors
     """
     return HDBSCAN(
-        core_dist_n_jobs=multiprocessing.cpu_count(),
+        n_jobs=-1,
+        # core_dist_n_jobs=multiprocessing.cpu_count(),
         min_cluster_size=min_cluster_size,
-        cluster_selection_epsilon=0.01,
         min_samples=1,
-        approx_min_span_tree=False,
+        # approx_min_span_tree=False,
+        metric="cosine",
+        cluster_selection_method="eom",
+        alpha=1.0,
+        allow_single_cluster=False,
+        algorithm="brute"
     )
 
 # %% ../../nbs/12_hotspots.ipynb 4
@@ -39,7 +46,9 @@ def get_hotspots(imageEngine: ImageFactory,
     """
     print(timestamp(), "Clustering data with HDBSCAN")
     model = get_cluster_model(cluster_spec.min_cluster_size)
-    z = model.fit(vecs)
+    # vecs = vecs / np.linalg.norm(vecs, axis=1, keepdims=True)
+    X_norm = normalize(vecs, norm="l2")
+    z = model.fit(X_norm)
 
     # create a map from cluster label to image indices in cluster
     d = defaultdict(lambda: defaultdict(list))
