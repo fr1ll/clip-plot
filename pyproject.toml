@@ -7,7 +7,6 @@ license = "MIT"
 requires-python=">=3.10"
 dependencies = [
     "fastcore>=1.8",
-    "hdbscan",
     "matplotlib>=3.10.0",
     "pillow>=11.1.0",
     "pyarrow",
