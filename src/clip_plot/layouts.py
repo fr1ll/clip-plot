@@ -329,7 +329,7 @@ def get_rasterfairy_layout(data_dir: Path, plot_id: str, umap_json_path: Path):
     return out_path
 
 # %% ../../nbs/05_layouts.ipynb 15
-def get_umap_layout_or_layouts(v: np.ndarray, imageEngine: ImageFactory, umap_spec: UmapSpec,
+def get_umap_layout_or_layouts(hidden_vectors: np.ndarray, imageEngine: ImageFactory, umap_spec: UmapSpec,
                               data_dir: Path, plot_id: str, projector: str = "umap") -> dict[str, list]:
     """Create a multi-layout UMAP projection"""
 
@@ -353,61 +353,60 @@ def get_umap_layout_or_layouts(v: np.ndarray, imageEngine: ImageFactory, umap_sp
     print(timestamp(), "UMAP variants to compute:")
     pprint(umap_variants)
 
-    singleLayout = len(umap_variants) == 1
+    is_single_layout = len(umap_variants) == 1
 
     # map each image's index to itself and create one copy of that map for each layout
-    relations_dict = {idx: idx for idx, _ in enumerate(v)}
+    relations_dict = {idx: idx for idx, _ in enumerate(hidden_vectors)}
 
     # determine the subset of umap_variants that have already been computed
-    uncomputed_variants = [v for v in umap_variants if not v["out_path"].exists()]
+    uncomputed_variants = [var for var in umap_variants if not var["out_path"].exists()]
 
-    # Use labels for fitting if available
-    y = []
-    if "label" in imageEngine.meta_headers:
+    def _get_label_array(imageEngine: ImageFactory) -> np.ndarray:
+        """convert labels to integers"""
+        if "label" not in imageEngine.meta_headers:
+            return np.array([])
         labels = [img.metadata.get("label", None) for img in imageEngine]
-        # if the user provided labels, integerize them
-        if any(label for label in labels):
-            d = defaultdict(lambda: len(d))
-            for label in labels:
-                if label is None:
-                    y.append(-1)
-                else:
-                    y.append(d[label])
-            """
-            Currently there is no way to have a particular image with the missing field for
-            "label". For scenarios with metadata, If an image is not matched, it is excluded from
-            the project.  If the meta value is empty, it will still have "" value .
-            """
-            y = np.array(y)
+        if not any(labels):
+            return np.array([])
+        label_to_int = defaultdict(lambda: len(label_to_int))
+        label_ints = []
+        for label in labels:
+            label_ints.append(-1 if label is None else label_to_int[label])
+        return np.array(label_ints)
+    
+    # Labels for fitting if available
+    label_array = _get_label_array(imageEngine)
 
-    if singleLayout:
+    if is_single_layout:
         print(timestamp(), f"Creating single xy-reduced layout with {umap_spec.reducer}")
-        xy = get_single_reducer_xy(hidden_vecs=v, umap_spec=umap_spec, y=y)
-        write_layout(umap_variants[0]["out_path"], data_dir=data_dir, obj=xy)
+        embeddings = get_single_reducer_xy(hidden_vectors=hidden_vectors, umap_spec=umap_spec,
+                                           y=label_array if np.any(label_array) else None)
+        write_layout(umap_variants[0]["out_path"], data_dir=data_dir, obj=embeddings)
 
     else:
         print(timestamp(), "Creating multi-UMAP layout")
         model = AlignedUMAP(
-            n_neighbors=[v["n_neighbors"] for v in uncomputed_variants], # type: ignore
-            min_dist=[v["min_dist"] for v in uncomputed_variants], # type: ignore
+            n_neighbors=[var["n_neighbors"] for var in uncomputed_variants], # type: ignore
+            min_dist=[var["min_dist"] for var in uncomputed_variants], # type: ignore
         )
-        z = model.fit_transform(
-            [v for _ in umap_variants],
-            y=[y if np.any(y) else None for _ in umap_variants],
+        embeddings = model.fit_transform(
+            [hidden_vectors for _ in umap_variants],
+            y=[label_array if np.any(label_array) else None for _ in umap_variants],
             relations=[relations_dict for _ in umap_variants[1:]],
         )
-        for i, v in enumerate(umap_variants):
-            write_layout(v["out_path"], data_dir=data_dir, obj=z[i]) # type: ignore
+        for idx, variant in enumerate(umap_variants):
+            write_layout(variant["out_path"], data_dir=data_dir, obj=embeddings[idx]) # type: ignore
 
     # return layout variants
     return {"variants": [
                     {
-                        "n_neighbors": v["n_neighbors"],
-                        "min_dist": v["min_dist"],
-                        "layout": v["out_path"],
+                        "n_neighbors": variant["n_neighbors"],
+                        "min_dist": variant["min_dist"],
+                        "layout": variant["out_path"],
                         "jittered": get_pointgrid_layout(
-                            input_path=v["out_path"], data_dir=data_dir,
-                            label=v["filename"], # what does label do?
+                            input_path=variant["out_path"],
+                            data_dir=data_dir,
+                            label=variant["filename"], # what does label do?
                             plot_id=plot_id
                         ),
                         # "grid": get_rasterfairy_layout(
@@ -415,7 +414,7 @@ def get_umap_layout_or_layouts(v: np.ndarray, imageEngine: ImageFactory, umap_sp
                         #     plot_id=plot_id
                         # )
                     }
-                for v in umap_variants
+                for variant in umap_variants
                 ]
     }
 

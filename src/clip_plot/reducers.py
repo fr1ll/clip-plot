@@ -9,27 +9,27 @@ import numpy as np
 from .configuration import UmapSpec
 
 # %% ../../nbs/15_reducers.ipynb 3
-def get_localmap_xy(hidden_vecs: np.ndarray, umap_spec: UmapSpec,) -> np.ndarray:
+def get_localmap_xy(hidden_vectors: np.ndarray, umap_spec: UmapSpec,) -> np.ndarray:
     from pacmap import LocalMAP
     return LocalMAP(n_components=2,
                     n_neighbors=umap_spec.n_neighbors[0],
                     MN_ratio=0.5,
                     FP_ratio=2.0,
                     # low_dist_thres=umap_spec.min_dist[0]
-                    ).fit_transform(hidden_vecs, init="pca")
+                    ).fit_transform(hidden_vectors, init="pca")
 
 # %% ../../nbs/15_reducers.ipynb 4
-def get_pacmap_xy(hidden_vecs: np.ndarray, umap_spec: UmapSpec,) -> np.ndarray:
+def get_pacmap_xy(hidden_vectors: np.ndarray, umap_spec: UmapSpec,) -> np.ndarray:
     from pacmap import PaCMAP
     return PaCMAP(n_components=2,
-                    n_neighbors=umap_spec.n_neighbors[0],
-                    MN_ratio=0.5,
-                    FP_ratio=2.0,
-                    # low_dist_thres=umap_spec.min_dist[0]
-                    ).fit_transform(hidden_vecs, init="pca")
+                  n_neighbors=umap_spec.n_neighbors[0],
+                  MN_ratio=0.5,
+                  FP_ratio=2.0,
+                  # low_dist_thres=umap_spec.min_dist[0]
+                  ).fit_transform(hidden_vectors, init="pca")
 
 # %% ../../nbs/15_reducers.ipynb 5
-def get_single_umap_xy(hidden_vecs: np.ndarray, umap_spec: UmapSpec,
+def get_single_umap_xy(hidden_vectors: np.ndarray, umap_spec: UmapSpec,
                        target: np.ndarray | None = None, seed: int | None = None,
                       ) -> np.ndarray:
     """
@@ -46,14 +46,14 @@ def get_single_umap_xy(hidden_vecs: np.ndarray, umap_spec: UmapSpec,
     if seed:
         config.update({"transform_seed": seed})
     model = UMAP(**config)
-    return model.fit_transform(hidden_vecs, y=target if np.any(target) else None)
+    return model.fit_transform(hidden_vectors, y=target if np.any(target) else None)
 
 # %% ../../nbs/15_reducers.ipynb 6
-def get_single_reducer_xy(hidden_vecs: np.ndarray, umap_spec: UmapSpec,
+def get_single_reducer_xy(hidden_vectors: np.ndarray, umap_spec: UmapSpec,
                         y: np.ndarray|None = None) -> np.ndarray:
     if umap_spec.reducer == "umap":
-        return get_single_umap_xy(hidden_vecs, umap_spec, target=y)
+        return get_single_umap_xy(hidden_vectors, umap_spec, target=y)
     elif umap_spec.reducer == "localmap":
-        return get_localmap_xy(hidden_vecs, umap_spec)
+        return get_localmap_xy(hidden_vectors, umap_spec)
     elif umap_spec.reducer == "pacmap":
-        return get_pacmap_xy(hidden_vecs, umap_spec)
+        return get_pacmap_xy(hidden_vectors, umap_spec)

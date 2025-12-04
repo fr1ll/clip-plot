@@ -44,11 +44,11 @@ cfg_step1 = Cfg(paths={"images": IMAGE_GLOB,
 # pprint(cfg_step1.model_dump())
 
 embed_images_pipeline(images=cfg_step1.paths.images,
-                        model=cfg_step1.model,
-                        metadata=cfg_step1.paths.metadata,
-                        output_dir=cfg_step1.paths.output_dir,
-                        table_format=cfg_step1.paths.table_format,
-                        table_id=cfg_step1.paths.table_id,
+                      model=cfg_step1.model,
+                      metadata=cfg_step1.paths.metadata,
+                      output_dir=cfg_step1.paths.output_dir,
+                      table_format=cfg_step1.paths.table_format,
+                      table_id=cfg_step1.paths.table_id,
                 )
 
 print("=== Finished Step 1: Embedding Images ===")
