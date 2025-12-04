@@ -46,31 +46,39 @@ def project_images_pipeline(output_dir: Path,
         ):
         """Convert a folder of images into a clip-plot visualization"""
 
-        # TODO: use a dataframe instead
+        # TODO: use a dataframe instead for all this
         meta_names:list[str] = []
         meta_vals: list[dict] | None = None
+        data_dir = output_dir / "data"
         if tables and images:
                 raise ValueError("Provide either tables or images parameter, not both.")
         if not tables and not images:
                 raise ValueError("No images found from either tables or images input.")
+
+        # TODO: simplify the horrible tables/metadata possibilities
         if tables and not images:
                 print(timestamp(), "Loading tables")
                 table: pl.DataFrame | None = cat_tables(tables).sort(by=image_path_col)
                 images: list[Path] = [Path(p) for p in table[image_path_col].to_numpy()]
+
+                imageEngine = ImageFactory(images, data_dir,
+                        **image_opts.model_dump(), metadata_paths=None)
+                # filter hidden vectors to match imageEngine, which may have filtered
+                # out some paths
+                df_image_paths = pl.DataFrame(data={image_path_col: [p.as_posix() for p in imageEngine.image_paths]},
+                                              schema={image_path_col: pl.String})
+                table = table.join(df_image_paths, on=image_path_col)
+
                 hidden_vectors: np.ndarray | None = table[vectors_col].to_numpy()
                 meta_names, meta_vals= table_to_meta(table)
+                if meta_vals:
+                        imageEngine.meta_headers = meta_names
+                        imageEngine.metadata = meta_vals
         elif not tables and images:
                 images = sorted(images)
                 hidden_vectors = get_embeddings(images, model_name=model)
-
-        data_dir = output_dir / "data"
-        imageEngine = ImageFactory(images, data_dir, metadata,
-                                   **image_opts.model_dump())
-
-        # TODO: simplify the horrible tables/metadata possibilities
-        if meta_vals:
-                imageEngine.meta_headers = meta_names
-                imageEngine.metadata = meta_vals
+                imageEngine = ImageFactory(images, data_dir, metadata,
+                                        **image_opts.model_dump())
 
         print(f"Config to project images: {str(image_opts.model_dump())}")
 
