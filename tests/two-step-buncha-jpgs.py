@@ -31,7 +31,7 @@ if OUTPUT_DIR.exists():
 TAGLINE: str = "Smithsonian Butterflies - Two-step Pipeline Test"
 N_NEIGHBORS: int = 30
 MIN_DIST: float = 0.01
-MIN_CLUSTER_SIZE: int = 5
+MIN_CLUSTER_SIZE: int = 30
 
 cfg_step1 = Cfg(paths={"images": IMAGE_GLOB,
                         "metadata": META_GLOB,
@@ -61,7 +61,7 @@ cfg_step2 = Cfg(paths={"tables":
                                 "min_dist": MIN_DIST},
                      cluster_spec={"min_cluster_size": MIN_CLUSTER_SIZE},
                      image_path_col="local_path",
-                     x_col="long",
+                     x_col="lon",
                      y_col="lat",
                     )
 

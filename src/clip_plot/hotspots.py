@@ -9,7 +9,6 @@ from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
-# from hdbscan import HDBSCAN
 from sklearn.preprocessing import normalize
 from sklearn.cluster import HDBSCAN
 
@@ -24,10 +23,8 @@ def get_cluster_model(min_cluster_size: int = 15):
     """
     return HDBSCAN(
         n_jobs=-1,
-        # core_dist_n_jobs=multiprocessing.cpu_count(),
         min_cluster_size=min_cluster_size,
         min_samples=1,
-        # approx_min_span_tree=False,
         metric="cosine",
         cluster_selection_method="eom",
         alpha=1.0,
