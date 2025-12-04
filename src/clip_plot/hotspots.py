@@ -71,6 +71,6 @@ def get_hotspots(imageEngine: ImageFactory,
 
     # save the hotspots to disk and return the path to the saved json
     print(timestamp(), "Found", len(clusters), "hotspots")
-    json_path = get_json_path(data_dir, "hotspots", "hotspot", plot_id)
+    json_path = get_json_path(data_dir, "hotspots", plot_id, "hotspot",)
     write_json(json_path, data_dir=data_dir, obj=clusters)
     return json_path

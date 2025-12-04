@@ -51,7 +51,7 @@ def get_json_path(data_dir: Path, subdir: str | None,
 # %% ../../nbs/01_utils.ipynb 11
 def write_json(output_path: Path, data_dir: Path, obj: Any):
     """
-    Write json object `obj` to disk and return the path to that file
+    Write json object `obj` to disk, converting Path objects to strings relative to `data_dir`
     """
     #| export
 

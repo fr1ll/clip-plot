@@ -56,4 +56,4 @@ def get_single_reducer_xy(hidden_vecs: np.ndarray, umap_spec: UmapSpec,
     elif umap_spec.reducer == "localmap":
         return get_localmap_xy(hidden_vecs, umap_spec)
     elif umap_spec.reducer == "pacmap":
-        return get_pacmap_xy(hidden_vecs, umap_specs)
+        return get_pacmap_xy(hidden_vecs, umap_spec)

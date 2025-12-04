@@ -231,7 +231,7 @@ class ImageFactory:
             else:
                 meta = None
 
-            return ValidImage(self.image_paths[index], meta)
+            return ValidImage(self.image_paths[index], metadata=meta)
 
     def filter_images(self):
         """

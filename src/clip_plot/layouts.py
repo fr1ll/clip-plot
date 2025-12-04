@@ -89,7 +89,7 @@ class AlphabeticLayout(BaseMetaLayout):
         Get the x,y positions of images in a grid projection
         """
         print(timestamp(), "Creating grid layout")
-        out_path = get_json_path(self.data_dir, self._SUBDIR, self._FILENAME, self.plot_id)
+        out_path = get_json_path(self.data_dir, self._SUBDIR, self.plot_id, self._FILENAME)
         n = math.ceil(self.imageEngine.count ** (1 / 2))
         positions = []
         for i in range(self.imageEngine.count):
@@ -186,8 +186,8 @@ class CategoricalLayout(BaseMetaLayout):
 
         print(timestamp(), "Creating categorical layout")
         # determine the out path and return from cache if possible
-        layout_out_path = get_json_path(self.data_dir, self._SUBDIR, self._FILENAME, self.plot_id)
-        labels_out_path = get_json_path(self.data_dir, self._SUBDIR, "categorical-labels", self.plot_id)
+        layout_out_path = get_json_path(self.data_dir, self._SUBDIR,  self.plot_id, self._FILENAME)
+        labels_out_path = get_json_path(self.data_dir, self._SUBDIR, self.plot_id, "categorical-labels")
 
         # accumulate d[category] = [indices of points with category]
         categories = [img.metadata.get("category", None) for img in self.imageEngine]
@@ -244,14 +244,16 @@ class CustomLayout(BaseMetaLayout):
     _FILENAME = "custom"
 
     def __init__(self, x_col: str, y_col: str):
+        super().__init__(plot_id, imageEngine.data_dir)
         self.x_col = x_col
         self.y_col = y_col
+        self.imageEngine = imageEngine
 
     def get_layout(self):
         """
         Return a 2D array of image positions corresponding to x,y coordinates in metadata
         """
-        out_path = get_json_path(self.data_dir, self._SUBDIR, self._FILENAME, self.plot_id)
+        out_path = get_json_path(self.data_dir, self._SUBDIR, self.plot_id, self._FILENAME)
         if not self.imageEngine.metadata:
             return
         found_coords = False
@@ -279,7 +281,6 @@ class CustomLayout(BaseMetaLayout):
         else:
             print(timestamp(), f"Creating custom layout for x:{self.x_col} and y:{self.y_col}")
         coords = np.array(coords).astype(float)
-        coords = (minmax_scale(coords) - 0.5) * 2
         write_layout(out_path, self.data_dir, obj=coords.tolist())
         return {"layout": out_path}
 
@@ -289,8 +290,9 @@ def get_pointgrid_layout(input_path: Path, data_dir: Path, label, plot_id: str):
 
     print(timestamp(), f"Creating {label} pointgrid")
     out_path = get_json_path(data_dir=data_dir, subdir="layouts",
+                             plot_id=plot_id,
                              filename=f"{label}-jittered",
-                             plot_id=plot_id)
+                             )
 
     arr = np.array(read_json(input_path))
     if arr.shape[-1] != 2:
@@ -307,7 +309,7 @@ def get_rasterfairy_layout(data_dir: Path, plot_id: str, umap_json_path: Path):
     """Create regular grid layout that keeps umap XYs close to each other"""
 
     print(timestamp(), "Creating rasterfairy layout")
-    out_path = get_json_path(data_dir, "layouts", "rasterfairy", plot_id)
+    out_path = get_json_path(data_dir, "layouts", plot_id, "rasterfairy")
     umap = np.array(read_json(umap_json_path))
     if umap.shape[-1] != 2:
         print(timestamp(), f"Couldn't create rasterfairy layout. Data shape is {umap.shape}, needs to be 2D.")
@@ -338,7 +340,7 @@ def get_umap_layout_or_layouts(v: np.ndarray, imageEngine: ImageFactory, umap_sp
         umap_spec.n_neighbors, umap_spec.min_dist
     ):
         filename = f"umap-n_neighbors_{n_neighbors}-min_dist_{min_dist}"
-        out_path = get_json_path(data_dir, "layouts", filename, plot_id)
+        out_path = get_json_path(data_dir, "layouts", plot_id, filename)
         umap_variants.append(
             {
                 "n_neighbors": n_neighbors,
@@ -473,7 +475,8 @@ def get_layouts(imageEngine: ImageFactory, hidden_vectors: np.ndarray,
     }
     if x_col and y_col:
         print("Attempting to create XY layout")
-        custom_layout = CustomLayout(x_col=x_col, y_col=y_col)
+        custom_layout = CustomLayout(x_col=x_col, y_col=y_col,
+                                     plot_id=plot_id, imageEngine=imageEngine)
         layouts.update({"custom": custom_layout.get_layout(),})
 
     return layouts

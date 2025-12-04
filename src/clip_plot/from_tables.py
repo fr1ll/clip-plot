@@ -9,7 +9,6 @@ __all__ = ['cat_tables', 'glob_to_tables', 'table_to_meta']
 from glob import glob
 from pathlib import Path
 
-import pandas as pd
 import polars as pl
 
 # %% ../../nbs/08_from_tables.ipynb 4
@@ -26,7 +25,7 @@ def cat_tables(table_paths: list[Path]) -> pl.DataFrame:
         return pl.concat((pl.read_parquet(t) for t in table_paths), how="diagonal_relaxed")
 
 # %% ../../nbs/08_from_tables.ipynb 5
-def glob_to_tables(pattern: str) -> pd.DataFrame:
+def glob_to_tables(pattern: str) -> pl.DataFrame:
     '''
     expand a glob of tables, read in the tables,
     and output as concatenated DataFrame
