@@ -54,7 +54,8 @@ jobs:
         working-directory: annoy-src
         run: |
           # Build only the wheel for the selected Python, no sdist
-          uv build --wheel --python ${{ matrix.python-version }} \
-          --out_dir "../vendor/annoy/${{ inputs.output_version }}"
+          uv build --wheel \
+          --python ${{ matrix.python-version }} \
+          --out-dir "../vendor/annoy/${{ inputs.output_version }}"
           ls -l "../vendor/annoy/${{ inputs.output_version }}"
     
