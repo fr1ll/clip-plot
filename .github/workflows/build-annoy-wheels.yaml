@@ -32,12 +32,12 @@ permissions:
 
 jobs:
   # -------------------------
-  # Linux: build inside manylinux2014 and auditwheel-repair
+  # Linux: build inside manylinux_2_28 and auditwheel-repair
   # -------------------------
-  linux-manylinux2014:
-    name: linux (manylinux2014)
+  linux-manylinux_2_28:
+    name: linux (manylinux_2_28)
     runs-on: ubuntu-latest
-    container: quay.io/pypa/manylinux2014_x86_64
+    container: quay.io/pypa/manylinux_2_28_x86_64
     steps:
       - name: Checkout (this repo)
         uses: actions/checkout@v5
@@ -88,67 +88,11 @@ jobs:
           path: upstream/wheelhouse/*.whl
 
   # -------------------------
-  # macOS: build with uv and delocate
-  # -------------------------
-  macos:
-    name: macOS
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [macos-13, macos-14]   # 13=x86_64 Intel, 14=arm64 Apple Silicon
-    steps:
-      - name: Checkout (this repo)
-        uses: actions/checkout@v5
-
-      - name: Checkout upstream (pinned)
-        uses: actions/checkout@v5
-        with:
-          repository: ${{ inputs.upstream_repo }}
-          ref: ${{ inputs.upstream_ref }}
-          path: upstream
-
-      - name: Install uv (per docs example)
-        uses: astral-sh/setup-uv@v7
-
-      - name: Install delocate
-        run: uv pip install delocate
-
-      - name: Build wheels with uv for selected Pythons
-        working-directory: upstream
-        env:
-          MAC_PYS: ${{ inputs.mac_pythons }}
-        run: |
-          mkdir -p dist wheelhouse
-          for V in $MAC_PYS; do
-            uv python install "cpython@${V}"
-            export UV_PYTHON="$(uv python find cpython@${V})"
-            uv build --wheel
-          done
-          ls -lh dist
-
-      - name: Delocate wheels
-        run: |
-          delocate-wheel -w upstream/wheelhouse upstream/dist/*.whl
-          ls -lh upstream/wheelhouse
-
-      - name: Smoke test (wheel) — same pattern as uv docs
-        working-directory: upstream
-        run: |
-          uv run --isolated --no-project --with wheelhouse/*.whl -c "import sys; print('OK macOS:', sys.version)"
-
-      - name: Upload macOS wheels (artifact)
-        uses: actions/upload-artifact@v4
-        with:
-          name: wheels-${{ matrix.os }}
-          path: upstream/wheelhouse/*.whl
-
-  # -------------------------
   # Release: attach wheels + build provenance
   # -------------------------
   release:
     name: Create Release + upload wheels + provenance
-    needs: [linux-manylinux2014, macos]
+    needs: [linux-manylinux_2_28]
     runs-on: ubuntu-latest
     steps:
       - name: Download artifacts
@@ -170,7 +114,7 @@ jobs:
           body: |
             **Upstream**: ${{ inputs.upstream_repo }} @ ${{ inputs.upstream_ref }}
             Built with: uv build (no PyPI publish)
-            Linux: manylinux2014 + auditwheel
+            Linux: manylinux_2_28 + auditwheel
             macOS: delocate
             Provenance: attached (GitHub build attestation)
           files: |
