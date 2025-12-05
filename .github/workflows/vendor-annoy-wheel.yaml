@@ -71,7 +71,8 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     permissions:
-      contents: write            # allow pushing commits
+      contents: write
+      pull-requests: write
     steps:
       - name: Checkout (full history, keep credentials)
         uses: actions/checkout@v4
