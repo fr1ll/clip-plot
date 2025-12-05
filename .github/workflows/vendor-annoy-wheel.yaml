@@ -59,3 +59,9 @@ jobs:
           --out-dir "../vendor/annoy/${{ inputs.output_version }}"
           ls -l "../vendor/annoy/${{ inputs.output_version }}"
     
+      - name: Upload wheel as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: annoy-wheels-${{ inputs.output_version }}-py${{ matrix.python-version }}
+          path: vendor/annoy/${{ inputs.output_version }}/*.whl
+          if-no-files-found: error
