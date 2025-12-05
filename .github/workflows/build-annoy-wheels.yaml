@@ -1,0 +1,182 @@
+# .github/workflows/build-annoy-wheels.yml
+name: "Build Annoy Wheels (uv)"
+
+on:
+  workflow_dispatch:
+    inputs:
+      upstream_repo:
+        description: "Upstream GitHub repo (owner/name)"
+        required: true
+        default: "spotify/annoy"
+      upstream_ref:
+        description: "Tag/branch/commit to build"
+        required: true
+        default: "1.17.3"
+      release_tag:
+        description: "Release tag (e.g. annoy-wheels-1.2.3)"
+        required: true
+        default: "annoy-wheels-1.17.3"
+      linux_abis:
+        description: "Space-separated manylinux ABIs"
+        required: true
+        default: "cp310-cp310 cp311-cp311 cp312-cp312 cp313-cp313"
+      mac_pythons:
+        description: "Space-separated macOS Python versions"
+        required: true
+        default: "3.10 3.11 3.12 3.13"
+
+permissions:
+  contents: write       # to create/update releases & upload assets
+  id-token: write       # for build attestation
+  attestations: write
+
+jobs:
+  # -------------------------
+  # Linux: build inside manylinux2014 and auditwheel-repair
+  # -------------------------
+  linux-manylinux2014:
+    name: linux (manylinux2014)
+    runs-on: ubuntu-latest
+    container: quay.io/pypa/manylinux2014_x86_64
+    steps:
+      - name: Checkout (this repo)
+        uses: actions/checkout@v5
+
+      - name: Checkout upstream (pinned)
+        uses: actions/checkout@v5
+        with:
+          repository: ${{ inputs.upstream_repo }}
+          ref: ${{ inputs.upstream_ref }}
+          path: upstream
+
+      - name: Install uv (per docs example)
+        uses: astral-sh/setup-uv@v7
+
+      - name: Install auditwheel
+        run: |
+          /opt/python/cp310-cp310/bin/pip install --upgrade pip auditwheel
+
+      - name: Build wheels with uv for each ABI
+        working-directory: upstream
+        env:
+          ABIS: ${{ inputs.linux_abis }}
+        run: |
+          mkdir -p dist wheelhouse
+          for ABI in $ABIS; do
+            export UV_PYTHON="/opt/python/${ABI}/bin/python"
+            uv build --wheel
+          done
+          ls -lh dist
+
+      - name: Repair wheels (auditwheel)
+        working-directory: upstream
+        run: |
+          /opt/python/cp310-cp310/bin/auditwheel repair dist/*.whl -w wheelhouse
+          ls -lh wheelhouse
+
+      - name: Smoke test (wheel) — same pattern as uv docs
+        working-directory: upstream
+        run: |
+          # test import/CLI if you have tests/smoke_test.py like the docs suggest
+          uv run --isolated --no-project --with wheelhouse/*.whl -c "import sys; print('OK Linux:', sys.version)"
+          # or: uv run --isolated --no-project --with wheelhouse/*.whl tests/smoke_test.py
+
+      - name: Upload Linux wheels (artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-linux
+          path: upstream/wheelhouse/*.whl
+
+  # -------------------------
+  # macOS: build with uv and delocate
+  # -------------------------
+  macos:
+    name: macOS
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-13, macos-14]   # 13=x86_64 Intel, 14=arm64 Apple Silicon
+    steps:
+      - name: Checkout (this repo)
+        uses: actions/checkout@v5
+
+      - name: Checkout upstream (pinned)
+        uses: actions/checkout@v5
+        with:
+          repository: ${{ inputs.upstream_repo }}
+          ref: ${{ inputs.upstream_ref }}
+          path: upstream
+
+      - name: Install uv (per docs example)
+        uses: astral-sh/setup-uv@v7
+
+      - name: Install delocate
+        run: uv pip install delocate
+
+      - name: Build wheels with uv for selected Pythons
+        working-directory: upstream
+        env:
+          MAC_PYS: ${{ inputs.mac_pythons }}
+        run: |
+          mkdir -p dist wheelhouse
+          for V in $MAC_PYS; do
+            uv python install "cpython@${V}"
+            export UV_PYTHON="$(uv python find cpython@${V})"
+            uv build --wheel
+          done
+          ls -lh dist
+
+      - name: Delocate wheels
+        run: |
+          delocate-wheel -w upstream/wheelhouse upstream/dist/*.whl
+          ls -lh upstream/wheelhouse
+
+      - name: Smoke test (wheel) — same pattern as uv docs
+        working-directory: upstream
+        run: |
+          uv run --isolated --no-project --with wheelhouse/*.whl -c "import sys; print('OK macOS:', sys.version)"
+
+      - name: Upload macOS wheels (artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}
+          path: upstream/wheelhouse/*.whl
+
+  # -------------------------
+  # Release: attach wheels + build provenance
+  # -------------------------
+  release:
+    name: Create Release + upload wheels + provenance
+    needs: [linux-manylinux2014, macos]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: collected
+
+      - name: Collect wheels
+        run: |
+          mkdir -p upload
+          find collected -name '*.whl' -exec cp {} upload/ \;
+          ls -lh upload
+
+      - name: Create or update GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.release_tag }}
+          name: "Annoy wheels: ${{ inputs.upstream_ref }}"
+          body: |
+            **Upstream**: ${{ inputs.upstream_repo }} @ ${{ inputs.upstream_ref }}
+            Built with: uv build (no PyPI publish)
+            Linux: manylinux2014 + auditwheel
+            macOS: delocate
+            Provenance: attached (GitHub build attestation)
+          files: |
+            upload/*.whl
+
+      - name: Attach build provenance
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: "upload/*.whl"
