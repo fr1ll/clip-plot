@@ -65,3 +65,56 @@ jobs:
           name: annoy-wheels-${{ inputs.output_version }}-py${{ matrix.python-version }}
           path: vendor/annoy/${{ inputs.output_version }}/*.whl
           if-no-files-found: error
+
+
+  commit-vendor:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write            # allow pushing commits
+    steps:
+      - name: Checkout (full history, keep credentials)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Download all wheel artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: annoy-wheels-${{ inputs.output_version }}-py*
+          path: _downloaded_wheels
+          merge-multiple: true
+
+      - name: Stage wheels into repo vendor tree
+        run: |
+          mkdir -p "vendor/annoy/${{ inputs.output_version }}"
+          cp -v _downloaded_wheels/*.whl "vendor/annoy/${{ inputs.output_version }}/"
+          ls -l "vendor/annoy/${{ inputs.output_version }}"
+
+      - name: Commit changes (if any)
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          BRANCH="vendor-annoy/${{ inputs.output_version }}"
+          git checkout -b "$BRANCH" || git checkout "$BRANCH"
+
+          git add vendor/annoy/${{ inputs.output_version }}/
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+
+          git commit -m "vendor: add Annoy wheels for ${{ inputs.output_version }}"
+          git push -u origin "$BRANCH"
+
+      - name: Open PR
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: vendor-annoy/${{ inputs.output_version }}
+          title: "Vendor: Annoy wheels for ${{ inputs.output_version }}"
+          body: |
+            Adds Annoy wheels built by matrix (Py310–Py313) into `vendor/annoy/${{ inputs.output_version }}`.
+          commit-message: "vendor: add Annoy wheels for ${{ inputs.output_version }}"
+          base: ${{ github.ref_name }} # current branch as the PR target
