@@ -46,21 +46,14 @@ jobs:
           git checkout "${{ inputs.annoy_ref }}"
           git rev-parse --short HEAD
 
+      - name: Ensure vendor output directory exists
+        run: |
+          mkdir -p "vendor/annoy/${{ inputs.output_version }}"
+
       - name: Build wheel only with uv (PEP 517)
         working-directory: annoy-src
         run: |
           # Build only the wheel for the selected Python, no sdist
-          uv build --wheel --python ${{ matrix.python-version }}
-          ls -l dist
-
-      - name: Stage wheel into vendor directory
-        run: |
-          mkdir -p "vendor/annoy/${{ inputs.output_version }}"
-          cp -v annoy-src/dist/*.whl "vendor/annoy/${{ inputs.output_version }}/"
-
-      - name: Upload wheel as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: annoy-wheels-${{ inputs.output_version }}-py${{ matrix.python-version }}
-          path: vendor/annoy/${{ inputs.output_version }}/*.whl
-          if-no-files-found: error
+          uv build --wheel --python ${{ matrix.python-version }} "../vendor/annoy/${{ inputs.output_version }}"
+          ls -l "../vendor/annoy/${{ inputs.output_version }}"
+    
