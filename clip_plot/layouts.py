@@ -5,7 +5,7 @@ __all__ = ['normalize_layout', 'write_layout', 'BaseLayout', 'BaseMetaLayout', '
            'get_categorical_points', 'CategoricalLayout', 'CustomLayout', 'get_pointgrid_layout',
            'get_rasterfairy_layout', 'get_umap_layout_or_layouts', 'get_heightmap', 'get_layouts']
 
-# %% ../nbs/05_layouts.ipynb #0446a691
+# %% ../nbs/05_layouts.ipynb #19649219
 import itertools
 import math
 import operator
@@ -30,7 +30,7 @@ from .reducers import get_single_reducer_xy
 from .utils import get_json_path, read_json, round_floats, timestamp, write_json
 
 
-# %% ../nbs/05_layouts.ipynb #debf3d88
+# %% ../nbs/05_layouts.ipynb #41936fff
 def normalize_layout(obj: Any, scale: bool = True, round: bool = True):
     """
     Write layout json `obj` to disk and return the path to the saved file
@@ -45,7 +45,7 @@ def normalize_layout(obj: Any, scale: bool = True, round: bool = True):
     return obj
 
 
-# %% ../nbs/05_layouts.ipynb #20293044
+# %% ../nbs/05_layouts.ipynb #1ed6c013
 def write_layout(output_path: Path, data_dir: Path,
                  obj: Any, scale: bool = True, round: bool = True):
     """
@@ -55,7 +55,7 @@ def write_layout(output_path: Path, data_dir: Path,
     obj = normalize_layout(obj, scale, round)
     return write_json(output_path=output_path, data_dir=data_dir, obj=obj)
 
-# %% ../nbs/05_layouts.ipynb #d57d69a6
+# %% ../nbs/05_layouts.ipynb #ff4c9dc0
 class BaseLayout(ABC):
     # Hardcoded for each particular layout
     # User should change
@@ -101,7 +101,7 @@ class AlphabeticLayout(BaseMetaLayout):
         write_layout(out_path, self.data_dir, z)
         return out_path
 
-# %% ../nbs/05_layouts.ipynb #a8e2d6e0
+# %% ../nbs/05_layouts.ipynb #81fe82bd
 @dataclass
 class Box:
         n_cells: int
@@ -169,7 +169,7 @@ def get_categorical_points(boxes: np.ndarray, unit_size=None):
             )
     return np.array(points_arr)
 
-# %% ../nbs/05_layouts.ipynb #bdc396f9
+# %% ../nbs/05_layouts.ipynb #24b6dc36
 class CategoricalLayout(BaseMetaLayout):
     _NULL_CATEGORY = "Other"
     _MARGIN = 2
@@ -239,7 +239,7 @@ class CategoricalLayout(BaseMetaLayout):
         return {"layout": layout_out_path,
                 "labels": labels_out_path}
 
-# %% ../nbs/05_layouts.ipynb #bb647190
+# %% ../nbs/05_layouts.ipynb #4e6e3811
 class CustomLayout(BaseMetaLayout):
     _FILENAME = "custom"
 
@@ -283,7 +283,7 @@ class CustomLayout(BaseMetaLayout):
         write_layout(out_path, self.data_dir, obj=coords.tolist())
         return {"layout": out_path}
 
-# %% ../nbs/05_layouts.ipynb #a1df85ce
+# %% ../nbs/05_layouts.ipynb #cc6cfdf6
 def get_pointgrid_layout(input_path: Path, data_dir: Path, label, plot_id: str):
     """Gridify the positions in `path` and return the path to this new layout"""
 
@@ -303,7 +303,7 @@ def get_pointgrid_layout(input_path: Path, data_dir: Path, label, plot_id: str):
     return out_path
 
 
-# %% ../nbs/05_layouts.ipynb #abf6ed00
+# %% ../nbs/05_layouts.ipynb #5c03fc73
 def get_rasterfairy_layout(data_dir: Path, plot_id: str, umap_json_path: Path):
     """Create regular grid layout that keeps umap XYs close to each other"""
 
@@ -327,7 +327,7 @@ def get_rasterfairy_layout(data_dir: Path, plot_id: str, umap_json_path: Path):
     write_layout(out_path, data_dir=data_dir, obj=pos)
     return out_path
 
-# %% ../nbs/05_layouts.ipynb #e34a24b0
+# %% ../nbs/05_layouts.ipynb #ebf12e2d
 def get_umap_layout_or_layouts(hidden_vectors: np.ndarray, imageEngine: ImageFactory, umap_spec: UmapSpec,
                               data_dir: Path, plot_id: str, projector: str = "umap") -> dict[str, list]:
     """Create a multi-layout UMAP projection"""
@@ -417,7 +417,7 @@ def get_umap_layout_or_layouts(hidden_vectors: np.ndarray, imageEngine: ImageFac
                 ]
     }
 
-# %% ../nbs/05_layouts.ipynb #17ac7d6e
+# %% ../nbs/05_layouts.ipynb #f4bf21c8
 def get_heightmap(json_path: Path, label: str, data_dir: Path):
     """
     Create a heightmap using the distribution of points stored at `path`
@@ -447,7 +447,7 @@ def get_heightmap(json_path: Path, label: str, data_dir: Path):
     out_path = hmap_dir / f"{label}-heightmap.png"
     plt.savefig(out_path, pad_inches=0)
 
-# %% ../nbs/05_layouts.ipynb #24bc29a4
+# %% ../nbs/05_layouts.ipynb #104b59c4
 def get_layouts(imageEngine: ImageFactory, hidden_vectors: np.ndarray,
                 data_dir: Path, plot_id: str,
                 umap_spec: UmapSpec,

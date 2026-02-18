@@ -5,13 +5,13 @@
 # %% auto #0
 __all__ = ['cat_tables', 'glob_to_tables', 'table_to_meta']
 
-# %% ../nbs/08_from_tables.ipynb #4601e568
+# %% ../nbs/08_from_tables.ipynb #48584c5f
 from glob import glob
 from pathlib import Path
 
 import polars as pl
 
-# %% ../nbs/08_from_tables.ipynb #5e4362ee
+# %% ../nbs/08_from_tables.ipynb #e55f7530
 def cat_tables(table_paths: list[Path]) -> pl.DataFrame:
     '''
     read and concatenate tables from list of paths
@@ -24,7 +24,7 @@ def cat_tables(table_paths: list[Path]) -> pl.DataFrame:
     elif extensions == {".parquet"}:
         return pl.concat((pl.read_parquet(t) for t in table_paths), how="diagonal_relaxed")
 
-# %% ../nbs/08_from_tables.ipynb #a1034456
+# %% ../nbs/08_from_tables.ipynb #e0b064be
 def glob_to_tables(pattern: str) -> pl.DataFrame:
     '''
     expand a glob of tables, read in the tables,
@@ -36,7 +36,7 @@ def glob_to_tables(pattern: str) -> pl.DataFrame:
     return cat_tables(table_paths)
 
 
-# %% ../nbs/08_from_tables.ipynb #2bba805e
+# %% ../nbs/08_from_tables.ipynb #dc3beca9
 def table_to_meta(table: pl.DataFrame) -> tuple[list, list]:
     '''convert table to metadata columns and list'''
     # viewer expects filename column

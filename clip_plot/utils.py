@@ -4,7 +4,7 @@
 __all__ = ['FILE_NAME', 'round_floats', 'is_number', 'timestamp', 'get_json_path', 'write_json', 'get_version', 'read_json',
            'copytree_agnostic', 'clean_filename']
 
-# %% ../nbs/01_utils.ipynb #410acc95
+# %% ../nbs/01_utils.ipynb #54b9039f
 import datetime
 import json
 import os
@@ -14,15 +14,15 @@ from shutil import copytree
 from typing import Any
 from urllib.parse import unquote
 
-# %% ../nbs/01_utils.ipynb #c6c7a155
+# %% ../nbs/01_utils.ipynb #9da96aaa
 FILE_NAME = "filename"  # Filename name key
 
-# %% ../nbs/01_utils.ipynb #2340e5ca
+# %% ../nbs/01_utils.ipynb #2fec300c
 def round_floats(obj, digits=5):
     """Return 2D array obj with rounded float precision"""
     return [[round(float(j), digits) for j in i] for i in obj]
 
-# %% ../nbs/01_utils.ipynb #0c238ad0
+# %% ../nbs/01_utils.ipynb #bc88c0f2
 def is_number(s: str) -> bool:
     try:
         int(s)
@@ -30,12 +30,12 @@ def is_number(s: str) -> bool:
     except ValueError:
         return False
 
-# %% ../nbs/01_utils.ipynb #c4fb308a
+# %% ../nbs/01_utils.ipynb #33d6c975
 def timestamp():
     """Return a string for printing the current time"""
     return str(datetime.datetime.now()) + ":"
 
-# %% ../nbs/01_utils.ipynb #3333b083
+# %% ../nbs/01_utils.ipynb #3ca81cf8
 def get_json_path(data_dir: Path, subdir: str | None,
                   plot_id: str | None, filename: str) -> Path:
     """
@@ -48,7 +48,7 @@ def get_json_path(data_dir: Path, subdir: str | None,
         filename = f"{filename}__{plot_id}"
     return output_dir/(filename + ".json") # don't use with_suffix, it chops names with decimals
 
-# %% ../nbs/01_utils.ipynb #92c41475
+# %% ../nbs/01_utils.ipynb #a030b73f
 def write_json(output_path: Path, data_dir: Path, obj: Any):
     """
     Write json object `obj` to disk, converting Path objects to strings relative to `data_dir`
@@ -66,19 +66,19 @@ def write_json(output_path: Path, data_dir: Path, obj: Any):
     with output_path.open("w", encoding="utf-8") as out:
         json.dump(obj, out, default=_convert_paths, indent=2)
 
-# %% ../nbs/01_utils.ipynb #cf2cf5e5
+# %% ../nbs/01_utils.ipynb #e17df106
 def get_version():
     from importlib.metadata import version
 
     import clip_plot
     return version(clip_plot.__name__)
 
-# %% ../nbs/01_utils.ipynb #693c412b
+# %% ../nbs/01_utils.ipynb #4a5ec168
 def read_json(path: Path) -> dict:
     with path.open("r") as f:
         return json.load(f)
 
-# %% ../nbs/01_utils.ipynb #7d28645b
+# %% ../nbs/01_utils.ipynb #758e24b5
 def copytree_agnostic(a,b):
     if sys.version_info.major >=3 and sys.version_info.minor >=8:
         copytree(a, b, dirs_exist_ok=True)
@@ -86,7 +86,7 @@ def copytree_agnostic(a,b):
         from distutils.dir_util import copy_tree
         copy_tree(a, b)
 
-# %% ../nbs/01_utils.ipynb #b4824cbe
+# %% ../nbs/01_utils.ipynb #5d60e86a
 def clean_filename(s: str) -> str:
     """Given a string that points to a filename, return a clean filename
     """

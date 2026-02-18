@@ -3,7 +3,7 @@
 # %% auto #0
 __all__ = ['write_metadata', 'get_manifest']
 
-# %% ../nbs/07_metadata.ipynb #9352bfbc
+# %% ../nbs/07_metadata.ipynb #e30034c2
 from collections import defaultdict
 from datetime import datetime
 from math import ceil
@@ -17,7 +17,7 @@ from .layouts import get_heightmap, get_layouts
 from .utils import FILE_NAME, clean_filename, get_version, is_number, read_json, write_json
 
 
-# %% ../nbs/07_metadata.ipynb #63e080fc
+# %% ../nbs/07_metadata.ipynb #f9aef5ab
 def write_metadata(imageEngine):
     """
     Write list `metadata` of objects to disk
@@ -80,7 +80,7 @@ def write_metadata(imageEngine):
                    obj={"domain": domain, "dates": date_d},
         )
 
-# %% ../nbs/07_metadata.ipynb #e78d1b27
+# %% ../nbs/07_metadata.ipynb #45b4c231
 def get_manifest(imageEngine, atlas_data,
                  hidden_vectors: np.ndarray,
                  plot_id: str,

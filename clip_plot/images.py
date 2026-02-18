@@ -5,7 +5,7 @@ __all__ = ['load_image', 'resize_to_max_side', 'resize_to_height', 'autocontrast
            'normalize_metadata_cols', 'get_metadata_list', 'ValidImage', 'ImageFactory', 'write_thumbnails',
            'copy_originals', 'new_atlas', 'create_atlases', 'write_viewer_images']
 
-# %% ../nbs/03_images.ipynb #82bd1b6e
+# %% ../nbs/03_images.ipynb #e751d36d
 import copy
 import csv
 import json
@@ -23,12 +23,12 @@ from tqdm.auto import tqdm
 from .utils import FILE_NAME, timestamp
 
 
-# %% ../nbs/03_images.ipynb #d358c914
+# %% ../nbs/03_images.ipynb #744f083a
 def load_image(image_path:str, format:str="RGB")->Image.Image:
     '''load an image and convert to desired format'''
     return Image.open(image_path).convert(format)
 
-# %% ../nbs/03_images.ipynb #a220a609
+# %% ../nbs/03_images.ipynb #a0f4db17
 def resize_to_max_side(img: Image.Image, maxlen:int=128):
     '''
     resize to a maximum side length
@@ -42,7 +42,7 @@ def resize_to_max_side(img: Image.Image, maxlen:int=128):
         size =  (max(1, int(maxlen * w / h)), maxlen)
     return img.resize(size, reducing_gap=2.0)
 
-# %% ../nbs/03_images.ipynb #81bb4235
+# %% ../nbs/03_images.ipynb #e3c23422
 def resize_to_height(img: Image.Image, height:int=128):
     '''
     resize to an exact height
@@ -55,7 +55,7 @@ def resize_to_height(img: Image.Image, height:int=128):
     size= (resizedwidth, height)
     return img.resize(size, reducing_gap=2.0)
 
-# %% ../nbs/03_images.ipynb #9e8086a1
+# %% ../nbs/03_images.ipynb #83e270e9
 def autocontrast(img: Image.Image) -> Image.Image:
     '''autocontrast lifted from keras library --
     added lightness normalization'''
@@ -72,7 +72,7 @@ def autocontrast(img: Image.Image) -> Image.Image:
     x = np.clip(x - mean_shift, 0, 255)
     return Image.fromarray(x.astype("uint8"))
 
-# %% ../nbs/03_images.ipynb #a3e062be
+# %% ../nbs/03_images.ipynb #522e9320
 def get_image_paths(images: str | list) -> list[Path]:
     """
     Called once to provide a list of image paths
@@ -87,7 +87,7 @@ def get_image_paths(images: str | list) -> list[Path]:
     else:
         return image_paths
 
-# %% ../nbs/03_images.ipynb #e1e48355
+# %% ../nbs/03_images.ipynb #5071d014
 def load_metadata(metadata_paths: list[Path]) -> pl.DataFrame:
     """load metadata from disk into a single dataframe"""
     suffixes = {p.suffix.lower() for p in metadata_paths}
@@ -107,14 +107,14 @@ def load_metadata(metadata_paths: list[Path]) -> pl.DataFrame:
     else:
         raise ValueError(f"Metadata paths must be one of .parquet, .csv, or .json. First example: {metadata_paths[0]}")
 
-# %% ../nbs/03_images.ipynb #027f93dd
+# %% ../nbs/03_images.ipynb #e682f5ae
 def normalize_metadata_cols(df: pl.DataFrame, ) -> pl.DataFrame:
     standard_cols = {"image_path", "image_filename", "hidden_vectors",
                                                    "category", "tags", "x", "y"}
     mapping = {c: c.lower() for c in df.columns if c.lower() in standard_cols}
     return df.rename(mapping)
 
-# %% ../nbs/03_images.ipynb #4afd8216
+# %% ../nbs/03_images.ipynb #4822e9b5
 def get_metadata_list(metadata_paths: list[Path]) -> tuple[list[dict] , list[str]]:
     """Return a list of dictionaries, one per image, with image metadata.
 
@@ -137,7 +137,7 @@ def get_metadata_list(metadata_paths: list[Path]) -> tuple[list[dict] , list[str
 
     return df_meta.to_dicts(), df_meta.columns
 
-# %% ../nbs/03_images.ipynb #9367f64b
+# %% ../nbs/03_images.ipynb #95be2adc
 @dataclass
 class ValidImage:
     path: Path
@@ -188,7 +188,7 @@ class ValidImage:
 
         return True, ""
 
-# %% ../nbs/03_images.ipynb #666f0eb6
+# %% ../nbs/03_images.ipynb #4da32326
 @dataclass
 class ImageFactory:
     """
@@ -353,7 +353,7 @@ class ImageFactory:
                 print(timestamp(), f"Image {p} could not be processed -- {exc}")
                 yield None
 
-# %% ../nbs/03_images.ipynb #ca0a1a28
+# %% ../nbs/03_images.ipynb #90bfb89d
 def write_thumbnails(imageEngine: ImageFactory, data_dir: Path, thumb_size: int):
     """create thumbnails and write to disk"""
     print(timestamp(), "Copying thumbnails to output directory")
@@ -373,7 +373,7 @@ def write_thumbnails(imageEngine: ImageFactory, data_dir: Path, thumb_size: int)
     return thumb_dims
 
 
-# %% ../nbs/03_images.ipynb #a9addd1e
+# %% ../nbs/03_images.ipynb #1b2ab984
 def copy_originals(imageEngine: ImageFactory, data_dir: Path,
                    use_cache: bool = False, max_height: int = 600):
     """create thumbnails and write to disk"""
@@ -393,11 +393,11 @@ def copy_originals(imageEngine: ImageFactory, data_dir: Path,
 
     return None
 
-# %% ../nbs/03_images.ipynb #db597e85
+# %% ../nbs/03_images.ipynb #146265ee
 def new_atlas(atlas_size: int) -> Image.Image:
     return Image.new(mode="RGB", size=(atlas_size,atlas_size))
 
-# %% ../nbs/03_images.ipynb #1604efeb
+# %% ../nbs/03_images.ipynb #62a2a9dd
 def create_atlases(imageEngine: ImageFactory, thumb_dims: list[int, int],
                    atlas_size: int = 4096, cell_size: int = 128
                    ) -> tuple[list[Image.Image], list[int, int]]:
@@ -443,7 +443,7 @@ def create_atlases(imageEngine: ImageFactory, thumb_dims: list[int, int],
     print(f"Cell size: {cell_size}x{cell_size}, Cells per atlas: {cells_per_row}x{cells_per_row}")
     return atlases, positions
 
-# %% ../nbs/03_images.ipynb #f4312cd4
+# %% ../nbs/03_images.ipynb #4281f3ee
 def write_viewer_images(imageEngine: ImageFactory,
                         plot_id: str, data_dir: Path,
                         thumb_size: int = 128,

@@ -3,14 +3,14 @@
 # %% auto #0
 __all__ = ['project_images_pipeline', 'tables_to_emb_atlas', 'embed_images_pipeline']
 
-# %% ../nbs/13_pipelines.ipynb #cff1cbb8
+# %% ../nbs/13_pipelines.ipynb #9597ad97
 # print separately that we're loading dependencies, as this can take a while
 # and we want to give immediate feedback the program is starting
 from .utils import timestamp
 
 print(timestamp(), "Beginning to load dependencies")
 
-# %% ../nbs/13_pipelines.ipynb #bfbddf0d
+# %% ../nbs/13_pipelines.ipynb #6844f8c9
 from pathlib import Path
 from shutil import rmtree
 from typing import Literal
@@ -28,7 +28,7 @@ from .reducers import get_single_reducer_xy
 from .web_config import copy_web_assets, get_clip_plot_root
 
 
-# %% ../nbs/13_pipelines.ipynb #5e970d8d
+# %% ../nbs/13_pipelines.ipynb #f36bd810
 def project_images_pipeline(output_dir: Path,
                             plot_id: str,
                             model: str,
@@ -107,7 +107,7 @@ def project_images_pipeline(output_dir: Path,
         # write_images(imageEngine)
         print(timestamp(), "Done!")
 
-# %% ../nbs/13_pipelines.ipynb #8fa40245
+# %% ../nbs/13_pipelines.ipynb #0e84d5b9
 def tables_to_emb_atlas(tables: list[Path],
                         output_dir: Path,
                         umap_spec: UmapSpec,
@@ -134,7 +134,7 @@ def tables_to_emb_atlas(tables: list[Path],
 
     print(timestamp(), "Done!")
 
-# %% ../nbs/13_pipelines.ipynb #4543f8b2
+# %% ../nbs/13_pipelines.ipynb #212dfd4d
 def embed_images_pipeline(images: list[Path],
                      model: str,
                      metadata: list[Path] | None,

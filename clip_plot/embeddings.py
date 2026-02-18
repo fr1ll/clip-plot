@@ -3,7 +3,7 @@
 # %% auto #0
 __all__ = ['images_from_paths', 'images_iterator', 'embed_images', 'get_embeddings']
 
-# %% ../nbs/04_embeddings.ipynb #38620f88
+# %% ../nbs/04_embeddings.ipynb #0187a33e
 from pathlib import Path
 
 import numpy as np
@@ -15,15 +15,15 @@ from transformers import pipeline
 from .utils import timestamp
 
 
-# %% ../nbs/04_embeddings.ipynb #ece967d5
+# %% ../nbs/04_embeddings.ipynb #4dba8a86
 def images_from_paths(pathlist):
     return (Image.open(p.as_posix()).convert("RGB").copy() for p in pathlist)
 
-# %% ../nbs/04_embeddings.ipynb #b18c9fc4
+# %% ../nbs/04_embeddings.ipynb #903def2c
 def images_iterator(ImageEngine):
     return (img.original for img in ImageEngine)
 
-# %% ../nbs/04_embeddings.ipynb #66aee2be
+# %% ../nbs/04_embeddings.ipynb #7ec9c0fb
 def embed_images(imagepaths : list[Path],
                  model_name : str = "timm/convnext_tiny.dinov3_lvd1689m",
                 #  batch_size : int = 4
@@ -46,7 +46,7 @@ def embed_images(imagepaths : list[Path],
 
     return np.array(embeddings)
 
-# %% ../nbs/04_embeddings.ipynb #e8d78fd1
+# %% ../nbs/04_embeddings.ipynb #74a84a2c
 def get_embeddings(image_paths: list[Path],
                    model_name : str = "timm/convnext_tiny.dinov3_lvd1689m",
                 #    batch_size : int = 4
