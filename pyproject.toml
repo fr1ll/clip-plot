@@ -72,6 +72,10 @@ build-backend = "uv_build"
 [tool.nbdev]
 put_version_in_init = false
 jupyter_hooks = true
+recursive = true
+nbs_path = "nbs"
+lib_path = "src/clip_plot"
+doc_path = "_docs"
 
 [tool.uv.build-backend]
 module-name = "clip_plot"

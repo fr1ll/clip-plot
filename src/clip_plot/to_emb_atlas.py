@@ -45,8 +45,7 @@ def load_images(df: daft.DataFrame, image_path_col: str,
     .with_column("image_bytes", daft.functions.download(daft.col(image_path_col), on_error="null"))
     .with_column("image_fullsize", daft.functions.decode_image(daft.col("image_bytes"), mode=mode))
     .with_column("image_preview", resize_for_preview(daft.col("image_fullsize"), preview_size, mode))
-    .with_column("image_name", daft.col(image_path_col).str.replace("\\", "/").str.split("/"))
-    .with_column("image_name", daft.col("image_name").list.get(-1))
+    .with_column("image_name", daft.functions.regexp_extract(daft.col(image_path_col), r"([^\\/]+)$"))
     .with_column("destination", daft.functions.concat(
         daft.lit(str(originals_dir)+"/"), daft.col("image_name")
         ))
