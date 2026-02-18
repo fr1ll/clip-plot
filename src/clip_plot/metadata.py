@@ -110,8 +110,8 @@ def get_manifest(imageEngine, atlas_data,
 
     # obtain the paths to each layout's JSON positions
     layouts = get_layouts(imageEngine, hidden_vectors,
-                                   data_dir, plot_id, umap_spec,
-                                   x_col, y_col)
+                          data_dir, plot_id, umap_spec,
+                          x_col, y_col)
     # create a heightmap for the umap layout
     if "umap" in layouts and layouts["umap"]:
         get_heightmap(json_path=layouts["umap"]["variants"][0]["layout"],

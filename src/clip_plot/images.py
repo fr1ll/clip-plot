@@ -412,12 +412,12 @@ def create_atlases(imageEngine: ImageFactory, thumb_dims: list[int, int],
         cell_content = resize_to_max_side(img.original, maxlen=cell_size)
         cell_content = autocontrast(cell_content)
         cell = Image.new('RGB', (cell_size, cell_size), (0, 0, 0))
-        
+
         content_w, content_h = cell_content.size
         paste_x = (cell_size - content_w) // 2
         paste_y = (cell_size - content_h) // 2
         cell.paste(cell_content, (paste_x, paste_y))
-        
+
         if x + cell_size > atlas_size: # new row
             x = 0
             y += cell_size

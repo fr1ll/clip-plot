@@ -149,7 +149,7 @@ def embed_images_pipeline(images: list[Path],
                 images = sorted(images)
 
                 imageEngine = ImageFactory(image_paths=images, data_dir=data_dir, metadata_paths=metadata)
-                
+
                 # imageFactory filters images, so some paths may be dropped
                 embeddings = get_embeddings(image_paths=imageEngine.image_paths, model_name=model)
                 df = pl.DataFrame({"image_path": imageEngine.image_paths,

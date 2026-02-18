@@ -77,7 +77,7 @@ class BaseLayout(ABC):
 
 class BaseMetaLayout(BaseLayout):
     def __init__(self, plot_id, imageEngine) -> None:
-        super().__init__(plot_id, imageEngine.data_dir)
+        super().__init__(plot_id=plot_id, data_dir=imageEngine.data_dir)
         self.imageEngine = imageEngine
 
 class AlphabeticLayout(BaseMetaLayout):
@@ -244,11 +244,9 @@ class CustomLayout(BaseMetaLayout):
     _FILENAME = "custom"
 
     def __init__(self, x_col: str, y_col: str, plot_id: str, imageEngine: ImageFactory):
-        super().__init__(plot_id, imageEngine)
+        super().__init__(plot_id=plot_id, imageEngine=imageEngine)
         self.x_col = x_col
         self.y_col = y_col
-        self.imageEngine = imageEngine
-        self.plot_id = plot_id
 
     def get_layout(self):
         """
@@ -419,7 +417,7 @@ def get_umap_layout_or_layouts(hidden_vectors: np.ndarray, imageEngine: ImageFac
                 ]
     }
 
-# %% ../../nbs/05_layouts.ipynb 17
+# %% ../../nbs/05_layouts.ipynb 16
 def get_heightmap(json_path: Path, label: str, data_dir: Path):
     """
     Create a heightmap using the distribution of points stored at `path`
@@ -449,10 +447,12 @@ def get_heightmap(json_path: Path, label: str, data_dir: Path):
     out_path = hmap_dir / f"{label}-heightmap.png"
     plt.savefig(out_path, pad_inches=0)
 
-# %% ../../nbs/05_layouts.ipynb 18
+# %% ../../nbs/05_layouts.ipynb 17
 def get_layouts(imageEngine: ImageFactory, hidden_vectors: np.ndarray,
                 data_dir: Path, plot_id: str,
-                umap_spec: UmapSpec, x_col, y_col
+                umap_spec: UmapSpec,
+                x_col: str | None,
+                y_col: str | None,
                 ):
     """Get the image positions in each projection"""
 
