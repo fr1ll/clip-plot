@@ -1,6 +1,7 @@
 [project]
 name="clip-plot"
-version = "0.1.7a1"
+version = "0.1.8a1"
+classifiers = ["Programming Language :: Python :: 3", "Programming Language :: Python :: 3 :: Only"]
 description = "Visual-similarity-space viewer for images"
 readme = "README.md"
 license = "MIT"
@@ -42,6 +43,9 @@ atlas =  [
     # "python_version >= '3.12'",
 ]
 
+[project.entry-points.nbdev]
+clip_plot = "src/clip_plot._modidx:d"
+
 [dependency-groups]
 dev = [
     "clip-plot",
@@ -64,6 +68,10 @@ pointgrid = { url = "https://github.com/fr1ll/pointgrid/releases/download/0.0.6/
 [build-system]
 requires = ["uv_build>=0.9.6,<0.10.0"]
 build-backend = "uv_build"
+
+[tool.nbdev]
+put_version_in_init = false
+jupyter_hooks = true
 
 [tool.uv.build-backend]
 module-name = "clip_plot"
