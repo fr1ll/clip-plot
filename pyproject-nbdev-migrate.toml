@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "clip-plot"
+dynamic = ["version"]
+description = "Visual-similarity-space viewer for images"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "Apache-2.0"}
+authors = [{name = "", email = ""}]
+keywords = ['nbdev']
+classifiers = ["Programming Language :: Python :: 3", "Programming Language :: Python :: 3 :: Only"]
+dependencies = []
+
+[project.urls]
+Repository = "https://github.com/fr1ll/clip-plot"
+Documentation = "https://fr1ll.github.io/clip-plot"
+
+[project.entry-points.nbdev]
+src/clip_plot = "src/clip_plot._modidx:d"
+
+[tool.setuptools.dynamic]
+version = {attr = "src/clip_plot.__version__"}
+
+[tool.setuptools.packages.find]
+include = ["src/clip_plot"]
+
+[tool.nbdev]
+put_version_in_init = false
+jupyter_hooks = true
