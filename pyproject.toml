@@ -1,11 +1,11 @@
 [project]
-name="clip-plot"
+name = "clip-plot"
 version = "0.1.8a1"
 classifiers = ["Programming Language :: Python :: 3", "Programming Language :: Python :: 3 :: Only"]
 description = "Visual-similarity-space viewer for images"
 readme = "README.md"
 license = "MIT"
-requires-python=">=3.10"
+requires-python = ">=3.10"
 dependencies = [
     "fastcore>=1.8",
     "matplotlib>=3.10.0",
