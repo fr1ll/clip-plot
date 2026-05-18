@@ -1,5 +1,10 @@
 Use `uv` for local project setup and running.
 
+## git habits
+
+- use `git mv` and `git rm` for file reorg
+- prefer small commits
+
 ## Environment
 
 - From the repository root, run `uv sync --all-extras` to create/update `.venv`.

@@ -3,7 +3,7 @@ project:
 
 website:
   title: "clip-plot"
-  site-url: "https://fr1ll.github.io/clip-plot"
+  site-url: "/"
   description: "Visual-similarity-space viewer for images"
   repo-branch: main
-  repo-url: "https://github.com/fr1ll/clip-plot"
+  repo-url: ""
