@@ -5,6 +5,7 @@ Use `uv` for local project setup and running.
 - From the repository root, run `uv sync --all-extras` to create/update `.venv`.
 - Run Python and project tools through `uv run`, for example `uv run python`.
 - This nbdev install exposes hyphenated console scripts. Use `uv run nbdev-prepare`; `uv run nbdev prepare`, `uv run nbdev`, and `uv run nbdev_prepare` are not valid here.
+- Hugging Face is configured through `.env` and loaded on folder entry by `.envrc`/direnv. If direnv has not loaded it yet, run `direnv allow` from the repository root.
 
 ## nbdev Prepare
 
