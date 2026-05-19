@@ -52,8 +52,8 @@ def load_images(df: daft.DataFrame, image_path_col: str,
     .with_column("image_local_path", daft.functions.concat(
         daft.lit(originals_dir.name +"/"), daft.col("image_name")
         ))
-    .with_column("image_preview_bytes", daft.col("image_preview").image.encode("JPEG"))
-    .with_column("image_fullsize_bytes", daft.col("image_fullsize").image.encode("JPEG"))
+    .with_column("image_preview_bytes", daft.functions.encode_image(daft.col("image_preview"), "JPEG"))
+    .with_column("image_fullsize_bytes", daft.functions.encode_image(daft.col("image_fullsize"), "JPEG"))
     # TODO: put None in for duplicate image names
     # and handle appropriate in upload (don't upload to orig folder, which is flat)
     .with_column("image_local_abspath", daft.functions.upload(daft.col("image_fullsize_bytes"), daft.col("destination")))
