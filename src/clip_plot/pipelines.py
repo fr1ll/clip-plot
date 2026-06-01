@@ -167,9 +167,7 @@ def embed_images_pipeline(images: list[Path],
                         df = df.join(df_meta.unique(subset=["image_filename"]),
                                      on="image_filename", how="left")
 
-                df = df.with_columns(pl.col("image_path").map_elements(
-                                     lambda x: x.as_posix(),  return_dtype=pl.Utf8
-                                     ))
+                df = df.with_columns(pl.Series("image_path", [p.as_posix() for p in df["image_path"]], dtype=pl.Utf8))
 
                 ## standardize sort order of table
                 # put standard columns in a sensible order if they exist in df

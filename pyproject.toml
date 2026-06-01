@@ -1,6 +1,6 @@
 [project]
 name = "clip-plot"
-version = "0.1.8a2"
+version = "0.1.10a1"
 classifiers = ["Programming Language :: Python :: 3", "Programming Language :: Python :: 3 :: Only"]
 description = "Visual-similarity-space viewer for images"
 readme = "README.md"

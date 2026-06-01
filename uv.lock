@@ -628,7 +628,7 @@ wheels = [
 
 [[package]]
 name = "clip-plot"
-version = "0.1.8a1"
+version = "0.1.10a1"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
